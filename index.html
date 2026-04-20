@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SALE一括 - セール価格計算表ジェネレーター</title>
+  <style>
+    :root {
+      --brand: #ee4d3d;
+      --brand-dark: #c53a2c;
+      --green: #3dee56;
+      --gray: #9e9da7;
+      --bg: #f7f7f9;
+      --card: #ffffff;
+      --text: #222;
+      --muted: #666;
+      --border: #e2e2e8;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      font-family: "游ゴシック", "Yu Gothic", "Hiragino Sans", "Meiryo", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    header {
+      background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+      color: white;
+      padding: 28px 32px;
+    }
+    header h1 { margin: 0; font-size: 24px; letter-spacing: 0.04em; }
+    header p { margin: 6px 0 0; opacity: 0.95; font-size: 13px; }
+    main {
+      max-width: 960px;
+      margin: 24px auto;
+      padding: 0 16px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .card h2 {
+      margin: 0 0 12px;
+      font-size: 17px;
+      border-left: 4px solid var(--brand);
+      padding-left: 10px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    @media (max-width: 640px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+    .file-input {
+      border: 2px dashed #ccc;
+      border-radius: 8px;
+      padding: 16px;
+      text-align: left;
+      transition: border-color .15s, background .15s;
+      background: #fafafa;
+    }
+    .file-input:hover { border-color: var(--brand); background: #fff5f3; }
+    .file-input.filled { border-color: var(--green); border-style: solid; background: #f0fff2; }
+    .file-input label {
+      display: block;
+      font-weight: 600;
+      font-size: 13px;
+      margin-bottom: 6px;
+    }
+    .file-input .desc { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+    .file-input input[type=file] { width: 100%; font-size: 13px; }
+    .filename {
+      margin-top: 6px;
+      font-size: 12px;
+      color: #1a7c38;
+      word-break: break-all;
+    }
+    .actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+    button {
+      background: var(--brand);
+      color: white;
+      border: 0;
+      border-radius: 6px;
+      padding: 12px 22px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s, transform .05s;
+    }
+    button:hover:not(:disabled) { background: var(--brand-dark); }
+    button:active { transform: translateY(1px); }
+    button:disabled { background: #bbb; cursor: not-allowed; }
+    button.secondary {
+      background: #f0f0f2;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    button.secondary:hover:not(:disabled) { background: #e4e4ea; }
+    .status {
+      margin-top: 14px;
+      font-size: 14px;
+      min-height: 20px;
+    }
+    .status.error { color: #c0392b; }
+    .status.success { color: #1a7c38; }
+    .stats {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 10px;
+    }
+    .stats .item {
+      background: #f7f8fa;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+    }
+    .stats .item .label { font-size: 11px; color: var(--muted); }
+    .stats .item .value { font-size: 20px; font-weight: 600; margin-top: 2px; }
+    .warnings {
+      margin-top: 12px;
+      max-height: 180px;
+      overflow-y: auto;
+      background: #fff8e1;
+      border: 1px solid #ffd666;
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 12px;
+      color: #8a6d00;
+    }
+    .warnings ul { margin: 4px 0 0 18px; padding: 0; }
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #ddd;
+      border-top-color: var(--brand);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .hint {
+      background: #eef5ff;
+      border-left: 4px solid #4a90e2;
+      padding: 12px 14px;
+      border-radius: 4px;
+      font-size: 13px;
+      color: #2a5a94;
+    }
+    .progress {
+      margin-top: 12px;
+      padding: 14px 18px;
+      background: #f0f4fb;
+      border: 1px solid #cddcf3;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #2a5a94;
+    }
+    .progress-bar {
+      height: 4px;
+      background: #e2e2e8;
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+    .progress-bar > div {
+      height: 100%;
+      background: var(--brand);
+      transition: width .3s;
+    }
+    footer {
+      text-align: center;
+      padding: 20px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    footer a { color: var(--muted); }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: #eef5ff;
+      color: #2a5a94;
+      font-size: 11px;
+      font-weight: 600;
+      margin-left: 8px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🏷️ SALE一括 <span class="badge" style="background: rgba(255,255,255,0.2); color: white;">ブラウザ版</span></h1>
+    <p>楽天RMS × ネクストエンジン → セール価格計算表を自動生成（完全ブラウザ処理・データは外に送りません）</p>
+  </header>
+
+  <main>
+    <div id="boot-progress" class="card">
+      <h2>起動中…</h2>
+      <div class="progress">
+        <span id="boot-status">Pythonランタイム（Pyodide）を読み込んでいます… 初回は30〜60秒ほどかかります</span>
+        <div class="progress-bar"><div id="boot-bar" style="width: 10%"></div></div>
+      </div>
+    </div>
+
+    <div id="app" style="display:none">
+      <div class="card">
+        <h2>使い方</h2>
+        <div class="hint">
+          以下4つのCSVをアップロードして「Excelを生成」を押してください。<br>
+          CSVはブラウザ内で処理されます（外部サーバーに送信されません）。
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>CSVをアップロード</h2>
+        <form id="upload-form">
+          <div class="grid">
+            <div class="file-input" data-target="rms">
+              <label>① RMSデータ</label>
+              <div class="desc">RMSから一括DLした商品情報CSV</div>
+              <input type="file" name="rms" accept=".csv" required />
+              <div class="filename"></div>
+            </div>
+            <div class="file-input" data-target="set_item">
+              <label>② NE-セット商品コード</label>
+              <div class="desc">ネクストエンジンのセット商品検索結果</div>
+              <input type="file" name="set_item" accept=".csv" required />
+              <div class="filename"></div>
+            </div>
+            <div class="file-input" data-target="set_component">
+              <label>③ NE-セット構成物コード</label>
+              <div class="desc">セット構成商品の原価情報</div>
+              <input type="file" name="set_component" accept=".csv" required />
+              <div class="filename"></div>
+            </div>
+            <div class="file-input" data-target="non_set">
+              <label>④ NE-セット無しコード</label>
+              <div class="desc">単品商品の原価情報</div>
+              <input type="file" name="non_set" accept=".csv" required />
+              <div class="filename"></div>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button type="button" id="btn-preview" class="secondary">プレビュー（統計のみ）</button>
+            <button type="submit" id="btn-generate">Excelを生成してダウンロード</button>
+          </div>
+          <div id="status" class="status"></div>
+        </form>
+
+        <div id="stats" class="stats" hidden></div>
+        <div id="warnings" class="warnings" hidden></div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    SALE一括 v0.1.0 (Browser) &nbsp;•&nbsp;
+    <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
+    Powered by Pyodide
+  </footer>
+
+  <!-- Pyodide読み込み -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.27.0/full/pyodide.js"></script>
+  <script>
+    // ---- 状態管理 ----
+    let pyodide = null;
+    let pyRunner = null;  // Pythonのrunnerモジュールへの参照
+
+    function setBootStatus(msg, pct) {
+      document.getElementById('boot-status').textContent = msg;
+      if (typeof pct === 'number') {
+        document.getElementById('boot-bar').style.width = pct + '%';
+      }
+    }
+
+    async function bootPyodide() {
+      try {
+        setBootStatus('Pyodideをロード中… (約10MB)', 15);
+        pyodide = await loadPyodide({
+          indexURL: "https://cdn.jsdelivr.net/pyodide/v0.27.0/full/"
+        });
+
+        setBootStatus('pandas を読み込み中…', 40);
+        await pyodide.loadPackage(['pandas']);
+
+        setBootStatus('openpyxl を読み込み中…', 60);
+        // openpyxl はPyodide組み込みではないのでmicropip経由
+        // （将来組み込みに含まれた場合も動くよう両方試す）
+        try {
+          await pyodide.loadPackage(['openpyxl']);
+        } catch (e) {
+          console.log('loadPackage失敗、micropipで再試行:', e.message);
+          await pyodide.loadPackage(['micropip']);
+          await pyodide.runPythonAsync(`
+import micropip
+await micropip.install('openpyxl')
+`);
+        }
+
+        setBootStatus('アプリコードを読み込み中…', 80);
+        // pyapp/ 配下のPythonファイルを取得して仮想FSに書き込む
+        for (const name of ['merger.py', 'excel_builder.py', 'runner.py']) {
+          const res = await fetch(`./pyapp/${name}`);
+          if (!res.ok) throw new Error(`${name} の取得に失敗 (${res.status})`);
+          const code = await res.text();
+          pyodide.FS.writeFile(`/home/pyodide/${name}`, code);
+        }
+        pyodide.runPython(`
+import sys
+sys.path.insert(0, "/home/pyodide")
+import runner
+        `);
+        pyRunner = pyodide.pyimport('runner');
+
+        setBootStatus('準備完了！', 100);
+        setTimeout(() => {
+          document.getElementById('boot-progress').style.display = 'none';
+          document.getElementById('app').style.display = 'block';
+        }, 400);
+      } catch (e) {
+        setBootStatus('❌ 起動エラー: ' + e.message, 0);
+        console.error('Boot error:', e);
+      }
+    }
+
+    // ---- UI制御 ----
+    document.querySelectorAll('.file-input input[type=file]').forEach(input => {
+      input.addEventListener('change', (e) => {
+        const wrap = e.target.closest('.file-input');
+        const fn = wrap.querySelector('.filename');
+        if (e.target.files && e.target.files[0]) {
+          fn.textContent = '📎 ' + e.target.files[0].name;
+          wrap.classList.add('filled');
+        } else {
+          fn.textContent = '';
+          wrap.classList.remove('filled');
+        }
+      });
+    });
+
+    function setStatus(msg, kind) {
+      const el = document.getElementById('status');
+      el.className = 'status' + (kind ? ' ' + kind : '');
+      el.innerHTML = msg;
+    }
+
+    function setButtonsDisabled(d) {
+      document.getElementById('btn-preview').disabled = d;
+      document.getElementById('btn-generate').disabled = d;
+    }
+
+    function renderStats(stats) {
+      const box = document.getElementById('stats');
+      box.hidden = false;
+      box.innerHTML = '';
+      const items = [
+        { label: 'RMS総行数', value: stats.rms_total },
+        { label: '通常価格空欄で除外', value: stats.excluded_no_price },
+        { label: '出力行数', value: stats.output_rows },
+        { label: 'セット構成から原価取得', value: stats.cost_from_component },
+        { label: '単品コードから原価取得', value: stats.cost_from_non_set },
+        { label: '原価が見つからなかった', value: stats.cost_not_found },
+      ];
+      items.forEach(it => {
+        const d = document.createElement('div');
+        d.className = 'item';
+        d.innerHTML = `<div class="label">${it.label}</div><div class="value">${it.value}</div>`;
+        box.appendChild(d);
+      });
+    }
+
+    function renderWarnings(warnings) {
+      const box = document.getElementById('warnings');
+      if (!warnings || warnings.length === 0) {
+        box.hidden = true;
+        return;
+      }
+      box.hidden = false;
+      box.innerHTML = '<strong>⚠️ 警告 (' + warnings.length + '件)</strong><ul>' +
+        warnings.map(w => '<li>' + String(w).replace(/</g, '&lt;') + '</li>').join('') + '</ul>';
+    }
+
+    async function getFileBytes(input) {
+      const file = input.files[0];
+      if (!file) throw new Error(`${input.name} が未選択です`);
+      const buf = await file.arrayBuffer();
+      return new Uint8Array(buf);
+    }
+
+    async function collectAllBytes() {
+      const form = document.getElementById('upload-form');
+      return {
+        rms: await getFileBytes(form.elements['rms']),
+        set_item: await getFileBytes(form.elements['set_item']),
+        set_component: await getFileBytes(form.elements['set_component']),
+        non_set: await getFileBytes(form.elements['non_set']),
+      };
+    }
+
+    document.getElementById('btn-preview').addEventListener('click', async () => {
+      setButtonsDisabled(true);
+      setStatus('<span class="spinner"></span>プレビュー取得中...', '');
+      try {
+        const b = await collectAllBytes();
+        const resultJson = pyRunner.preview(b.rms, b.set_item, b.set_component, b.non_set);
+        const data = JSON.parse(resultJson);
+        renderStats(data.stats);
+        renderWarnings(data.warnings);
+        setStatus('✅ プレビュー取得完了', 'success');
+      } catch (e) {
+        setStatus('❌ エラー: ' + e.message, 'error');
+        console.error(e);
+      } finally {
+        setButtonsDisabled(false);
+      }
+    });
+
+    document.getElementById('upload-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      setButtonsDisabled(true);
+      setStatus('<span class="spinner"></span>Excelを生成中... (5〜20秒)', '');
+      try {
+        const b = await collectAllBytes();
+        const pyResult = pyRunner.process(b.rms, b.set_item, b.set_component, b.non_set);
+        // pyResultは PyProxy なので toJs() して取り出す
+        const result = pyResult.toJs({ dict_converter: Object.fromEntries });
+        pyResult.destroy();
+
+        const xlsxBytes = result.xlsx;
+        const stats = result.stats;
+        const warnings = result.warnings;
+
+        renderStats(stats);
+        renderWarnings(warnings);
+
+        const blob = new Blob([xlsxBytes], {
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const now = new Date();
+        const ts = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
+        a.download = `利益計算表_${ts}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        setStatus('✅ Excelをダウンロードしました', 'success');
+      } catch (e) {
+        setStatus('❌ エラー: ' + e.message, 'error');
+        console.error(e);
+      } finally {
+        setButtonsDisabled(false);
+      }
+    });
+
+    // 起動
+    bootPyodide();
+  </script>
+</body>
+</html>
