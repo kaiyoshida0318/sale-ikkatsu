@@ -31,6 +31,7 @@
       display: flex;
       align-items: center;
       gap: 16px;
+      position: relative;
     }
     header .logo-mark {
       flex-shrink: 0;
@@ -38,6 +39,15 @@
     header .titles { line-height: 1.25; }
     header h1 { margin: 0; font-size: 22px; letter-spacing: 0.06em; font-weight: 600; }
     header p { margin: 4px 0 0; opacity: 0.9; font-size: 12px; letter-spacing: 0.02em; }
+    header .version {
+      position: absolute;
+      top: 12px;
+      right: 18px;
+      font-size: 11px;
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      opacity: 0.6;
+      letter-spacing: 0.05em;
+    }
     main {
       max-width: 960px;
       margin: 24px auto;
@@ -219,6 +229,7 @@
       <h1>SALE一括 <span class="badge" style="background: rgba(255,255,255,0.2); color: white;">ブラウザ版</span></h1>
       <p>楽天RMS × ネクストエンジン → セール価格計算表を自動生成（完全ブラウザ処理・データは外に送りません）</p>
     </div>
+    <span class="version">v0.2.0</span>
   </header>
 
   <main>
@@ -283,7 +294,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.1.0 (Browser) &nbsp;•&nbsp;
+    SALE一括 v0.2.0 (Browser) &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
     Powered by Pyodide
   </footer>
