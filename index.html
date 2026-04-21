@@ -6,8 +6,9 @@
   <title>SALE一括 - セール価格計算表ジェネレーター</title>
   <style>
     :root {
-      --brand: #ee4d3d;
-      --brand-dark: #c53a2c;
+      --brand: #1e3a5f;
+      --brand-dark: #0d2340;
+      --brand-accent: #FFC857;
       --green: #3dee56;
       --gray: #9e9da7;
       --bg: #f7f7f9;
@@ -26,10 +27,17 @@
     header {
       background: linear-gradient(135deg, var(--brand), var(--brand-dark));
       color: white;
-      padding: 28px 32px;
+      padding: 22px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
     }
-    header h1 { margin: 0; font-size: 24px; letter-spacing: 0.04em; }
-    header p { margin: 6px 0 0; opacity: 0.95; font-size: 13px; }
+    header .logo-mark {
+      flex-shrink: 0;
+    }
+    header .titles { line-height: 1.25; }
+    header h1 { margin: 0; font-size: 22px; letter-spacing: 0.06em; font-weight: 600; }
+    header p { margin: 4px 0 0; opacity: 0.9; font-size: 12px; letter-spacing: 0.02em; }
     main {
       max-width: 960px;
       margin: 24px auto;
@@ -64,7 +72,7 @@
       transition: border-color .15s, background .15s;
       background: #fafafa;
     }
-    .file-input:hover { border-color: var(--brand); background: #fff5f3; }
+    .file-input:hover { border-color: var(--brand); background: #f0f4fb; }
     .file-input.filled { border-color: var(--green); border-style: solid; background: #f0fff2; }
     .file-input label {
       display: block;
@@ -202,8 +210,15 @@
 </head>
 <body>
   <header>
-    <h1>🏷️ SALE一括 <span class="badge" style="background: rgba(255,255,255,0.2); color: white;">ブラウザ版</span></h1>
-    <p>楽天RMS × ネクストエンジン → セール価格計算表を自動生成（完全ブラウザ処理・データは外に送りません）</p>
+    <svg class="logo-mark" width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect x="3" y="3" width="42" height="42" rx="7" fill="none" stroke="#FFC857" stroke-width="2.2"/>
+      <text x="24" y="23" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="700" fill="#FFC857" text-anchor="middle">SALE</text>
+      <text x="24" y="37" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="500" fill="#ffffff" text-anchor="middle">一括</text>
+    </svg>
+    <div class="titles">
+      <h1>SALE一括 <span class="badge" style="background: rgba(255,255,255,0.2); color: white;">ブラウザ版</span></h1>
+      <p>楽天RMS × ネクストエンジン → セール価格計算表を自動生成（完全ブラウザ処理・データは外に送りません）</p>
+    </div>
   </header>
 
   <main>
