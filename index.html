@@ -4,6 +4,19 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SALE一括 - セール価格計算表ジェネレーター</title>
+
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png" />
+  <link rel="icon" href="assets/favicon.ico" />
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png" />
+
+  <meta name="description" content="楽天RMSとネクストエンジンのCSVから、セール価格計算表Excelをブラウザだけで自動生成。データは外に送られません。" />
+  <meta property="og:title" content="SALE一括 - セール価格計算表ジェネレーター" />
+  <meta property="og:description" content="楽天RMS × ネクストエンジン → セール価格計算表を自動生成（完全ブラウザ処理）" />
+  <meta property="og:image" content="assets/ogp.png" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="assets/ogp.png" />
   <style>
     :root {
       --brand: #1e3a5f;
@@ -35,6 +48,8 @@
     }
     header .logo-mark {
       flex-shrink: 0;
+      display: block;
+      border-radius: 8px;
     }
     header .titles { line-height: 1.25; }
     header h1 { margin: 0; font-size: 22px; letter-spacing: 0.06em; font-weight: 600; }
@@ -220,16 +235,12 @@
 </head>
 <body>
   <header>
-    <svg class="logo-mark" width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <rect x="3" y="3" width="42" height="42" rx="7" fill="none" stroke="#FFC857" stroke-width="2.2"/>
-      <text x="24" y="23" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="700" fill="#FFC857" text-anchor="middle">SALE</text>
-      <text x="24" y="37" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="500" fill="#ffffff" text-anchor="middle">一括</text>
-    </svg>
+    <img class="logo-mark" src="assets/logo-192.png" width="56" height="56" alt="SALE一括ロゴ" />
     <div class="titles">
       <h1>SALE一括 <span class="badge" style="background: rgba(255,255,255,0.2); color: white;">ブラウザ版</span></h1>
       <p>楽天RMS × ネクストエンジン → セール価格計算表を自動生成（完全ブラウザ処理・データは外に送りません）</p>
     </div>
-    <span class="version">v0.2.0</span>
+    <span class="version">v0.3.0</span>
   </header>
 
   <main>
@@ -294,7 +305,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.2.0 (Browser) &nbsp;•&nbsp;
+    SALE一括 v0.3.0 (Browser) &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
     Powered by Pyodide
   </footer>
