@@ -141,6 +141,38 @@
       opacity: 0.8;
       letter-spacing: 0.05em;
     }
+    /* Pythonランタイム状態表示 */
+    .py-status {
+      position: absolute;
+      bottom: 8px;
+      right: 18px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--muted);
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    }
+    .py-status-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #f39c12;
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    .py-status.ready .py-status-dot {
+      background: #27ae60;
+      animation: none;
+    }
+    .py-status.error .py-status-dot {
+      background: #e74c3c;
+      animation: none;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
     main {
       max-width: 960px;
       margin: 24px auto;
@@ -424,19 +456,15 @@
       <input type="text" id="sale-end" placeholder="5/5 23:59" autocomplete="off" />
     </div>
 
-    <span class="version">v0.5.0</span>
+    <span class="version">v0.6.0</span>
+    <span id="py-status" class="py-status" title="Pythonランタイム読み込み状況">
+      <span class="py-status-dot"></span>
+      <span class="py-status-text">準備中...</span>
+    </span>
   </header>
 
   <main>
-    <div id="boot-progress" class="card">
-      <h2>起動中…</h2>
-      <div class="progress">
-        <span id="boot-status">Pythonランタイム（Pyodide）を読み込んでいます… 初回は30〜60秒ほどかかります</span>
-        <div class="progress-bar"><div id="boot-bar" style="width: 10%"></div></div>
-      </div>
-    </div>
-
-    <div id="app" style="display:none">
+    <div id="app">
       <!-- ツール選択ハブ (入口) -->
       <div id="tool-hub" class="tool-launcher">
         <button type="button" class="tool-btn" data-tool="sale-price">
@@ -507,7 +535,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.5.0 (Browser) &nbsp;•&nbsp;
+    SALE一括 v0.6.0 (Browser) &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
     Powered by Pyodide
   </footer>
@@ -517,28 +545,29 @@
   <script>
     // ---- 状態管理 ----
     let pyodide = null;
-    let pyRunner = null;  // Pythonのrunnerモジュールへの参照
+    let pyRunner = null;
+    let pyReady = false;
+    let pyReadyPromise = null;  // CSV処理時にawaitするためのPromise
 
-    function setBootStatus(msg, pct) {
-      document.getElementById('boot-status').textContent = msg;
-      if (typeof pct === 'number') {
-        document.getElementById('boot-bar').style.width = pct + '%';
-      }
+    function setPyStatus(text, state) {
+      const el = document.getElementById('py-status');
+      if (!el) return;
+      el.classList.remove('ready', 'error');
+      if (state) el.classList.add(state);
+      el.querySelector('.py-status-text').textContent = text;
     }
 
     async function bootPyodide() {
       try {
-        setBootStatus('Pyodideをロード中… (約10MB)', 15);
+        setPyStatus('Pyodide読込中...', null);
         pyodide = await loadPyodide({
           indexURL: "https://cdn.jsdelivr.net/pyodide/v0.27.0/full/"
         });
 
-        setBootStatus('pandas を読み込み中…', 40);
+        setPyStatus('pandas読込中...', null);
         await pyodide.loadPackage(['pandas']);
 
-        setBootStatus('openpyxl を読み込み中…', 60);
-        // openpyxl はPyodide組み込みではないのでmicropip経由
-        // （将来組み込みに含まれた場合も動くよう両方試す）
+        setPyStatus('openpyxl読込中...', null);
         try {
           await pyodide.loadPackage(['openpyxl']);
         } catch (e) {
@@ -550,8 +579,7 @@ await micropip.install('openpyxl')
 `);
         }
 
-        setBootStatus('アプリコードを読み込み中…', 80);
-        // pyapp/ 配下のPythonファイルを取得して仮想FSに書き込む
+        setPyStatus('アプリコード読込中...', null);
         for (const name of ['merger.py', 'excel_builder.py', 'runner.py']) {
           const res = await fetch(`./pyapp/${name}`);
           if (!res.ok) throw new Error(`${name} の取得に失敗 (${res.status})`);
@@ -564,17 +592,26 @@ sys.path.insert(0, "/home/pyodide")
 import runner
         `);
         pyRunner = pyodide.pyimport('runner');
-
-        setBootStatus('準備完了！', 100);
-        setTimeout(() => {
-          document.getElementById('boot-progress').style.display = 'none';
-          document.getElementById('app').style.display = 'block';
-        }, 400);
+        pyReady = true;
+        setPyStatus('準備完了', 'ready');
       } catch (e) {
-        setBootStatus('❌ 起動エラー: ' + e.message, 0);
+        setPyStatus('起動エラー: ' + e.message, 'error');
         console.error('Boot error:', e);
+        throw e;
       }
     }
+
+    // Service Worker登録（2回目以降の高速起動用）
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch((e) => {
+          console.log('SW登録スキップ:', e);
+        });
+      });
+    }
+
+    // バックグラウンドでPyodideロード開始（UIは即表示済み）
+    pyReadyPromise = bootPyodide();
 
     // ---- UI制御 ----
     // ツール選択ハブ ←→ ツール本体 の切替
@@ -631,6 +668,7 @@ import runner
 
     function setStatus(msg, kind) {
       const el = document.getElementById('status');
+      if (!el) return;
       el.className = 'status' + (kind ? ' ' + kind : '');
       el.innerHTML = msg;
     }
@@ -688,10 +726,17 @@ import runner
       };
     }
 
+    async function ensurePyReady() {
+      if (pyReady) return;
+      setStatus('<span class="spinner"></span>Pythonランタイムを準備中... (初回は30〜60秒)', '');
+      await pyReadyPromise;
+    }
+
     document.getElementById('btn-preview').addEventListener('click', async () => {
       setButtonsDisabled(true);
-      setStatus('<span class="spinner"></span>プレビュー取得中...', '');
       try {
+        await ensurePyReady();
+        setStatus('<span class="spinner"></span>プレビュー取得中...', '');
         const b = await collectAllBytes();
         const resultJson = pyRunner.preview(b.rms, b.set_item, b.set_component, b.non_set);
         const data = JSON.parse(resultJson);
@@ -709,8 +754,9 @@ import runner
     document.getElementById('upload-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       setButtonsDisabled(true);
-      setStatus('<span class="spinner"></span>Excelを生成中... (5〜20秒)', '');
       try {
+        await ensurePyReady();
+        setStatus('<span class="spinner"></span>Excelを生成中... (5〜20秒)', '');
         const b = await collectAllBytes();
         const pyResult = pyRunner.process(b.rms, b.set_item, b.set_component, b.non_set);
         // pyResultは PyProxy なので toJs() して取り出す
