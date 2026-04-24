@@ -65,69 +65,106 @@
       flex-shrink: 0;
     }
     /* セール種別ドロップダウン */
+    .sale-type-wrap {
+      display: inline-flex;
+      align-items: stretch;
+      border: 3px solid #d63031;
+      border-radius: 10px;
+      background: #fff;
+      overflow: hidden;
+    }
+    .sale-type-wrap.type-marathon { border-color: #1b8f3a; }
+    .sale-type-wrap .sale-type-tag {
+      background: #d63031;
+      color: #fff;
+      padding: 0 14px;
+      font-weight: 700;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+    .sale-type-wrap.type-marathon .sale-type-tag { background: #1b8f3a; }
     .sale-type-select {
       font-size: 22px;
       font-weight: 700;
-      padding: 14px 50px 14px 21px;
-      border: 9px solid currentColor;
-      border-radius: 12px;
+      padding: 10px 46px 10px 16px;
+      border: 0;
       background: #fff;
+      color: #d63031;
       cursor: pointer;
       appearance: none;
       -webkit-appearance: none;
-      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='10' viewBox='0 0 14 10'><path d='M1 1l6 6 6-6' stroke='currentColor' stroke-width='2.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='10' viewBox='0 0 14 10'><path d='M1 1l6 6 6-6' stroke='%23d63031' stroke-width='2.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
       background-repeat: no-repeat;
-      background-position: right 18px center;
-      min-width: 300px;
+      background-position: right 16px center;
+      min-width: 260px;
       font-family: inherit;
     }
-    .sale-type-select.type-super-sale { color: #d63031; }
-    .sale-type-select.type-marathon { color: #1b8f3a; }
+    .sale-type-wrap.type-marathon .sale-type-select {
+      color: #1b8f3a;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='10' viewBox='0 0 14 10'><path d='M1 1l6 6 6-6' stroke='%231b8f3a' stroke-width='2.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    }
     .sale-type-select:focus {
       outline: none;
-      box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.15);
+      box-shadow: inset 0 0 0 3px rgba(30, 58, 95, 0.15);
     }
+
     /* セール期間入力 */
     .sale-period {
       display: inline-flex;
-      align-items: center;
-      gap: 12px;
+      align-items: stretch;
       border: 3px solid var(--brand);
-      background: #fff;
       border-radius: 10px;
-      padding: 9px 18px;
-      font-size: 22px;
+      background: #f7f9fc;
+      overflow: hidden;
     }
     .sale-period .label {
-      color: var(--text);
-      font-size: 22px;
+      background: var(--brand);
+      color: #fff;
+      padding: 0 14px;
+      font-size: 14px;
       font-weight: 700;
+      letter-spacing: 0.06em;
+      display: flex;
+      align-items: center;
       white-space: nowrap;
+    }
+    .sale-period .period-body {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      padding: 0 14px;
+      gap: 10px;
+      min-width: 360px;
     }
     .sale-period input {
       border: 0;
       background: transparent;
-      font-size: 22px;
+      font-size: 20px;
       font-weight: 700;
       font-family: inherit;
       font-variant-numeric: tabular-nums;
-      padding: 6px 0;
-      width: 200px;
-      color: var(--text);
+      padding: 10px 4px;
+      width: 100%;
+      text-align: center;
+      color: var(--brand);
+      letter-spacing: 0.02em;
     }
     .sale-period input:focus {
       outline: none;
-      background: #f0f4fb;
+      background: #e8eef7;
       border-radius: 4px;
     }
     .sale-period input::placeholder {
-      color: #b5b5bd;
+      color: #a8b3c6;
       font-weight: 700;
     }
     .sale-period .sep {
-      color: var(--text);
+      color: var(--brand);
       font-weight: 700;
-      font-size: 22px;
+      font-size: 20px;
     }
     /* 右上の v0.x.x バージョン表示 + 文字サイズコントロール */
     header .header-right {
@@ -462,6 +499,84 @@
       border-left: 4px solid var(--brand);
       padding-left: 10px;
     }
+
+    /* タブ切替 */
+    .tabs {
+      display: flex;
+      gap: 2px;
+      border-bottom: 2px solid var(--border);
+      margin-bottom: 0;
+      flex-wrap: wrap;
+    }
+    .tab {
+      background: transparent;
+      border: 0;
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      font-family: inherit;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      transition: color .15s, border-color .15s;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active {
+      color: var(--brand);
+      border-bottom-color: var(--brand);
+    }
+    .tab.tab-10 { --tab-accent: #4a90e2; }
+    .tab.tab-20 { --tab-accent: #ea8c2c; }
+    .tab.tab-30 { --tab-accent: #22a857; }
+    .tab.tab-50 { --tab-accent: #8b5a2b; }
+    .tab.active.tab-10 { color: #2e6bc3; border-bottom-color: #4a90e2; }
+    .tab.active.tab-20 { color: #b56312; border-bottom-color: #ea8c2c; }
+    .tab.active.tab-30 { color: #17743b; border-bottom-color: #22a857; }
+    .tab.active.tab-50 { color: #633e1e; border-bottom-color: #8b5a2b; }
+
+    /* 商品テーブル */
+    .product-table-wrap {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 0 0 8px 8px;
+      padding: 16px;
+      overflow-x: auto;
+    }
+    .product-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .product-table th,
+    .product-table td {
+      padding: 8px 10px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .product-table th {
+      background: #f4f5f8;
+      font-weight: 700;
+      color: var(--text);
+      position: sticky;
+      top: 0;
+    }
+    .product-table td.num {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+    .product-table tr:hover td { background: #fafbfd; }
+    .product-table .name { max-width: 360px; white-space: normal; }
+
+    .empty-state {
+      padding: 40px 20px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+      background: #fafbfd;
+      border-radius: 6px;
+    }
   </style>
 </head>
 <body>
@@ -474,16 +589,21 @@
       </svg>
     </div>
 
-    <select id="sale-type" class="sale-type-select type-super-sale" aria-label="セール種別">
-      <option value="super-sale" selected>楽天スーパーSALE</option>
-      <option value="marathon">楽天お買い物マラソン</option>
-    </select>
+    <div id="sale-type-wrap" class="sale-type-wrap type-super-sale">
+      <span class="sale-type-tag">SALE</span>
+      <select id="sale-type" class="sale-type-select" aria-label="セール種別">
+        <option value="super-sale" selected>楽天スーパーSALE</option>
+        <option value="marathon">楽天お買い物マラソン</option>
+      </select>
+    </div>
 
     <div class="sale-period" role="group" aria-label="セール期間">
       <span class="label">セール期間</span>
-      <input type="text" id="sale-start" placeholder="5/1 10:00" autocomplete="off" />
-      <span class="sep">〜</span>
-      <input type="text" id="sale-end" placeholder="5/5 23:59" autocomplete="off" />
+      <div class="period-body">
+        <input type="text" id="sale-start" placeholder="12/12 10:00" autocomplete="off" />
+        <span class="sep">〜</span>
+        <input type="text" id="sale-end" placeholder="12/15 20:00" autocomplete="off" />
+      </div>
     </div>
 
     <div class="header-right">
@@ -491,7 +611,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.9.1</span>
+      <span class="version">v0.10.0</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -504,6 +624,13 @@
     <div id="app">
       <!-- ツール選択ハブ (入口) -->
       <div id="tool-hub" class="tool-launcher">
+        <button type="button" class="tool-btn variant-green" data-tool="products">
+          <span class="plus-icon">+</span>
+          <span class="tool-label">
+            セール参加商品
+            <div class="tool-sub">対象商品をOFF率ごとに切り替えて確認</div>
+          </span>
+        </button>
         <button type="button" class="tool-btn" data-tool="sale-price">
           <span class="plus-icon">+</span>
           <span class="tool-label">
@@ -511,6 +638,31 @@
             <div class="tool-sub">RMS × NE の4CSVから利益計算表Excelを生成</div>
           </span>
         </button>
+      </div>
+
+      <!-- ツール本体: セール参加商品 -->
+      <div id="tool-products" class="tool-panel">
+        <div class="tool-panel-header">
+          <button type="button" class="back-btn" data-back>← 戻る</button>
+          <h2>セール参加商品</h2>
+        </div>
+
+        <div class="tabs" role="tablist">
+          <button type="button" class="tab active" data-offrate="all" role="tab">全体</button>
+          <button type="button" class="tab tab-10" data-offrate="10" role="tab">10%OFF</button>
+          <button type="button" class="tab tab-20" data-offrate="20" role="tab">20%OFF</button>
+          <button type="button" class="tab tab-30" data-offrate="30" role="tab">30%OFF</button>
+          <button type="button" class="tab tab-50" data-offrate="50" role="tab">50%OFF</button>
+        </div>
+
+        <div class="product-table-wrap">
+          <div id="product-table-container">
+            <div class="empty-state">
+              まだデータがありません。<br>
+              「セール価格決定用」でCSVをアップロードすると、ここに商品一覧が表示されます。
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- ツール本体: セール価格決定用 -->
@@ -572,7 +724,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.9.1 &nbsp;•&nbsp;
+    SALE一括 v0.10.0 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
     Powered by ExcelJS
   </footer>
@@ -686,18 +838,171 @@
       btn.addEventListener('click', showHub);
     });
 
-    // セール種別の色切替
+    // セール種別の色切替（ラップ要素にクラス適用）＋永続化
+    const SALE_TYPE_KEY = 'sale-ikkatsu-sale-type';
     const saleTypeEl = document.getElementById('sale-type');
+    const saleTypeWrap = document.getElementById('sale-type-wrap');
     function updateSaleTypeColor() {
-      saleTypeEl.classList.remove('type-super-sale', 'type-marathon');
+      saleTypeWrap.classList.remove('type-super-sale', 'type-marathon');
+      const tag = saleTypeWrap.querySelector('.sale-type-tag');
       if (saleTypeEl.value === 'marathon') {
-        saleTypeEl.classList.add('type-marathon');
+        saleTypeWrap.classList.add('type-marathon');
+        if (tag) tag.textContent = 'マラソン';
       } else {
-        saleTypeEl.classList.add('type-super-sale');
+        saleTypeWrap.classList.add('type-super-sale');
+        if (tag) tag.textContent = 'SALE';
       }
+      localStorage.setItem(SALE_TYPE_KEY, saleTypeEl.value);
+    }
+    const savedType = localStorage.getItem(SALE_TYPE_KEY);
+    if (savedType === 'super-sale' || savedType === 'marathon') {
+      saleTypeEl.value = savedType;
     }
     saleTypeEl.addEventListener('change', updateSaleTypeColor);
     updateSaleTypeColor();
+
+    // セール期間 永続化
+    const SALE_PERIOD_START = 'sale-ikkatsu-period-start';
+    const SALE_PERIOD_END = 'sale-ikkatsu-period-end';
+    const saleStartEl = document.getElementById('sale-start');
+    const saleEndEl = document.getElementById('sale-end');
+    saleStartEl.value = localStorage.getItem(SALE_PERIOD_START) || '';
+    saleEndEl.value = localStorage.getItem(SALE_PERIOD_END) || '';
+    saleStartEl.addEventListener('input', () => {
+      localStorage.setItem(SALE_PERIOD_START, saleStartEl.value);
+    });
+    saleEndEl.addEventListener('input', () => {
+      localStorage.setItem(SALE_PERIOD_END, saleEndEl.value);
+    });
+
+    // ---- 商品一覧タブ ----
+    // 直近のプレビュー/生成結果の rows を保持して、タブで表示を切り替える
+    let lastProductRows = null;
+    let currentOffRate = 'all';
+
+    function formatYen(n) {
+      if (n === null || n === undefined || n === '') return '';
+      const v = Number(n);
+      if (!Number.isFinite(v)) return String(n);
+      return '¥' + Math.round(v).toLocaleString('ja-JP');
+    }
+    // P価格: ROUNDDOWN(E*0.9, -1) 等と同等の計算
+    function calcOffPrice(normalPrice, rate) {
+      if (!Number.isFinite(normalPrice)) return null;
+      const mul = (100 - rate) / 100;
+      return Math.floor((normalPrice * mul) / 10) * 10;
+    }
+    // 利益額: ROUNDDOWN(P - F - G - (P*0.01*L) - (P*0.01*M) - (P*0.01*N) - O, 0)
+    // G(送料)は未入力のため0で計算。L=6, M=3.5, N=1, O=10
+    function calcProfit(offPrice, cost) {
+      if (!Number.isFinite(offPrice) || !Number.isFinite(cost)) return null;
+      const L = 6, M = 3.5, N = 1, O = 10, G = 0;
+      const p = offPrice - cost - G
+               - (offPrice * 0.01 * L)
+               - (offPrice * 0.01 * M)
+               - (offPrice * 0.01 * N)
+               - O;
+      return Math.floor(p);
+    }
+    function calcProfitRate(profit, offPrice) {
+      if (!Number.isFinite(profit) || !Number.isFinite(offPrice) || offPrice === 0) return null;
+      return Math.floor((profit / offPrice) * 100);
+    }
+
+    function renderProductTable() {
+      const container = document.getElementById('product-table-container');
+      if (!container) return;
+      if (!lastProductRows || lastProductRows.length === 0) {
+        container.innerHTML = '<div class="empty-state">まだデータがありません。<br>「セール価格決定用」でCSVをアップロードすると、ここに商品一覧が表示されます。</div>';
+        return;
+      }
+      // 空白行を除外
+      const rows = lastProductRows.filter(r => !r._blank);
+
+      const rate = currentOffRate;
+      let headHtml = '';
+      let rowsHtml = '';
+
+      if (rate === 'all') {
+        headHtml = `<tr>
+          <th>商品名</th>
+          <th>セット商品コード</th>
+          <th class="num">通常価格</th>
+          <th class="num">原価</th>
+          <th class="num">10%OFF</th>
+          <th class="num">20%OFF</th>
+          <th class="num">30%OFF</th>
+          <th class="num">50%OFF</th>
+        </tr>`;
+        rowsHtml = rows.map(r => {
+          const price = Number(r['通常価格']);
+          const cost = Number(r['原価']);
+          const p10 = calcOffPrice(price, 10);
+          const p20 = calcOffPrice(price, 20);
+          const p30 = calcOffPrice(price, 30);
+          const p50 = calcOffPrice(price, 50);
+          return `<tr>
+            <td class="name">${escapeHtml(r['商品名'] || '')}</td>
+            <td>${escapeHtml(r['セット商品コード'] || '')}</td>
+            <td class="num">${formatYen(price)}</td>
+            <td class="num">${Number.isFinite(cost) ? formatYen(cost) : '—'}</td>
+            <td class="num">${formatYen(p10)}</td>
+            <td class="num">${formatYen(p20)}</td>
+            <td class="num">${formatYen(p30)}</td>
+            <td class="num">${formatYen(p50)}</td>
+          </tr>`;
+        }).join('');
+      } else {
+        const rateNum = Number(rate);
+        headHtml = `<tr>
+          <th>商品名</th>
+          <th>セット商品コード</th>
+          <th class="num">通常価格</th>
+          <th class="num">原価</th>
+          <th class="num">${rateNum}%OFF価格</th>
+          <th class="num">利益額</th>
+          <th class="num">利益率</th>
+        </tr>`;
+        rowsHtml = rows.map(r => {
+          const price = Number(r['通常価格']);
+          const cost = Number(r['原価']);
+          const offPrice = calcOffPrice(price, rateNum);
+          const profit = calcProfit(offPrice, cost);
+          const profitRate = calcProfitRate(profit, offPrice);
+          return `<tr>
+            <td class="name">${escapeHtml(r['商品名'] || '')}</td>
+            <td>${escapeHtml(r['セット商品コード'] || '')}</td>
+            <td class="num">${formatYen(price)}</td>
+            <td class="num">${Number.isFinite(cost) ? formatYen(cost) : '—'}</td>
+            <td class="num">${formatYen(offPrice)}</td>
+            <td class="num">${profit !== null ? formatYen(profit) : '—'}</td>
+            <td class="num">${profitRate !== null ? profitRate + '%' : '—'}</td>
+          </tr>`;
+        }).join('');
+      }
+
+      container.innerHTML = `<table class="product-table">
+        <thead>${headHtml}</thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+      <div style="margin-top:10px;font-size:12px;color:var(--muted);">表示: ${rows.length}件 ${rate === 'all' ? '（全体）' : '（' + rate + '%OFF）'}</div>`;
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      })[c]);
+    }
+
+    // タブ切替
+    document.querySelectorAll('.tabs .tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tabs .tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentOffRate = tab.getAttribute('data-offrate');
+        renderProductTable();
+      });
+    });
 
     // ファイル選択のラベル更新
     document.querySelectorAll('.file-input input[type=file]').forEach(input => {
@@ -794,7 +1099,9 @@
         });
         renderStats(result.stats);
         renderWarnings(result.warnings);
-        setStatus('✅ プレビュー取得完了', 'success');
+        lastProductRows = result.rows;
+        renderProductTable();
+        setStatus('✅ プレビュー取得完了（セール参加商品タブに商品一覧が表示されます）', 'success');
       } catch (e) {
         setStatus('❌ エラー: ' + e.message, 'error');
         console.error(e);
@@ -820,6 +1127,8 @@
 
         renderStats(result.stats);
         renderWarnings(result.warnings);
+        lastProductRows = result.rows;
+        renderProductTable();
 
         const blob = new Blob([xlsxBuf], {
           type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
