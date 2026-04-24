@@ -129,21 +129,54 @@
       font-weight: 700;
       font-size: 20px;
     }
+    /* 右上の v0.x.x バージョン表示 + 文字サイズコントロール */
+    header .header-right {
+      margin-left: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      flex-shrink: 0;
+    }
     header .version {
-      position: absolute;
-      top: 10px;
-      right: 18px;
-      font-size: 11px;
+      font-size: 12px;
       font-family: ui-monospace, "SF Mono", Menlo, monospace;
       color: var(--muted);
-      opacity: 0.8;
       letter-spacing: 0.05em;
+    }
+    .font-size-control {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #f0f0f2;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 4px;
+    }
+    .font-size-control button {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 4px 10px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      font-family: inherit;
+      min-width: 32px;
+    }
+    .font-size-control button:hover { background: #fafafa; }
+    .font-size-control button:active { transform: translateY(1px); }
+    .font-size-control .pct {
+      font-size: 12px;
+      color: var(--text);
+      font-weight: 600;
+      min-width: 38px;
+      text-align: center;
+      padding: 0 4px;
+      font-variant-numeric: tabular-nums;
     }
     /* Pythonランタイム状態表示 */
     .py-status {
-      position: absolute;
-      bottom: 8px;
-      right: 18px;
       display: inline-flex;
       align-items: center;
       gap: 6px;
@@ -453,11 +486,18 @@
       <input type="text" id="sale-end" placeholder="5/5 23:59" autocomplete="off" />
     </div>
 
-    <span class="version">v0.8.0</span>
-    <span id="py-status" class="py-status" title="Pythonランタイム読み込み状況">
-      <span class="py-status-dot"></span>
-      <span class="py-status-text">準備中...</span>
-    </span>
+    <div class="header-right">
+      <span id="py-status" class="py-status" title="アプリ準備状況">
+        <span class="py-status-dot"></span>
+        <span class="py-status-text">準備中...</span>
+      </span>
+      <span class="version">v0.9.0</span>
+      <div class="font-size-control" role="group" aria-label="文字サイズ変更">
+        <button type="button" id="fs-down" title="小さく">A−</button>
+        <span class="pct" id="fs-pct">100%</span>
+        <button type="button" id="fs-up" title="大きく">A+</button>
+      </div>
+    </div>
   </header>
 
   <main>
@@ -532,7 +572,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.8.0 &nbsp;•&nbsp;
+    SALE一括 v0.9.0 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
     Powered by ExcelJS
   </footer>
@@ -590,6 +630,36 @@
     }
 
     appReadyPromise = bootApp();
+
+    // ---- 文字サイズコントロール ----
+    const FS_KEY = 'sale-ikkatsu-font-scale';
+    const FS_LEVELS = [0.85, 0.9, 0.95, 1.0, 1.1, 1.2, 1.35, 1.5];
+
+    function getFsIndex() {
+      const v = parseFloat(localStorage.getItem(FS_KEY) || '1.0');
+      const i = FS_LEVELS.indexOf(v);
+      return i >= 0 ? i : FS_LEVELS.indexOf(1.0);
+    }
+    function applyFs(level) {
+      const main = document.querySelector('main');
+      if (!main) return;
+      main.style.zoom = level;
+      const pct = Math.round(level * 100);
+      const el = document.getElementById('fs-pct');
+      if (el) el.textContent = pct + '%';
+      localStorage.setItem(FS_KEY, String(level));
+    }
+    function fsAdjust(delta) {
+      let i = getFsIndex();
+      i = Math.max(0, Math.min(FS_LEVELS.length - 1, i + delta));
+      applyFs(FS_LEVELS[i]);
+    }
+
+    document.getElementById('fs-up').addEventListener('click', () => fsAdjust(+1));
+    document.getElementById('fs-down').addEventListener('click', () => fsAdjust(-1));
+    document.getElementById('fs-pct').addEventListener('click', () => applyFs(1.0));
+    // 初期値適用
+    applyFs(FS_LEVELS[getFsIndex()]);
 
     // ---- UI制御 ----
     // ツール選択ハブ ←→ ツール本体 の切替
