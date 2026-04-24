@@ -57,6 +57,15 @@
       border-radius: 12px;
       padding: 8px 15px;
       line-height: 1;
+      cursor: pointer;
+      transition: transform .1s, box-shadow .15s;
+      border-style: solid;
+    }
+    .logo-plate:hover {
+      box-shadow: 0 3px 10px rgba(30, 58, 95, 0.25);
+    }
+    .logo-plate:active {
+      transform: translateY(1px);
     }
     .logo-plate .mark {
       display: block;
@@ -645,7 +654,7 @@
 </head>
 <body>
   <header>
-    <div class="logo-plate">
+    <div id="logo-home" class="logo-plate" role="button" tabindex="0" aria-label="トップ画面に戻る" title="トップ画面に戻る">
       <svg class="mark" viewBox="0 0 48 48" aria-hidden="true">
         <rect x="3" y="3" width="42" height="42" rx="7" fill="none" stroke="#FFC857" stroke-width="3"/>
         <text x="24" y="22" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700" fill="#FFC857" text-anchor="middle">SALE</text>
@@ -675,7 +684,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.11.0</span>
+      <span class="version">v0.11.1</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -783,7 +792,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.11.0 &nbsp;•&nbsp;
+    SALE一括 v0.11.1 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
     Powered by ExcelJS
   </footer>
@@ -908,6 +917,18 @@
     document.querySelectorAll('[data-back]').forEach(btn => {
       btn.addEventListener('click', () => showView('products'));
     });
+
+    // ロゴクリック → トップ(products)へ
+    const logoHome = document.getElementById('logo-home');
+    if (logoHome) {
+      logoHome.addEventListener('click', () => showView('products'));
+      logoHome.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          showView('products');
+        }
+      });
+    }
 
     // セール種別の色切替（ラップ要素にクラス適用）＋永続化
     const SALE_TYPE_KEY = 'sale-ikkatsu-sale-type';
