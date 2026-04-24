@@ -49,24 +49,20 @@
     }
     /* 横長プレートロゴ */
     .logo-plate {
+    .logo-plate {
       display: inline-flex;
       align-items: center;
-      gap: 10px;
+      justify-content: center;
       background: linear-gradient(135deg, var(--brand), var(--brand-dark));
       border: 2px solid var(--brand-accent);
-      border-radius: 8px;
-      padding: 8px 18px;
-      color: var(--brand-accent);
-      font-weight: 700;
-      font-size: 20px;
-      letter-spacing: 0.08em;
+      border-radius: 10px;
+      padding: 8px 14px;
       line-height: 1;
-      white-space: nowrap;
     }
     .logo-plate .mark {
-      display: inline-block;
-      width: 28px;
-      height: 28px;
+      display: block;
+      width: 48px;
+      height: 48px;
       flex-shrink: 0;
     }
     /* セール種別ドロップダウン */
@@ -438,10 +434,9 @@
     <div class="logo-plate">
       <svg class="mark" viewBox="0 0 48 48" aria-hidden="true">
         <rect x="3" y="3" width="42" height="42" rx="7" fill="none" stroke="#FFC857" stroke-width="3"/>
-        <text x="24" y="22" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="700" fill="#FFC857" text-anchor="middle">SALE</text>
-        <text x="24" y="37" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="500" fill="#FFC857" text-anchor="middle">一括</text>
+        <text x="24" y="23" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#FFC857" text-anchor="middle">SALE</text>
+        <text x="24" y="38" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="500" fill="#FFC857" text-anchor="middle">一括</text>
       </svg>
-      <span>SALE一括</span>
     </div>
 
     <select id="sale-type" class="sale-type-select type-super-sale" aria-label="セール種別">
@@ -456,7 +451,7 @@
       <input type="text" id="sale-end" placeholder="5/5 23:59" autocomplete="off" />
     </div>
 
-    <span class="version">v0.6.0</span>
+    <span class="version">v0.7.1</span>
     <span id="py-status" class="py-status" title="Pythonランタイム読み込み状況">
       <span class="py-status-dot"></span>
       <span class="py-status-text">準備中...</span>
@@ -535,19 +530,21 @@
   </main>
 
   <footer>
-    SALE一括 v0.6.0 (Browser) &nbsp;•&nbsp;
+    SALE一括 v0.7.1 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
-    Powered by Pyodide
+    Powered by ExcelJS
   </footer>
 
-  <!-- Pyodide読み込み -->
-  <script src="https://cdn.jsdelivr.net/pyodide/v0.27.0/full/pyodide.js"></script>
+  <!-- ExcelJS (CDN) と 自前のロジック -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+  <script src="./app/merger.js"></script>
+  <script src="./app/builder.js"></script>
   <script>
     // ---- 状態管理 ----
-    let pyodide = null;
-    let pyRunner = null;
-    let pyReady = false;
-    let pyReadyPromise = null;  // CSV処理時にawaitするためのPromise
+    // JS版は即座に使える（Pyodideのような重い準備なし）。
+    // ExcelJSのロードを軽く確認するだけ。
+    let appReady = false;
+    let appReadyPromise = null;
 
     function setPyStatus(text, state) {
       const el = document.getElementById('py-status');
@@ -557,42 +554,22 @@
       el.querySelector('.py-status-text').textContent = text;
     }
 
-    async function bootPyodide() {
+    async function bootApp() {
       try {
-        setPyStatus('Pyodide読込中...', null);
-        pyodide = await loadPyodide({
-          indexURL: "https://cdn.jsdelivr.net/pyodide/v0.27.0/full/"
-        });
-
-        setPyStatus('pandas読込中...', null);
-        await pyodide.loadPackage(['pandas']);
-
-        setPyStatus('openpyxl読込中...', null);
-        try {
-          await pyodide.loadPackage(['openpyxl']);
-        } catch (e) {
-          console.log('loadPackage失敗、micropipで再試行:', e.message);
-          await pyodide.loadPackage(['micropip']);
-          await pyodide.runPythonAsync(`
-import micropip
-await micropip.install('openpyxl')
-`);
+        setPyStatus('ライブラリ確認中...', null);
+        // ExcelJSが読み込まれるまで少し待つ(<script>なので基本は同期読み込み済みだが保険)
+        let retries = 0;
+        while (typeof ExcelJS === 'undefined' && retries < 50) {
+          await new Promise(r => setTimeout(r, 100));
+          retries++;
         }
-
-        setPyStatus('アプリコード読込中...', null);
-        for (const name of ['merger.py', 'excel_builder.py', 'runner.py']) {
-          const res = await fetch(`./pyapp/${name}`);
-          if (!res.ok) throw new Error(`${name} の取得に失敗 (${res.status})`);
-          const code = await res.text();
-          pyodide.FS.writeFile(`/home/pyodide/${name}`, code);
+        if (typeof ExcelJS === 'undefined') {
+          throw new Error('ExcelJSの読み込みに失敗しました');
         }
-        pyodide.runPython(`
-import sys
-sys.path.insert(0, "/home/pyodide")
-import runner
-        `);
-        pyRunner = pyodide.pyimport('runner');
-        pyReady = true;
+        if (typeof SaleIkkatsuMerger === 'undefined' || typeof SaleIkkatsuBuilder === 'undefined') {
+          throw new Error('アプリコードの読み込みに失敗しました');
+        }
+        appReady = true;
         setPyStatus('準備完了', 'ready');
       } catch (e) {
         setPyStatus('起動エラー: ' + e.message, 'error');
@@ -601,7 +578,7 @@ import runner
       }
     }
 
-    // Service Worker登録（2回目以降の高速起動用）
+    // Service Worker登録（2回目以降さらに高速化）
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js').catch((e) => {
@@ -610,8 +587,7 @@ import runner
       });
     }
 
-    // バックグラウンドでPyodideロード開始（UIは即表示済み）
-    pyReadyPromise = bootPyodide();
+    appReadyPromise = bootApp();
 
     // ---- UI制御 ----
     // ツール選択ハブ ←→ ツール本体 の切替
@@ -726,22 +702,26 @@ import runner
       };
     }
 
-    async function ensurePyReady() {
-      if (pyReady) return;
-      setStatus('<span class="spinner"></span>Pythonランタイムを準備中... (初回は30〜60秒)', '');
-      await pyReadyPromise;
+    async function ensureAppReady() {
+      if (appReady) return;
+      setStatus('<span class="spinner"></span>ライブラリ読み込み中...', '');
+      await appReadyPromise;
     }
 
     document.getElementById('btn-preview').addEventListener('click', async () => {
       setButtonsDisabled(true);
       try {
-        await ensurePyReady();
+        await ensureAppReady();
         setStatus('<span class="spinner"></span>プレビュー取得中...', '');
         const b = await collectAllBytes();
-        const resultJson = pyRunner.preview(b.rms, b.set_item, b.set_component, b.non_set);
-        const data = JSON.parse(resultJson);
-        renderStats(data.stats);
-        renderWarnings(data.warnings);
+        const result = SaleIkkatsuMerger.mergeAll({
+          rmsBytes: b.rms,
+          setItemBytes: b.set_item,
+          setComponentBytes: b.set_component,
+          nonSetBytes: b.non_set,
+        });
+        renderStats(result.stats);
+        renderWarnings(result.warnings);
         setStatus('✅ プレビュー取得完了', 'success');
       } catch (e) {
         setStatus('❌ エラー: ' + e.message, 'error');
@@ -755,22 +735,21 @@ import runner
       e.preventDefault();
       setButtonsDisabled(true);
       try {
-        await ensurePyReady();
-        setStatus('<span class="spinner"></span>Excelを生成中... (5〜20秒)', '');
+        await ensureAppReady();
+        setStatus('<span class="spinner"></span>Excelを生成中...', '');
         const b = await collectAllBytes();
-        const pyResult = pyRunner.process(b.rms, b.set_item, b.set_component, b.non_set);
-        // pyResultは PyProxy なので toJs() して取り出す
-        const result = pyResult.toJs({ dict_converter: Object.fromEntries });
-        pyResult.destroy();
+        const result = SaleIkkatsuMerger.mergeAll({
+          rmsBytes: b.rms,
+          setItemBytes: b.set_item,
+          setComponentBytes: b.set_component,
+          nonSetBytes: b.non_set,
+        });
+        const xlsxBuf = await SaleIkkatsuBuilder.buildXlsx(result.rows);
 
-        const xlsxBytes = result.xlsx;
-        const stats = result.stats;
-        const warnings = result.warnings;
+        renderStats(result.stats);
+        renderWarnings(result.warnings);
 
-        renderStats(stats);
-        renderWarnings(warnings);
-
-        const blob = new Blob([xlsxBytes], {
+        const blob = new Blob([xlsxBuf], {
           type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         });
         const url = URL.createObjectURL(blob);
@@ -791,9 +770,6 @@ import runner
         setButtonsDisabled(false);
       }
     });
-
-    // 起動
-    bootPyodide();
   </script>
 </body>
 </html>
