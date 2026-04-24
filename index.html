@@ -40,10 +40,10 @@
     header {
       background: #ffffff;
       border-bottom: 1px solid var(--border);
-      padding: 14px 24px;
+      padding: 18px 28px;
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 18px;
       flex-wrap: wrap;
       position: relative;
     }
@@ -53,32 +53,32 @@
       align-items: center;
       justify-content: center;
       background: linear-gradient(135deg, var(--brand), var(--brand-dark));
-      border: 2px solid var(--brand-accent);
-      border-radius: 10px;
-      padding: 8px 14px;
+      border: 3px solid var(--brand-accent);
+      border-radius: 12px;
+      padding: 10px 18px;
       line-height: 1;
     }
     .logo-plate .mark {
       display: block;
-      width: 48px;
-      height: 48px;
+      width: 77px;
+      height: 77px;
       flex-shrink: 0;
     }
     /* セール種別ドロップダウン */
     .sale-type-select {
-      font-size: 15px;
+      font-size: 22px;
       font-weight: 700;
-      padding: 9px 34px 9px 14px;
-      border: 2px solid currentColor;
-      border-radius: 8px;
+      padding: 14px 50px 14px 21px;
+      border: 3px solid currentColor;
+      border-radius: 10px;
       background: #fff;
       cursor: pointer;
       appearance: none;
       -webkit-appearance: none;
-      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' stroke='currentColor' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='10' viewBox='0 0 14 10'><path d='M1 1l6 6 6-6' stroke='currentColor' stroke-width='2.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
       background-repeat: no-repeat;
-      background-position: right 12px center;
-      min-width: 200px;
+      background-position: right 18px center;
+      min-width: 300px;
       font-family: inherit;
     }
     .sale-type-select.type-super-sale { color: #d63031; }
@@ -91,27 +91,28 @@
     .sale-period {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      border: 2px solid var(--border);
+      gap: 12px;
+      border: 3px solid var(--border);
       background: #fff;
-      border-radius: 8px;
-      padding: 6px 12px;
-      font-size: 13px;
+      border-radius: 10px;
+      padding: 9px 18px;
+      font-size: 20px;
     }
     .sale-period .label {
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 600;
+      color: var(--text);
+      font-size: 18px;
+      font-weight: 700;
       white-space: nowrap;
     }
     .sale-period input {
       border: 0;
       background: transparent;
-      font-size: 14px;
+      font-size: 21px;
+      font-weight: 700;
       font-family: inherit;
       font-variant-numeric: tabular-nums;
-      padding: 4px 0;
-      width: 120px;
+      padding: 6px 0;
+      width: 180px;
       color: var(--text);
     }
     .sale-period input:focus {
@@ -121,10 +122,12 @@
     }
     .sale-period input::placeholder {
       color: #b5b5bd;
+      font-weight: 700;
     }
     .sale-period .sep {
-      color: var(--muted);
-      font-weight: 600;
+      color: var(--text);
+      font-weight: 700;
+      font-size: 20px;
     }
     header .version {
       position: absolute;
@@ -433,8 +436,8 @@
     <div class="logo-plate">
       <svg class="mark" viewBox="0 0 48 48" aria-hidden="true">
         <rect x="3" y="3" width="42" height="42" rx="7" fill="none" stroke="#FFC857" stroke-width="3"/>
-        <text x="24" y="23" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#FFC857" text-anchor="middle">SALE</text>
-        <text x="24" y="38" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="500" fill="#FFC857" text-anchor="middle">一括</text>
+        <text x="24" y="22" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700" fill="#FFC857" text-anchor="middle">SALE</text>
+        <text x="24" y="38" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="500" fill="#FFC857" text-anchor="middle">一括</text>
       </svg>
     </div>
 
@@ -450,7 +453,7 @@
       <input type="text" id="sale-end" placeholder="5/5 23:59" autocomplete="off" />
     </div>
 
-    <span class="version">v0.7.2</span>
+    <span class="version">v0.8.0</span>
     <span id="py-status" class="py-status" title="Pythonランタイム読み込み状況">
       <span class="py-status-dot"></span>
       <span class="py-status-text">準備中...</span>
@@ -529,7 +532,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.7.2 &nbsp;•&nbsp;
+    SALE一括 v0.8.0 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
     Powered by ExcelJS
   </footer>
