@@ -598,11 +598,11 @@
     }
     .tabs .tab:hover { background: #f0f0f2; }
     .tabs .tab[data-offrate="all"]:hover { color: var(--text); }
-    /* active時は色塗りつぶし＋白文字 */
+    /* active時は色塗りつぶし＋白文字 (デフォルト=全体タブはダークグレー) */
     .tab.active {
       color: #fff;
-      background: var(--brand);
-      border-bottom-color: var(--brand);
+      background: #4a4a55;
+      border-bottom-color: #4a4a55;
     }
     .tabs .tab.tab-10:hover { color: #1c4b8a; }
     .tabs .tab.tab-20:hover { color: #a14d0a; }
@@ -613,7 +613,7 @@
     .tab.active.tab-30 { color: #fff; background: #165d28; border-bottom-color: #165d28; }
     .tab.active.tab-50 { color: #fff; background: #a81f1f; border-bottom-color: #a81f1f; }
     /* active中のホバーでも色が抜けないよう明示 */
-    .tabs .tab.active:hover { color: #fff; background: var(--brand); }
+    .tabs .tab.active:hover { color: #fff; background: #4a4a55; }
     .tabs .tab.active.tab-10:hover { background: #1c4b8a; }
     .tabs .tab.active.tab-20:hover { background: #a14d0a; }
     .tabs .tab.active.tab-30:hover { background: #165d28; }
@@ -773,7 +773,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.13.2</span>
+      <span class="version">v0.14.0</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -881,7 +881,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.13.2 &nbsp;•&nbsp;
+    SALE一括 v0.14.0 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
     Powered by ExcelJS
   </footer>
@@ -1041,19 +1041,231 @@
     saleTypeEl.addEventListener('change', updateSaleTypeColor);
     updateSaleTypeColor();
 
-    // セール期間 永続化
+    // セール期間 永続化＋マスク入力
     const SALE_PERIOD_START = 'sale-ikkatsu-period-start';
     const SALE_PERIOD_END = 'sale-ikkatsu-period-end';
     const saleStartEl = document.getElementById('sale-start');
     const saleEndEl = document.getElementById('sale-end');
-    saleStartEl.value = localStorage.getItem(SALE_PERIOD_START) || '';
-    saleEndEl.value = localStorage.getItem(SALE_PERIOD_END) || '';
-    saleStartEl.addEventListener('input', () => {
-      localStorage.setItem(SALE_PERIOD_START, saleStartEl.value);
-    });
-    saleEndEl.addEventListener('input', () => {
-      localStorage.setItem(SALE_PERIOD_END, saleEndEl.value);
-    });
+
+    // テンプレート: 0000/00/00 00:00 (16文字)
+    // 数字位置(0以外でも上書き可): 0,1,2,3, 5,6, 8,9, 11,12, 14,15
+    // 固定位置: 4='/', 7='/', 10=' ', 13=':'
+    const MASK_TEMPLATE = '0000/00/00 00:00';
+    const MASK_FIXED = { 4: '/', 7: '/', 10: ' ', 13: ':' };
+    const DIGIT_POSITIONS = [0,1,2,3,5,6,8,9,11,12,14,15];
+
+    function isFixedPos(pos) {
+      return pos in MASK_FIXED;
+    }
+
+    function nextDigitPos(pos) {
+      for (const p of DIGIT_POSITIONS) {
+        if (p > pos) return p;
+      }
+      return MASK_TEMPLATE.length; // 末尾(超過)
+    }
+
+    function prevDigitPos(pos) {
+      for (let i = DIGIT_POSITIONS.length - 1; i >= 0; i--) {
+        if (DIGIT_POSITIONS[i] < pos) return DIGIT_POSITIONS[i];
+      }
+      return 0;
+    }
+
+    function ensureMaskValue(el) {
+      // 16文字未満ならテンプレートで埋める。固定位置がずれてたら正規化
+      let v = el.value || '';
+      if (v.length < MASK_TEMPLATE.length) {
+        // 既存値を保持しつつテンプレートで埋める
+        const buf = MASK_TEMPLATE.split('');
+        for (let i = 0; i < Math.min(v.length, MASK_TEMPLATE.length); i++) {
+          if (isFixedPos(i)) continue;
+          if (/[0-9]/.test(v[i])) buf[i] = v[i];
+        }
+        v = buf.join('');
+      } else {
+        // 固定位置を強制
+        const buf = v.slice(0, MASK_TEMPLATE.length).split('');
+        for (const [pos, ch] of Object.entries(MASK_FIXED)) {
+          buf[pos] = ch;
+        }
+        v = buf.join('');
+      }
+      el.value = v;
+    }
+
+    function attachMaskInput(el, storageKey) {
+      // 初期値: localStorageに値があればそれを使い、なければテンプレートで埋める
+      const stored = localStorage.getItem(storageKey);
+      if (stored && stored.length === MASK_TEMPLATE.length) {
+        el.value = stored;
+      } else {
+        el.value = MASK_TEMPLATE;
+      }
+      ensureMaskValue(el);
+
+      // フォーカス時: 最初の "0" 位置にカーソル
+      el.addEventListener('focus', () => {
+        // 最初の "0" を含む数字位置を探す
+        let pos = 0;
+        let found = false;
+        for (const p of DIGIT_POSITIONS) {
+          if (el.value[p] === '0') {
+            pos = p;
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          // 全部埋まってたら最後の数字位置
+          pos = DIGIT_POSITIONS[DIGIT_POSITIONS.length - 1];
+        }
+        // requestAnimationFrame でブラウザがフォーカス処理を終えた後に位置調整
+        requestAnimationFrame(() => {
+          try { el.setSelectionRange(pos, pos + 1); } catch (e) {}
+        });
+      });
+
+      // クリック時: クリック位置が固定位置なら直近の数字位置にスナップ
+      el.addEventListener('click', () => {
+        requestAnimationFrame(() => {
+          let pos = el.selectionStart;
+          if (pos >= MASK_TEMPLATE.length) pos = DIGIT_POSITIONS[DIGIT_POSITIONS.length - 1];
+          while (isFixedPos(pos) && pos < MASK_TEMPLATE.length) pos++;
+          try { el.setSelectionRange(pos, pos + 1); } catch (e) {}
+        });
+      });
+
+      // キーボード処理
+      el.addEventListener('keydown', (e) => {
+        // 修飾キーは普通に動作させる(コピペとかタブ移動)
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+        // まず現在位置を「数字位置にスナップ」
+        let pos = el.selectionStart;
+        // 範囲外なら最後の数字位置
+        if (pos >= MASK_TEMPLATE.length) {
+          pos = DIGIT_POSITIONS[DIGIT_POSITIONS.length - 1];
+        }
+        // 固定位置なら次の数字位置
+        while (isFixedPos(pos) && pos < MASK_TEMPLATE.length) pos++;
+        if (pos >= MASK_TEMPLATE.length) pos = DIGIT_POSITIONS[DIGIT_POSITIONS.length - 1];
+
+        const selLen = el.selectionEnd - el.selectionStart;
+
+        if (/^[0-9]$/.test(e.key)) {
+          e.preventDefault();
+          // pos は既に数字位置にスナップ済み
+          const buf = el.value.split('');
+          buf[pos] = e.key;
+          el.value = buf.join('');
+          // 次の数字位置に移動
+          const np = nextDigitPos(pos);
+          if (np < MASK_TEMPLATE.length) {
+            el.setSelectionRange(np, np + 1);
+          } else {
+            el.setSelectionRange(pos, pos + 1);
+          }
+          // input イベント発火(localStorage保存のため)
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+          return;
+        }
+
+        if (e.key === 'Backspace') {
+          e.preventDefault();
+          const buf = el.value.split('');
+          // 現在位置自体を 0 に戻し、前に移動
+          // ただし、現在位置が末尾(最後の数字位置)で、その値が 0 でなければ現在位置を 0 に
+          // それ以外は前の数字位置を 0 に
+          let target;
+          if (selLen > 0) {
+            target = pos;
+          } else if (el.selectionStart >= MASK_TEMPLATE.length || el.value[pos] !== '0') {
+            // 現在位置が初期値以外なら現在位置を消す
+            target = pos;
+          } else {
+            target = prevDigitPos(pos);
+          }
+          if (target >= 0 && !isFixedPos(target)) {
+            buf[target] = '0';
+            el.value = buf.join('');
+            el.setSelectionRange(target, target + 1);
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+          return;
+        }
+
+        if (e.key === 'Delete') {
+          e.preventDefault();
+          const buf = el.value.split('');
+          if (!isFixedPos(pos)) {
+            buf[pos] = '0';
+            el.value = buf.join('');
+            el.setSelectionRange(pos, pos + 1);
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+          return;
+        }
+
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          const np = prevDigitPos(pos);
+          el.setSelectionRange(np, np + 1);
+          return;
+        }
+        if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          let np = nextDigitPos(pos);
+          if (np >= MASK_TEMPLATE.length) np = DIGIT_POSITIONS[DIGIT_POSITIONS.length - 1];
+          el.setSelectionRange(np, np + 1);
+          return;
+        }
+        if (e.key === 'Home') {
+          e.preventDefault();
+          el.setSelectionRange(0, 1);
+          return;
+        }
+        if (e.key === 'End') {
+          e.preventDefault();
+          const last = DIGIT_POSITIONS[DIGIT_POSITIONS.length - 1];
+          el.setSelectionRange(last, last + 1);
+          return;
+        }
+        if (e.key === 'Tab' || e.key === 'Enter' || e.key === 'Escape') {
+          // ブラウザ標準動作
+          return;
+        }
+        // それ以外のキーは無効化
+        e.preventDefault();
+      });
+
+      // ペースト対応: 数字以外を除去して埋める
+      el.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const text = (e.clipboardData || window.clipboardData).getData('text');
+        const digits = text.replace(/[^0-9]/g, '').slice(0, 12);
+        const buf = el.value.split('');
+        let dpIdx = 0;
+        for (const p of DIGIT_POSITIONS) {
+          if (dpIdx < digits.length) {
+            buf[p] = digits[dpIdx++];
+          }
+        }
+        el.value = buf.join('');
+        const lastPos = nextDigitPos(DIGIT_POSITIONS[Math.min(digits.length, DIGIT_POSITIONS.length) - 1] || 0);
+        el.setSelectionRange(lastPos, lastPos + 1);
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+
+      // 入力時: 値が壊れてないか正規化＋永続化
+      el.addEventListener('input', () => {
+        ensureMaskValue(el);
+        localStorage.setItem(storageKey, el.value);
+      });
+    }
+
+    attachMaskInput(saleStartEl, SALE_PERIOD_START);
+    attachMaskInput(saleEndEl, SALE_PERIOD_END);
 
     // ---- 商品一覧タブ ----
     // 直近のプレビュー/生成結果の rows を保持して、タブで表示を切り替える
