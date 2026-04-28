@@ -594,21 +594,23 @@
       margin-bottom: -2px;
       transition: color .15s, border-color .15s, background .15s;
     }
-    .tab:hover { background: #f0f0f2; }
-    .tab[data-offrate="all"]:hover { color: var(--text); }
+    .tabs .tab:hover { background: #f0f0f2; }
+    .tabs .tab[data-offrate="all"]:hover { color: var(--text); }
     .tab.active {
       color: var(--brand);
       border-bottom-color: var(--brand);
       background: transparent;
     }
-    .tab.tab-10:hover { color: #1c4b8a; }
-    .tab.tab-20:hover { color: #a14d0a; }
-    .tab.tab-30:hover { color: #165d28; }
-    .tab.tab-50:hover { color: #a81f1f; }
+    .tabs .tab.tab-10:hover { color: #1c4b8a; }
+    .tabs .tab.tab-20:hover { color: #a14d0a; }
+    .tabs .tab.tab-30:hover { color: #165d28; }
+    .tabs .tab.tab-50:hover { color: #a81f1f; }
     .tab.active.tab-10 { color: #1c4b8a; border-bottom-color: #1c4b8a; background: transparent; }
     .tab.active.tab-20 { color: #a14d0a; border-bottom-color: #a14d0a; background: transparent; }
     .tab.active.tab-30 { color: #165d28; border-bottom-color: #165d28; background: transparent; }
     .tab.active.tab-50 { color: #a81f1f; border-bottom-color: #a81f1f; background: transparent; }
+    /* active 中のホバーでも背景がネイビーにならないよう明示 */
+    .tabs .tab.active:hover { background: #f5f7fa; }
 
     /* 商品テーブル */
     .product-table-wrap {
@@ -764,7 +766,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.13.1</span>
+      <span class="version">v0.13.2</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -872,7 +874,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.13.1 &nbsp;•&nbsp;
+    SALE一括 v0.13.2 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
     Powered by ExcelJS
   </footer>
