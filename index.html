@@ -632,9 +632,9 @@
       grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
       gap: 10px;
     }
-    /* セール開始準備は10ボタン → 5列×2行で固定 */
+    /* セール開始準備は最終的に12ボタン → 4列×3行 */
     .workflow-block.block-prep .workflow-block-buttons {
-      grid-template-columns: repeat(5, 1fr);
+      grid-template-columns: repeat(4, 1fr);
     }
     /* セール当日 / セール後 は 3列固定 (当日は1個だが、後ろの3つと同じ幅にする) */
     .workflow-block.block-day .workflow-block-buttons,
@@ -1035,7 +1035,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.22.2</span>
+      <span class="version">v0.23.0</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1207,7 +1207,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.22.2 &nbsp;•&nbsp;
+    SALE一括 v0.23.0 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
     Powered by ExcelJS
   </footer>
@@ -1831,7 +1831,9 @@
         className: 'block-prep',
         buttons: [
           { id: 'prep-add-products', label: '参加商品追加', action: 'open-add-products' },
-          { id: 'prep-make-price-table', label: 'セール価格決定表作成', action: 'open-sale-price' },
+          { id: 'prep-cost-set-item', label: '原価特定 NE-セット商品コード' },
+          { id: 'prep-cost-set-component', label: '原価特定 NE-セット構成物コード' },
+          { id: 'prep-cost-non-set', label: '原価特定-NE-セット無しコード' },
           { id: 'prep-decide-price', label: 'セール価格決定', action: 'open-decide-price' },
           { id: 'prep-decide-title', label: 'セール用タイトル決定' },
           { id: 'prep-dl-rms-csv', label: 'RMSアップ素材CSVダウンロード' },
@@ -1840,6 +1842,7 @@
           { id: 'prep-sku-record', label: '倉庫入れSKU記録' },
           { id: 'prep-ad-delete', label: '広告削除' },
           { id: 'prep-thumb-change', label: 'トップ画像変更' },
+          { id: 'prep-make-price-table', label: 'セール価格決定表作成', action: 'open-sale-price' },
         ],
       },
       {
