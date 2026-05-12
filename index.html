@@ -1049,7 +1049,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.24.0</span>
+      <span class="version">v0.25.0</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1254,11 +1254,60 @@
           </form>
         </div>
       </div>
+
+      <!-- サブビュー: ③ 原価特定 NE-セット構成物コード -->
+      <div id="tool-cost-set-component" class="tool-panel">
+        <div class="tool-panel-header">
+          <button type="button" class="back-btn" data-back>← 戻る</button>
+          <h2>③ 原価特定 NE-セット構成物コード</h2>
+        </div>
+
+        <div class="card">
+          <h2>1. 検索用ファイルのダウンロード</h2>
+          <div class="howto-list" style="padding-left: 0;">
+            ② で取り込んだ <b>NE-セット商品コードCSV</b> から、商品コードを抽出した検索用CSVをダウンロードします。<br>
+            <span style="color: var(--muted); font-size: 12px;">※「<code>"</code>」は除去・重複は1件にまとめ・ヘッダー「商品コード」付き</span>
+          </div>
+          <div class="actions" style="margin-top: 12px;">
+            <button type="button" id="btn-dl-search-list" class="secondary">検索用CSVをダウンロード</button>
+          </div>
+          <div id="dl-search-list-status" class="status"></div>
+        </div>
+
+        <div class="card">
+          <h2>2. ファイルの作成手順</h2>
+          <ol class="howto-list">
+            <li>上の「検索用CSVをダウンロード」で取得したファイルの<b>商品コード</b>をコピー</li>
+            <li>ネクストエンジンの「<b>商品検索</b>」を開く</li>
+            <li>「複数コード」欄に貼り付け → 検索</li>
+            <li>検索結果の一覧を<b>ダウンロード</b>(CSV)</li>
+          </ol>
+        </div>
+
+        <div class="card">
+          <h2>3. CSVをアップロード</h2>
+          <form id="cost-set-component-form">
+            <div class="grid">
+              <div class="file-input" data-target="cost-set-component" style="grid-column: 1 / -1;">
+                <label>NE-セット構成物コード CSV</label>
+                <div class="desc">ネクストエンジン「商品検索」のダウンロード結果</div>
+                <input type="file" name="cost_set_component" accept=".csv" required />
+                <div class="filename"></div>
+              </div>
+            </div>
+
+            <div class="actions">
+              <button type="submit" id="btn-cost-set-component-upload">取り込む</button>
+            </div>
+            <div id="cost-set-component-status" class="status"></div>
+          </form>
+        </div>
+      </div>
     </div>
   </main>
 
   <footer>
-    SALE一括 v0.24.0 &nbsp;•&nbsp;
+    SALE一括 v0.25.0 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
     Powered by ExcelJS
   </footer>
@@ -1883,7 +1932,7 @@
         buttons: [
           { id: 'prep-add-products', label: '参加商品追加', action: 'open-add-products' },
           { id: 'prep-cost-set-item', label: '原価特定 NE-セット商品コード', action: 'open-cost-set-item' },
-          { id: 'prep-cost-set-component', label: '原価特定 NE-セット構成物コード' },
+          { id: 'prep-cost-set-component', label: '原価特定 NE-セット構成物コード', action: 'open-cost-set-component' },
           { id: 'prep-cost-non-set', label: '原価特定-NE-セット無しコード' },
           { id: 'prep-decide-price', label: 'セール価格決定', action: 'open-decide-price' },
           { id: 'prep-decide-title', label: 'セール用タイトル決定' },
@@ -2024,6 +2073,8 @@
             showView('decide-price');
           } else if (action === 'open-cost-set-item') {
             showView('cost-set-item');
+          } else if (action === 'open-cost-set-component') {
+            showView('cost-set-component');
           }
         });
       });
@@ -2412,6 +2463,119 @@
         );
       } catch (err) {
         setCostSetItemStatus('❌ エラー: ' + err.message, 'error');
+        console.error(err);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    // ---- ③ 原価特定 NE-セット構成物コード: 検索用CSV作成 + アップロード ----
+    function setCostSetComponentStatus(msg, kind) {
+      const el = document.getElementById('cost-set-component-status');
+      if (!el) return;
+      el.className = 'status' + (kind ? ' ' + kind : '');
+      el.innerHTML = msg;
+    }
+    function setDlSearchListStatus(msg, kind) {
+      const el = document.getElementById('dl-search-list-status');
+      if (!el) return;
+      el.className = 'status' + (kind ? ' ' + kind : '');
+      el.innerHTML = msg;
+    }
+
+    // ②で取り込んだ NE-セット商品コードCSV から、商品コード列を抽出してユニーク化
+    function extractUniqueProductCodesFromSetItem(csvText) {
+      const rows = parseCsvText(csvText);
+      if (rows.length < 2) return [];
+      const header = rows[0];
+      // 「商品コード」列を厳密一致で探す (NEの仕様)
+      let idx = header.findIndex(h => h && h.trim() === '商品コード');
+      if (idx < 0) {
+        // 念のため部分一致
+        idx = header.findIndex(h => h && h.indexOf('商品コード') >= 0);
+      }
+      if (idx < 0) throw new Error('CSVに「商品コード」列が見つかりません');
+      const all = [];
+      for (let i = 1; i < rows.length; i++) {
+        const cell = rows[i][idx];
+        if (!cell) continue;
+        // セル内改行で複数コードに分割 / トリム
+        for (const c of String(cell).split(/\r?\n/)) {
+          const v = c.trim();
+          if (v) all.push(v);
+        }
+      }
+      // 順序保持で重複除去
+      const seen = new Set();
+      const unique = [];
+      for (const c of all) {
+        if (!seen.has(c)) { seen.add(c); unique.push(c); }
+      }
+      return unique;
+    }
+
+    // 検索用CSVをダウンロード
+    document.getElementById('btn-dl-search-list').addEventListener('click', () => {
+      try {
+        setDlSearchListStatus('', '');
+        const ym = currentYM || getCurrentYM();
+        if (!ym) throw new Error('セール期間(開始日時)が未入力です');
+        const archive = loadArchive();
+        const data = archive[ym];
+        if (!data || !data.setItemCsvB64) {
+          throw new Error('② のNE-セット商品コードCSVが未取り込みです');
+        }
+        const buf = b642u8(data.setItemCsvB64);
+        const text = decodeShiftJIS(buf);
+        const codes = extractUniqueProductCodesFromSetItem(text);
+        if (codes.length === 0) throw new Error('商品コードが抽出できませんでした');
+        // CSV組み立て (ヘッダー「商品コード」+ 縦並び、UTF-8 BOM付きでExcel互換)
+        const csvLines = ['商品コード'].concat(codes);
+        const csvText = csvLines.join('\r\n') + '\r\n';
+        const BOM = '\ufeff';
+        const blob = new Blob([BOM + csvText], { type: 'text/csv;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const now = new Date();
+        const ts = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+        a.download = `検索用_商品コード一覧_${ts}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        setDlSearchListStatus(`✅ ${codes.length}件の商品コードをダウンロードしました`, 'success');
+      } catch (err) {
+        setDlSearchListStatus('❌ エラー: ' + err.message, 'error');
+        console.error(err);
+      }
+    });
+
+    // ③ アップロード
+    document.getElementById('cost-set-component-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btn-cost-set-component-upload');
+      btn.disabled = true;
+      try {
+        const input = e.target.elements['cost_set_component'];
+        if (!input.files || !input.files[0]) {
+          throw new Error('CSVファイルを選択してください');
+        }
+        setCostSetComponentStatus('<span class="spinner"></span>CSVを読み込み中...', '');
+        const buf = await input.files[0].arrayBuffer();
+        const ym = currentYM || getCurrentYM();
+        if (!ym) throw new Error('セール期間(開始日時)を先に入力してください');
+        const archive = loadArchive();
+        if (!archive[ym]) archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {}, workflowOpened: {} };
+        archive[ym].setComponentCsvB64 = ab2b64(buf);
+        archive[ym].setComponentCsvName = input.files[0].name;
+        saveArchive(archive);
+        setCostSetComponentStatus(
+          `✅ 「${input.files[0].name}」を取り込みました (${(buf.byteLength/1024).toFixed(1)} KB)。`,
+          'success'
+        );
+      } catch (err) {
+        setCostSetComponentStatus('❌ エラー: ' + err.message, 'error');
         console.error(err);
       } finally {
         btn.disabled = false;
