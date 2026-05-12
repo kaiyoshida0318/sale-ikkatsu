@@ -45,7 +45,9 @@
       align-items: center;
       gap: 18px;
       flex-wrap: wrap;
-      position: relative;
+      position: sticky;
+      top: 0;
+      z-index: 50;
     }
     /* 横長プレートロゴ */
     .logo-plate {
@@ -561,6 +563,9 @@
       display: flex;
       align-items: stretch;
       gap: 4px;
+      position: sticky;
+      top: 0;
+      z-index: 45;
     }
     .main-tab {
       background: transparent;
@@ -1201,7 +1206,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.29.0</span>
+      <span class="version">v0.29.1</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1508,7 +1513,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.29.0 &nbsp;•&nbsp;
+    SALE一括 v0.29.1 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
     Powered by ExcelJS
   </footer>
@@ -1596,6 +1601,24 @@
     document.getElementById('fs-pct').addEventListener('click', () => applyFs(1.0));
     // 初期値適用
     applyFs(FS_LEVELS[getFsIndex()]);
+
+    // ヘッダーとタブを sticky 固定: タブの top をヘッダー高さに追随させる
+    (function syncStickyTabs() {
+      const header = document.querySelector('header');
+      const tabs = document.querySelector('.main-tabs-bar');
+      if (!header || !tabs) return;
+      function update() {
+        // ヘッダー実高 (折り返し時にも追随)
+        const h = header.getBoundingClientRect().height;
+        tabs.style.top = h + 'px';
+      }
+      update();
+      window.addEventListener('resize', update);
+      // ヘッダー内の要素変化(ドロップダウン選択でwrap変化など)にも追随
+      if (typeof ResizeObserver !== 'undefined') {
+        new ResizeObserver(update).observe(header);
+      }
+    })();
 
     // ---- UI制御 ----
     // メインタブ(products, workflow) ⇄ サブビュー(sale-price, add-products, decide-price) の切替
