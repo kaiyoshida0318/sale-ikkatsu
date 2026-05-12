@@ -1049,7 +1049,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.26.0</span>
+      <span class="version">v0.26.1</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1356,7 +1356,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.26.0 &nbsp;•&nbsp;
+    SALE一括 v0.26.1 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
     Powered by ExcelJS
   </footer>
@@ -1516,6 +1516,7 @@
     // メインタブのクリック
     document.querySelectorAll('.main-tab[data-main-tab]').forEach(tab => {
       tab.addEventListener('click', () => {
+        _inProgressBtnId = null; // タブ切替で進行中外枠は消す
         showView(tab.getAttribute('data-main-tab'));
       });
     });
@@ -1528,10 +1529,14 @@
     // ロゴクリック → セール参加商品タブへ(最新月の表)
     const logoHome = document.getElementById('logo-home');
     if (logoHome) {
-      logoHome.addEventListener('click', () => showView('products'));
+      logoHome.addEventListener('click', () => {
+        _inProgressBtnId = null;
+        showView('products');
+      });
       logoHome.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
+          _inProgressBtnId = null;
           showView('products');
         }
       });
@@ -2016,45 +2021,45 @@
 
     // チェック状態: 年月別に保存
     // 構造: archive[YYYY/MM].workflow = { 'prep-add-products': true, ... }
-    //       archive[YYYY/MM].workflowOpened = { 'prep-add-products': true, ... }  ← 開いた=進行中
+    // 進行中マーク(外枠) はメモリ変数 _inProgressBtnId で一時管理 (永続化しない)
+    let _inProgressBtnId = null;
+
     function getWorkflowState() {
       if (!currentYM) return {};
       const archive = loadArchive();
       return (archive[currentYM] && archive[currentYM].workflow) || {};
     }
-    function getWorkflowOpened() {
-      if (!currentYM) return {};
-      const archive = loadArchive();
-      return (archive[currentYM] && archive[currentYM].workflowOpened) || {};
-    }
     function setWorkflowDone(btnId, done) {
       if (!currentYM) return;
       const archive = loadArchive();
-      if (!archive[currentYM]) archive[currentYM] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {}, workflowOpened: {} };
+      if (!archive[currentYM]) archive[currentYM] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
       const wf = archive[currentYM].workflow || {};
-      const op = archive[currentYM].workflowOpened || {};
       if (done) {
         wf[btnId] = true;
-        // チェック入れた瞬間に「進行中(外枠)」は外す
-        delete op[btnId];
+        // チェック入れた瞬間に「進行中(外枠)」も外す
+        if (_inProgressBtnId === btnId) _inProgressBtnId = null;
       } else {
         delete wf[btnId];
       }
       archive[currentYM].workflow = wf;
-      archive[currentYM].workflowOpened = op;
       saveArchive(archive);
     }
     // ボタンを開いた = 進行中マーク (チェック済みの場合は付けない)
     function markWorkflowOpened(btnId) {
-      if (!currentYM) return;
+      if (!currentYM) { _inProgressBtnId = btnId; return; }
       const archive = loadArchive();
-      if (!archive[currentYM]) archive[currentYM] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {}, workflowOpened: {} };
-      const wf = archive[currentYM].workflow || {};
-      if (wf[btnId]) return; // 既にチェック済みなら何もしない
-      const op = archive[currentYM].workflowOpened || {};
-      op[btnId] = true;
-      archive[currentYM].workflowOpened = op;
-      saveArchive(archive);
+      const wf = (archive[currentYM] && archive[currentYM].workflow) || {};
+      if (wf[btnId]) { _inProgressBtnId = null; return; } // 既にチェック済みなら付けない
+      _inProgressBtnId = btnId;
+    }
+    // 進行中マークを外す
+    function clearInProgress() {
+      if (!_inProgressBtnId) return;
+      _inProgressBtnId = null;
+      const wfPanel = document.getElementById('tool-workflow');
+      if (wfPanel && wfPanel.classList.contains('active')) {
+        renderWorkflow();
+      }
     }
 
     // 丸付き数字 ①〜⑳
@@ -2064,11 +2069,10 @@
       const root = document.getElementById('workflow');
       if (!root) return;
       const state = getWorkflowState();
-      const opened = getWorkflowOpened();
       const html = WORKFLOW_BLOCKS.map(block => {
         const btnsHtml = block.buttons.map((btn, idx) => {
           const done = !!state[btn.id];
-          const inProgress = !done && !!opened[btn.id];
+          const inProgress = !done && (_inProgressBtnId === btn.id);
           const classes = ['wf-btn'];
           if (done) classes.push('is-done');
           if (inProgress) classes.push('is-active');
@@ -2137,8 +2141,8 @@
       const archive = loadArchive();
       if (!archive[currentYM]) return;
       archive[currentYM].workflow = {};
-      archive[currentYM].workflowOpened = {};
       saveArchive(archive);
+      _inProgressBtnId = null;
       renderWorkflow();
     }
     const _clearChecksBtn = document.getElementById('btn-clear-checks');
@@ -2154,6 +2158,21 @@
         }
       });
     }
+
+    // セール作業手順パネルの背景クリックで進行中マークを外す
+    // (wf-btn の中をクリックした場合は除外、それ以外なら外す)
+    (function() {
+      const wfPanel = document.getElementById('tool-workflow');
+      if (!wfPanel) return;
+      wfPanel.addEventListener('click', (e) => {
+        if (!_inProgressBtnId) return;
+        // wf-btn内のクリックは別ハンドラが処理するのでスキップ
+        if (e.target.closest('.wf-btn')) return;
+        // 「全てのチェックを外す」ボタンも対象外
+        if (e.target.closest('#btn-clear-checks')) return;
+        clearInProgress();
+      });
+    })();
 
     // タブ切替
     document.querySelectorAll('.tabs .tab').forEach(tab => {
@@ -2504,7 +2523,7 @@
         const ym = currentYM || getCurrentYM();
         if (!ym) throw new Error('セール期間(開始日時)を先に入力してください');
         const archive = loadArchive();
-        if (!archive[ym]) archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {}, workflowOpened: {} };
+        if (!archive[ym]) archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
         archive[ym].setItemCsvB64 = ab2b64(buf);
         archive[ym].setItemCsvName = input.files[0].name;
         saveArchive(archive);
@@ -2617,7 +2636,7 @@
         const ym = currentYM || getCurrentYM();
         if (!ym) throw new Error('セール期間(開始日時)を先に入力してください');
         const archive = loadArchive();
-        if (!archive[ym]) archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {}, workflowOpened: {} };
+        if (!archive[ym]) archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
         archive[ym].setComponentCsvB64 = ab2b64(buf);
         archive[ym].setComponentCsvName = input.files[0].name;
         saveArchive(archive);
@@ -2735,7 +2754,7 @@
         const ym = currentYM || getCurrentYM();
         if (!ym) throw new Error('セール期間(開始日時)を先に入力してください');
         const archive = loadArchive();
-        if (!archive[ym]) archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {}, workflowOpened: {} };
+        if (!archive[ym]) archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
         archive[ym].nonSetCsvB64 = ab2b64(buf);
         archive[ym].nonSetCsvName = input.files[0].name;
         saveArchive(archive);
