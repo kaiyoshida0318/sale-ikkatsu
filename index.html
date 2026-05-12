@@ -592,7 +592,17 @@
       display: flex;
       flex-direction: column;
       gap: 14px;
-      margin: 24px 0;
+      margin: 8px 0 24px;
+    }
+
+    /* 商品セクション(ワークフローの下に折りたたみ表示) */
+    .products-section {
+      margin-top: 8px;
+    }
+    .section-divider {
+      border: 0;
+      border-top: 2px solid var(--border);
+      margin: 24px 0 20px;
     }
     .workflow-block {
       display: grid;
@@ -980,7 +990,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.19.2</span>
+      <span class="version">v0.20.0</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1004,33 +1014,38 @@
     <div id="app">
       <!-- メインタブ: セール参加商品 (デフォルト表示) -->
       <div id="tool-products" class="tool-panel active">
-        <div class="archive-selector-bar">
-          <label for="archive-select" class="archive-label">セール期間：</label>
-          <select id="archive-select" class="archive-select">
-            <option value="">（履歴なし）</option>
-          </select>
-          <span id="archive-period" class="archive-period"></span>
-        </div>
+        <!-- セール作業フロー (上) -->
+        <div class="workflow" id="workflow"></div>
 
-        <div class="tabs" role="tablist">
-          <button type="button" class="tab active" data-offrate="all" role="tab">全体</button>
-          <button type="button" class="tab tab-10" data-offrate="10" role="tab">10%OFF</button>
-          <button type="button" class="tab tab-20" data-offrate="20" role="tab">20%OFF</button>
-          <button type="button" class="tab tab-30" data-offrate="30" role="tab">30%OFF</button>
-          <button type="button" class="tab tab-50" data-offrate="50" role="tab">50%OFF</button>
-        </div>
+        <!-- セール参加商品セクション (タブクリックで表示・ロゴで非表示) -->
+        <div id="products-section" class="products-section" hidden>
+          <hr class="section-divider" />
 
-        <div class="product-table-wrap">
-          <div id="product-table-container">
-            <div class="empty-state">
-              まだデータがありません。<br>
-              右上の「+ セール価格決定用」からCSVをアップロードすると、ここに商品一覧が表示されます。
+          <div class="archive-selector-bar">
+            <label for="archive-select" class="archive-label">セール期間：</label>
+            <select id="archive-select" class="archive-select">
+              <option value="">（履歴なし）</option>
+            </select>
+            <span id="archive-period" class="archive-period"></span>
+          </div>
+
+          <div class="tabs" role="tablist">
+            <button type="button" class="tab active" data-offrate="all" role="tab">全体</button>
+            <button type="button" class="tab tab-10" data-offrate="10" role="tab">10%OFF</button>
+            <button type="button" class="tab tab-20" data-offrate="20" role="tab">20%OFF</button>
+            <button type="button" class="tab tab-30" data-offrate="30" role="tab">30%OFF</button>
+            <button type="button" class="tab tab-50" data-offrate="50" role="tab">50%OFF</button>
+          </div>
+
+          <div class="product-table-wrap">
+            <div id="product-table-container">
+              <div class="empty-state">
+                まだデータがありません。<br>
+                「参加商品追加」からCSVをアップロードすると、ここに商品一覧が表示されます。
+              </div>
             </div>
           </div>
         </div>
-
-        <!-- セール作業フロー -->
-        <div class="workflow" id="workflow"></div>
       </div>
 
       <!-- サブビュー: セール価格決定用 (ボタンクリックで切替) -->
@@ -1128,7 +1143,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.19.2 &nbsp;•&nbsp;
+    SALE一括 v0.20.0 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
     Powered by ExcelJS
   </footer>
@@ -1256,38 +1271,63 @@
       }
     }
 
-    // マウスの「戻る」/ブラウザバック: サブビューに居る時はトップへ戻す
+    // マウスの「戻る」/ブラウザバック: サブビューに居る時はトップへ戻す(商品セクションは閉じる)
     window.addEventListener('popstate', (e) => {
       const v = (e.state && e.state.view) || 'products';
       _suppressPushState = true;
       try {
+        if (v === 'products') setProductsSectionVisible(false);
         showView(v);
       } finally {
         _suppressPushState = false;
       }
     });
 
-    // メインタブのクリック
+    // メインタブのクリック → トップに戻る + 商品セクションを表示
     document.querySelectorAll('.main-tab[data-main-tab]').forEach(tab => {
       tab.addEventListener('click', () => {
-        showView(tab.getAttribute('data-main-tab'));
+        const viewId = tab.getAttribute('data-main-tab');
+        if (viewId === 'products') {
+          setProductsSectionVisible(true);
+        }
+        showView(viewId);
       });
     });
 
+    // 商品セクション (アーカイブセレクタ + OFF率タブ + テーブル) の表示/非表示
+    function setProductsSectionVisible(show) {
+      const sec = document.getElementById('products-section');
+      if (!sec) return;
+      if (show) {
+        sec.hidden = false;
+        // 表示時に最新の状態で再描画
+        renderProductTable();
+      } else {
+        sec.hidden = true;
+      }
+    }
+
     // 「+セール価格決定用」ボタン削除済み(ワークフローの「セール価格決定表作成」から開く)
 
-    // 戻るボタン → メインタブ(products)へ
+    // 戻るボタン → トップへ + 商品セクションは隠す (タブクリック以外は閉じる方針)
     document.querySelectorAll('[data-back]').forEach(btn => {
-      btn.addEventListener('click', () => showView('products'));
+      btn.addEventListener('click', () => {
+        setProductsSectionVisible(false);
+        showView('products');
+      });
     });
 
-    // ロゴクリック → トップ(products)へ
+    // ロゴクリック → トップへ + 商品セクションを隠す
     const logoHome = document.getElementById('logo-home');
     if (logoHome) {
-      logoHome.addEventListener('click', () => showView('products'));
+      logoHome.addEventListener('click', () => {
+        setProductsSectionVisible(false);
+        showView('products');
+      });
       logoHome.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
+          setProductsSectionVisible(false);
           showView('products');
         }
       });
