@@ -595,18 +595,9 @@
       display: flex;
       flex-direction: column;
       gap: 14px;
-      margin: 8px 0 24px;
+      margin: 16px 0 24px;
     }
 
-    /* 商品セクション(ワークフローの下に折りたたみ表示) */
-    .products-section {
-      margin-top: 8px;
-    }
-    .section-divider {
-      border: 0;
-      border-top: 2px solid var(--border);
-      margin: 24px 0 20px;
-    }
     .workflow-block {
       display: grid;
       grid-template-columns: 140px 1fr;
@@ -993,7 +984,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.20.1</span>
+      <span class="version">v0.21.0</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1011,44 +1002,48 @@
       </svg>
       セール参加商品
     </button>
+    <button type="button" class="main-tab" data-main-tab="workflow" role="tab">
+      <svg class="icon-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M9 11l3 3L22 4"/>
+        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+      </svg>
+      セール作業手順
+    </button>
   </nav>
 
   <main>
     <div id="app">
       <!-- メインタブ: セール参加商品 (デフォルト表示) -->
       <div id="tool-products" class="tool-panel active">
-        <!-- セール作業フロー (上) -->
-        <div class="workflow" id="workflow"></div>
+        <div class="archive-selector-bar">
+          <label for="archive-select" class="archive-label">セール期間：</label>
+          <select id="archive-select" class="archive-select">
+            <option value="">（履歴なし）</option>
+          </select>
+          <span id="archive-period" class="archive-period"></span>
+        </div>
 
-        <!-- セール参加商品セクション (タブクリックで表示・ロゴで非表示) -->
-        <div id="products-section" class="products-section" hidden>
-          <hr class="section-divider" />
+        <div class="tabs" role="tablist">
+          <button type="button" class="tab active" data-offrate="all" role="tab">全体</button>
+          <button type="button" class="tab tab-10" data-offrate="10" role="tab">10%OFF</button>
+          <button type="button" class="tab tab-20" data-offrate="20" role="tab">20%OFF</button>
+          <button type="button" class="tab tab-30" data-offrate="30" role="tab">30%OFF</button>
+          <button type="button" class="tab tab-50" data-offrate="50" role="tab">50%OFF</button>
+        </div>
 
-          <div class="archive-selector-bar">
-            <label for="archive-select" class="archive-label">セール期間：</label>
-            <select id="archive-select" class="archive-select">
-              <option value="">（履歴なし）</option>
-            </select>
-            <span id="archive-period" class="archive-period"></span>
-          </div>
-
-          <div class="tabs" role="tablist">
-            <button type="button" class="tab active" data-offrate="all" role="tab">全体</button>
-            <button type="button" class="tab tab-10" data-offrate="10" role="tab">10%OFF</button>
-            <button type="button" class="tab tab-20" data-offrate="20" role="tab">20%OFF</button>
-            <button type="button" class="tab tab-30" data-offrate="30" role="tab">30%OFF</button>
-            <button type="button" class="tab tab-50" data-offrate="50" role="tab">50%OFF</button>
-          </div>
-
-          <div class="product-table-wrap">
-            <div id="product-table-container">
-              <div class="empty-state">
-                まだデータがありません。<br>
-                「参加商品追加」からCSVをアップロードすると、ここに商品一覧が表示されます。
-              </div>
+        <div class="product-table-wrap">
+          <div id="product-table-container">
+            <div class="empty-state">
+              まだデータがありません。<br>
+              「セール作業手順」タブの「参加商品追加」からCSVをアップロードすると、ここに商品一覧が表示されます。
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- メインタブ: セール作業手順 -->
+      <div id="tool-workflow" class="tool-panel">
+        <div class="workflow" id="workflow"></div>
       </div>
 
       <!-- サブビュー: セール価格決定用 (ボタンクリックで切替) -->
@@ -1146,7 +1141,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.20.1 &nbsp;•&nbsp;
+    SALE一括 v0.21.0 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
     Powered by ExcelJS
   </footer>
@@ -1236,19 +1231,22 @@
     applyFs(FS_LEVELS[getFsIndex()]);
 
     // ---- UI制御 ----
-    // メインタブ(products) ⇄ サブビュー(sale-price) の切替
-    // ブラウザ/マウスの「戻る」でトップに戻れるよう、サブビュー遷移時は history.pushState する
+    // メインタブ(products, workflow) ⇄ サブビュー(sale-price, add-products) の切替
+    // ブラウザ/マウスの「戻る」でサブビューから戻れるよう、サブビュー遷移時は history.pushState する
     let _suppressPushState = false; // popstate由来の呼び出しでは積まない
+    const MAIN_TABS = ['products', 'workflow'];
+
     function showView(viewId) {
       document.querySelectorAll('.tool-panel').forEach(p => p.classList.remove('active'));
       const panel = document.getElementById('tool-' + viewId);
       if (panel) panel.classList.add('active');
       // メインタブ active 状態
       document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
+      const mt = document.querySelector(`.main-tab[data-main-tab="${viewId}"]`);
+      if (mt) mt.classList.add('active');
+
+      // products タブを開くときは最新の年月に切り替えて再描画
       if (viewId === 'products') {
-        const mt = document.querySelector('.main-tab[data-main-tab="products"]');
-        if (mt) mt.classList.add('active');
-        // 最新の年月に自動で切り替え＆表示更新
         const archive = loadArchive();
         const yms = sortYMs(Object.keys(archive));
         if (yms.length > 0) {
@@ -1259,78 +1257,55 @@
           updateArchivePeriodLabel();
         }
         renderProductTable();
-      if (typeof renderWorkflow === "function") renderWorkflow();
+      }
+      // workflow タブを開くときは手順表を再描画
+      if (viewId === 'workflow') {
+        if (typeof renderWorkflow === 'function') renderWorkflow();
       }
 
-      // 履歴管理: サブビューに入る時だけ pushState (二重積み防止のため現stateとも比較)
+      // 履歴管理: メインタブ以外(=サブビュー)に入る時だけ pushState
       if (!_suppressPushState) {
         const cur = history.state && history.state.view;
-        if (viewId !== 'products' && cur !== viewId) {
+        const isMain = MAIN_TABS.includes(viewId);
+        if (!isMain && cur !== viewId) {
           history.pushState({ view: viewId }, '', '#' + viewId);
-        } else if (viewId === 'products' && cur && cur !== 'products') {
-          // ボタン等から明示的にトップに戻った時はhash消す(履歴は積まない=replace)
+        } else if (isMain && cur && !MAIN_TABS.includes(cur)) {
+          // サブビューから明示的にメインタブに戻った時はhash消す
           history.replaceState(null, '', location.pathname + location.search);
         }
       }
     }
 
-    // マウスの「戻る」/ブラウザバック: サブビューに居る時はトップへ戻す(商品セクションは閉じる)
+    // マウスの「戻る」/ブラウザバック
     window.addEventListener('popstate', (e) => {
       const v = (e.state && e.state.view) || 'products';
       _suppressPushState = true;
       try {
-        if (v === 'products') setProductsSectionVisible(false);
         showView(v);
       } finally {
         _suppressPushState = false;
       }
     });
 
-    // メインタブのクリック → トップに戻る + 商品セクションを表示
+    // メインタブのクリック
     document.querySelectorAll('.main-tab[data-main-tab]').forEach(tab => {
       tab.addEventListener('click', () => {
-        const viewId = tab.getAttribute('data-main-tab');
-        if (viewId === 'products') {
-          setProductsSectionVisible(true);
-        }
-        showView(viewId);
+        showView(tab.getAttribute('data-main-tab'));
       });
     });
 
-    // 商品セクション (アーカイブセレクタ + OFF率タブ + テーブル) の表示/非表示
-    function setProductsSectionVisible(show) {
-      const sec = document.getElementById('products-section');
-      if (!sec) return;
-      if (show) {
-        sec.hidden = false;
-        // 表示時に最新の状態で再描画
-        renderProductTable();
-      } else {
-        sec.hidden = true;
-      }
-    }
-
-    // 「+セール価格決定用」ボタン削除済み(ワークフローの「セール価格決定表作成」から開く)
-
-    // 戻るボタン → トップへ + 商品セクションは隠す (タブクリック以外は閉じる方針)
+    // 戻るボタン → セール参加商品タブへ
     document.querySelectorAll('[data-back]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        setProductsSectionVisible(false);
-        showView('products');
-      });
+      btn.addEventListener('click', () => showView('products'));
     });
 
-    // ロゴクリック → トップへ + 商品セクションを隠す
+    // ロゴクリック → セール参加商品タブへ(最新月の表)
     const logoHome = document.getElementById('logo-home');
     if (logoHome) {
-      logoHome.addEventListener('click', () => {
-        setProductsSectionVisible(false);
-        showView('products');
-      });
+      logoHome.addEventListener('click', () => showView('products'));
       logoHome.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          setProductsSectionVisible(false);
           showView('products');
         }
       });
