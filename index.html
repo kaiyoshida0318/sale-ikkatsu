@@ -1005,6 +1005,77 @@
       background: #fafbfd;
       border-radius: 6px;
     }
+
+    /* セール価格決定表 */
+    .decide-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 8px 4px 12px;
+      flex-wrap: wrap;
+    }
+    .decide-stats { font-size: 12px; color: var(--muted); }
+    .decide-table-scroll {
+      overflow-x: auto;
+      max-height: 70vh;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+    .product-table.decide-table {
+      font-size: 12px;
+      border-collapse: collapse;
+      width: 100%;
+    }
+    .product-table.decide-table th,
+    .product-table.decide-table td {
+      padding: 6px 8px;
+      border: 1px solid #d8d8de;
+      white-space: nowrap;
+      text-align: center;
+    }
+    .product-table.decide-table th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      font-weight: 700;
+      color: #fff;
+    }
+    .product-table.decide-table td.col-name {
+      text-align: left;
+      max-width: 280px;
+      white-space: normal;
+      word-break: break-word;
+    }
+    .product-table.decide-table th.col-name { background: #4a4a55; }
+    .product-table.decide-table td.col-name { background: #fff; }
+    /* 赤系 (#ee4d3d) - セット商品コード/商品管理番号/SS用タイトル */
+    .product-table.decide-table th.col-red { background: #ee4d3d; }
+    .product-table.decide-table td.col-red { background: #fef0ee; }
+    /* 緑系 (#3dee56) - 通常価格/原価/送料 */
+    .product-table.decide-table th.col-green { background: #2eb942; color: #fff; }
+    .product-table.decide-table td.col-green { background: #effbef; font-weight: 600; }
+    /* グレー (#9e9da7) - バリエ/手数料 */
+    .product-table.decide-table th.col-gray { background: #7c7b86; }
+    .product-table.decide-table td.col-gray { background: #f3f3f5; color: #555; font-size: 11px; }
+    /* OFF率列 (SALE一括の％OFF色に合わせる) */
+    .product-table.decide-table th.col-off10 { background: #1c4b8a; }
+    .product-table.decide-table td.col-off10 { background: #e8f0fa; color: #1c4b8a; font-weight: 700; }
+    .product-table.decide-table th.col-off20 { background: #a14d0a; }
+    .product-table.decide-table td.col-off20 { background: #fcefe2; color: #a14d0a; font-weight: 700; }
+    .product-table.decide-table th.col-off30 { background: #165d28; }
+    .product-table.decide-table td.col-off30 { background: #e8f4ec; color: #165d28; font-weight: 700; }
+    .product-table.decide-table th.col-off50 { background: #a81f1f; }
+    .product-table.decide-table td.col-off50 { background: #faeaea; color: #a81f1f; font-weight: 700; }
+    /* 商品管理番号切り替えの空行 */
+    .product-table.decide-table tr.blank-row td {
+      background: #fafbfd !important;
+      height: 6px;
+      padding: 0;
+      border-left: 0;
+      border-right: 0;
+    }
   </style>
 </head>
 <body>
@@ -1061,7 +1132,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.26.2</span>
+      <span class="version">v0.27.0</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1368,7 +1439,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.26.2 &nbsp;•&nbsp;
+    SALE一括 v0.27.0 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
     Powered by ExcelJS
   </footer>
@@ -2817,83 +2888,341 @@
       }
     });
 
-    // ---- セール価格決定: 計算結果(rows)を表で表示 ----
-    // result.rows の中身は merger.js 出力に依存するため、よく使われそうな列を優先的に表示し、
-    // それ以外は折りたたみとする。配列ベース/オブジェクトベースのどちらにも対応。
-    function getCurrentPriceRows() {
-      if (!currentYM) return [];
-      const archive = loadArchive();
-      return (archive[currentYM] && archive[currentYM].priceRows) || [];
+    // ---- セール価格決定: ①〜④のCSVから表を構築・表示 ----
+    // 入力: アーカイブの rmsCsvB64 / setItemCsvB64 / setComponentCsvB64 / nonSetCsvB64
+    // 出力: 28列の表 (Excel仕様準拠、画面表示用)
+
+    // 数値変換 (空・非数値は null)
+    function toNum(v) {
+      if (v === null || v === undefined || v === '') return null;
+      const s = String(v).replace(/,/g,'').trim();
+      if (s === '') return null;
+      const n = Number(s);
+      return Number.isFinite(n) ? n : null;
     }
 
-    function rowToObj(row) {
-      // 既にオブジェクトならそのまま、配列ならExcel仕様の28列順にラベルを付与
-      if (row && typeof row === 'object' && !Array.isArray(row)) return row;
-      if (Array.isArray(row)) {
-        const labels = [
-          '商品名','セット商品コード','商品管理番号','SS用タイトル','通常価格','原価','送料',
-          'バリエ1','バリエ2','バリエ3','バリエ4',
-          '手数料L','手数料M','手数料N','手数料O',
-          '10%OFF価格','10%利益','10%利益率','10%詳細',
-          '20%OFF価格','20%利益','20%利益率','20%詳細',
-          '30%OFF価格','30%利益','30%利益率','30%詳細',
-          '50%OFF価格','50%利益','50%利益率','50%詳細',
-          'セット商品コード(末尾)'
-        ];
-        const obj = {};
-        for (let i = 0; i < row.length; i++) {
-          obj[labels[i] || `col${i+1}`] = row[i];
+    // NE-セット商品コード CSV → {セット商品コード: [{code, qty}, ...]}
+    function parseSetItemMap(text) {
+      const rows = parseCsvText(text);
+      if (rows.length < 2) return {};
+      const h = rows[0];
+      const iSet = h.findIndex(x => x && x.trim() === 'セット商品コード');
+      const iCodes = h.findIndex(x => x && x.trim() === '商品コード');
+      const iQty = h.findIndex(x => x && x.trim() === '数量');
+      if (iSet < 0 || iCodes < 0 || iQty < 0) throw new Error('NE-セット商品コードCSVに必要な列が見つかりません');
+      const map = {};
+      for (let i = 1; i < rows.length; i++) {
+        const r = rows[i];
+        const sc = (r[iSet]||'').trim();
+        if (!sc) continue;
+        const codes = String(r[iCodes]||'').split(/\r?\n/);
+        const qtys = String(r[iQty]||'').split(/\r?\n/);
+        const pairs = [];
+        for (let j = 0; j < codes.length; j++) {
+          const c = (codes[j]||'').trim();
+          if (!c) continue;
+          const q = toNum(qtys[j]) ?? 1;
+          pairs.push({ code: c, qty: q });
         }
-        return obj;
+        map[sc] = pairs;
       }
-      return {};
+      return map;
+    }
+
+    // NE-セット構成物コード or セット無しコード CSV → {商品コード: 原価}
+    function parseCostMap(text) {
+      const rows = parseCsvText(text);
+      if (rows.length < 2) return {};
+      const h = rows[0];
+      const iCode = h.findIndex(x => x && x.trim() === '商品コード');
+      const iCost = h.findIndex(x => x && x.trim() === '原価');
+      if (iCode < 0 || iCost < 0) throw new Error('CSVに「商品コード」または「原価」列が見つかりません');
+      const map = {};
+      for (let i = 1; i < rows.length; i++) {
+        const r = rows[i];
+        const c = (r[iCode]||'').trim();
+        if (!c) continue;
+        const v = toNum(r[iCost]);
+        if (v !== null) map[c] = v;
+      }
+      return map;
+    }
+
+    // SKU(=システム連携用SKU番号)から原価を計算
+    function calcCostForSku(sku, setItemMap, componentCost, nonSetCost) {
+      const missing = []; // 見つからなかった構成物
+      if (Object.prototype.hasOwnProperty.call(setItemMap, sku)) {
+        let total = 0;
+        for (const p of setItemMap[sku]) {
+          if (Object.prototype.hasOwnProperty.call(componentCost, p.code)) {
+            total += componentCost[p.code] * p.qty;
+          } else if (Object.prototype.hasOwnProperty.call(nonSetCost, p.code)) {
+            total += nonSetCost[p.code] * p.qty;
+          } else {
+            missing.push(p.code);
+          }
+        }
+        return { cost: total, missing };
+      }
+      if (Object.prototype.hasOwnProperty.call(nonSetCost, sku)) {
+        return { cost: nonSetCost[sku], missing: [] };
+      }
+      return { cost: null, missing: [sku] };
+    }
+
+    // ①〜④のCSVから表データを組み立て
+    // 戻り値: { rows: [...], stats: {...}, warnings: [...] }
+    // rows の各要素は object { name, setCode, mgr, ssTitle, price, cost, ship, v1, v2, v3, v4,
+    //                          feeL, feeM, feeN, feeO, ... , isBlankRow: bool }
+    function mergeAllFromArchive() {
+      const ym = currentYM || getCurrentYM();
+      if (!ym) throw new Error('セール期間(開始日時)を先に入力してください');
+      const archive = loadArchive();
+      const data = archive[ym];
+      if (!data) throw new Error('セール期間のデータがありません');
+      if (!data.rmsCsvB64) throw new Error('① のRMSデータCSVが未取り込みです');
+      if (!data.setItemCsvB64) throw new Error('② のNE-セット商品コードCSVが未取り込みです');
+      if (!data.setComponentCsvB64) throw new Error('③ のNE-セット構成物コードCSVが未取り込みです');
+      if (!data.nonSetCsvB64) throw new Error('④ のNE-セット無しコードCSVが未取り込みです');
+
+      const rmsText = decodeShiftJIS(b642u8(data.rmsCsvB64));
+      const setItemText = decodeShiftJIS(b642u8(data.setItemCsvB64));
+      const compText = decodeShiftJIS(b642u8(data.setComponentCsvB64));
+      const nonSetText = decodeShiftJIS(b642u8(data.nonSetCsvB64));
+
+      const setItemMap = parseSetItemMap(setItemText);
+      const componentCost = parseCostMap(compText);
+      const nonSetCost = parseCostMap(nonSetText);
+
+      // RMSデータをパース
+      const rmsRows = parseCsvText(rmsText);
+      if (rmsRows.length < 2) throw new Error('RMSデータCSVが空です');
+      const rh = rmsRows[0];
+      const iMgr = rh.findIndex(x => x && x.indexOf('商品管理番号') >= 0);
+      const iName = rh.findIndex(x => x && x.trim() === '商品名');
+      const iSku = rh.findIndex(x => x && x.indexOf('システム連携用SKU番号') >= 0);
+      const iPrice = rh.findIndex(x => x && x.indexOf('通常購入販売価格') >= 0);
+      const iV1 = rh.findIndex(x => x && x.trim() === 'バリエーション項目選択肢1');
+      const iV2 = rh.findIndex(x => x && x.trim() === 'バリエーション項目選択肢2');
+      const iV3 = rh.findIndex(x => x && x.trim() === 'バリエーション項目選択肢3');
+      const iV4 = rh.findIndex(x => x && x.trim() === 'バリエーション項目選択肢4');
+      if (iMgr < 0 || iName < 0 || iSku < 0 || iPrice < 0) {
+        throw new Error('RMSデータCSVに必要な列が見つかりません');
+      }
+
+      const rows = [];
+      const warnings = [];
+      let prevMgr = null;
+      let lastPriceInMgr = null; // 同一商品管理番号内の直前の通常価格
+      let countTotal = 0;
+      let countExcludedNoPrice = 0;
+      let countCostFound = 0;
+      let countCostNotFound = 0;
+
+      for (let i = 1; i < rmsRows.length; i++) {
+        const r = rmsRows[i];
+        if (!r) continue;
+        const mgr = (r[iMgr]||'').trim();
+        const name = (r[iName]||'').trim();
+        const sku = (r[iSku]||'').trim();
+        const priceRaw = (r[iPrice]||'').trim();
+        if (!sku) continue;
+        countTotal++;
+        if (!priceRaw) { countExcludedNoPrice++; continue; }
+        const price = toNum(priceRaw);
+        if (price === null) { countExcludedNoPrice++; continue; }
+
+        // 商品管理番号切替時に空行を挟む
+        if (prevMgr !== null && mgr !== prevMgr) {
+          rows.push({ isBlankRow: true });
+          lastPriceInMgr = null;
+        }
+        prevMgr = mgr;
+
+        // E列重複スキップ: 同一商品管理番号内で同じ価格が直前と同じなら空欄
+        let priceDisp = price;
+        if (lastPriceInMgr !== null && lastPriceInMgr === price) {
+          priceDisp = ''; // 2回目以降は空欄
+        } else {
+          lastPriceInMgr = price;
+        }
+
+        const v1 = iV1 >= 0 ? (r[iV1]||'') : '';
+        const v2 = iV2 >= 0 ? (r[iV2]||'') : '';
+        const v3 = iV3 >= 0 ? (r[iV3]||'') : '';
+        const v4 = iV4 >= 0 ? (r[iV4]||'') : '';
+
+        // 原価計算 (priceが空欄表示でも原価は出す。Excel仕様: 通常価格セル内容がある=Rowは原価入る)
+        // ただし計算対象の "通常価格" は priceDisp ではなく実価格を使う
+        const cc = calcCostForSku(sku, setItemMap, componentCost, nonSetCost);
+        const cost = cc.cost;
+        if (cost === null) {
+          countCostNotFound++;
+          warnings.push(`SKU "${sku}" の原価が見つかりません`);
+        } else {
+          countCostFound++;
+          if (cc.missing.length > 0) {
+            warnings.push(`SKU "${sku}" の構成物のうち見つからなかったコード: ${cc.missing.join(', ')}`);
+          }
+        }
+
+        // OFF価格と利益額・利益率の計算 (Excel数式と同等)
+        // ROUNDDOWN(price*rate, -1) → Math.floor(price*rate/10)*10
+        // 利益 = ROUNDDOWN(P - F - G - P*0.01*L - P*0.01*M - P*0.01*N - O, 0)
+        // 利益率 = ROUNDDOWN((Q/P)*100, 0) (P=0なら "")
+        const G = 0; // 送料(空)
+        const L = 6, M = 3.5, N = 1, O = 10;
+        function offCalc(rate) {
+          const offPriceRaw = price * rate;
+          const offPrice = Math.floor(offPriceRaw / 10) * 10;
+          if (cost === null) return { offPrice, profit: null, rate: null };
+          const profitRaw = offPrice - cost - G - offPrice*0.01*L - offPrice*0.01*M - offPrice*0.01*N - O;
+          const profit = Math.floor(profitRaw);
+          const r = offPrice > 0 ? Math.floor((profit/offPrice)*100) : null;
+          return { offPrice, profit, rate: r };
+        }
+        const off10 = offCalc(0.9);
+        const off20 = offCalc(0.8);
+        const off30 = offCalc(0.7);
+        const off50 = offCalc(0.5);
+
+        rows.push({
+          isBlankRow: false,
+          name, setCode: sku, mgr, ssTitle: '',
+          price: priceDisp, priceActual: price,
+          cost, ship: '', v1, v2, v3, v4,
+          feeL: L, feeM: M, feeN: N, feeO: O,
+          off10p: off10.offPrice, off10profit: off10.profit, off10rate: off10.rate,
+          off20p: off20.offPrice, off20profit: off20.profit, off20rate: off20.rate,
+          off30p: off30.offPrice, off30profit: off30.profit, off30rate: off30.rate,
+          off50p: off50.offPrice, off50profit: off50.profit, off50rate: off50.rate,
+          setCodeEnd: sku,
+        });
+      }
+
+      return {
+        rows,
+        stats: {
+          total: countTotal,
+          excluded_no_price: countExcludedNoPrice,
+          output_rows: rows.filter(r => !r.isBlankRow).length,
+          cost_found: countCostFound,
+          cost_not_found: countCostNotFound,
+        },
+        warnings,
+      };
     }
 
     function fmtCell(v) {
       if (v === null || v === undefined || v === '') return '';
-      if (typeof v === 'number') return v.toLocaleString('ja-JP');
+      if (typeof v === 'number') {
+        // 整数なら3桁区切り、小数なら小数のまま
+        if (Number.isInteger(v)) return v.toLocaleString('ja-JP');
+        return String(v);
+      }
       return String(v);
     }
+
+    // 列定義 (28列、Excel仕様準拠)
+    // class: th/td に付けるクラス(色分け用)
+    const DECIDE_COLS = [
+      { key: 'name',         label: '商品名',         cls: 'col-name', group: 'main' },
+      { key: 'setCode',      label: 'セット商品コード', cls: 'col-red',  group: 'main' },
+      { key: 'mgr',          label: '商品管理番号',   cls: 'col-red',  group: 'main' },
+      { key: 'ssTitle',      label: 'SS用タイトル',   cls: 'col-red',  group: 'main' },
+      { key: 'price',        label: '通常価格',       cls: 'col-green',group: 'main' },
+      { key: 'cost',         label: '原価',           cls: 'col-green',group: 'main' },
+      { key: 'ship',         label: '送料',           cls: 'col-green',group: 'main' },
+      { key: 'v1',           label: 'バリエ1',        cls: 'col-gray', group: 'fee' },
+      { key: 'v2',           label: 'バリエ2',        cls: 'col-gray', group: 'fee' },
+      { key: 'v3',           label: 'バリエ3',        cls: 'col-gray', group: 'fee' },
+      { key: 'v4',           label: 'バリエ4',        cls: 'col-gray', group: 'fee' },
+      { key: 'feeL',         label: '楽天手数料',     cls: 'col-gray', group: 'fee' },
+      { key: 'feeM',         label: '楽天ペイ',       cls: 'col-gray', group: 'fee' },
+      { key: 'feeN',         label: 'ポイント',       cls: 'col-gray', group: 'fee' },
+      { key: 'feeO',         label: 'NE手数料',       cls: 'col-gray', group: 'fee' },
+      { key: 'off10p',       label: '10%OFF価格',     cls: 'col-off10',group: 'main' },
+      { key: 'off10profit',  label: '10%利益',        cls: 'col-off10',group: 'main' },
+      { key: 'off10rate',    label: '10%率',          cls: 'col-off10',group: 'main' },
+      { key: 'off20p',       label: '20%OFF価格',     cls: 'col-off20',group: 'main' },
+      { key: 'off20profit',  label: '20%利益',        cls: 'col-off20',group: 'main' },
+      { key: 'off20rate',    label: '20%率',          cls: 'col-off20',group: 'main' },
+      { key: 'off30p',       label: '30%OFF価格',     cls: 'col-off30',group: 'main' },
+      { key: 'off30profit',  label: '30%利益',        cls: 'col-off30',group: 'main' },
+      { key: 'off30rate',    label: '30%率',          cls: 'col-off30',group: 'main' },
+      { key: 'off50p',       label: '50%OFF価格',     cls: 'col-off50',group: 'main' },
+      { key: 'off50profit',  label: '50%利益',        cls: 'col-off50',group: 'main' },
+      { key: 'off50rate',    label: '50%率',          cls: 'col-off50',group: 'main' },
+      { key: 'setCodeEnd',   label: 'セット商品コード', cls: 'col-red',  group: 'main' },
+    ];
+
+    let _decideShowFee = true; // バリエ・手数料グループの表示/非表示
 
     function renderDecidePriceTable() {
       const container = document.getElementById('decide-price-table-container');
       if (!container) return;
-      const rows = getCurrentPriceRows();
       const status = document.getElementById('decide-price-status');
-      if (status) {
-        status.className = 'status';
-        status.innerHTML = '';
-      }
-      if (!rows || rows.length === 0) {
+      if (status) { status.className = 'status'; status.innerHTML = ''; }
+
+      let result;
+      try {
+        result = mergeAllFromArchive();
+      } catch (err) {
         container.innerHTML = `<div class="empty-state">
-          まだ計算結果がありません。<br>
-          「セール作業手順」→「セール価格決定表作成」から3つのCSVをアップロードしてください。
+          ${escapeHtml(err.message)}<br>
+          <span style="font-size:12px;color:var(--muted);">「セール作業手順」の ①〜④ をすべて取り込んでください。</span>
         </div>`;
         return;
       }
-      // 列を決める: 最初の行のキーを使う
-      const first = rowToObj(rows[0]);
-      const keys = Object.keys(first);
-      // 優先列(あるものだけ、順番固定)
-      const preferred = ['商品名','商品管理番号','セット商品コード','通常価格','原価','送料',
-                         '10%OFF価格','10%利益','10%利益率',
-                         '20%OFF価格','20%利益','20%利益率',
-                         '30%OFF価格','30%利益','30%利益率',
-                         '50%OFF価格','50%利益','50%利益率'];
-      const shown = preferred.filter(k => keys.includes(k));
-      const cols = shown.length > 0 ? shown : keys.slice(0, 12);
 
-      const head = `<tr>${cols.map(k => `<th>${escapeHtml(k)}</th>`).join('')}</tr>`;
+      const rows = result.rows;
+      if (!rows || rows.length === 0) {
+        container.innerHTML = `<div class="empty-state">対象データがありません。</div>`;
+        return;
+      }
+
+      const cols = DECIDE_COLS.filter(c => _decideShowFee || c.group !== 'fee');
+
+      const head = `<tr>${cols.map(c => `<th class="${c.cls}">${escapeHtml(c.label)}</th>`).join('')}</tr>`;
       const body = rows.map(r => {
-        const o = rowToObj(r);
-        return `<tr>${cols.map(k => `<td>${escapeHtml(fmtCell(o[k]))}</td>`).join('')}</tr>`;
+        if (r.isBlankRow) {
+          // 空行: 全列空セル
+          return `<tr class="blank-row">${cols.map(c => `<td class="${c.cls}">&nbsp;</td>`).join('')}</tr>`;
+        }
+        return `<tr>${cols.map(c => {
+          let v = r[c.key];
+          // 利益率は値があれば "%" 付き
+          if (c.key.endsWith('rate') && v !== null && v !== undefined && v !== '') {
+            return `<td class="${c.cls}">${escapeHtml(fmtCell(v))}%</td>`;
+          }
+          return `<td class="${c.cls}">${escapeHtml(fmtCell(v))}</td>`;
+        }).join('')}</tr>`;
       }).join('');
 
-      container.innerHTML = `<table class="product-table">
-        <thead>${head}</thead>
-        <tbody>${body}</tbody>
-      </table>
-      <div class="table-hint">${rows.length}件 / 表示列: ${cols.length} (元の列: ${keys.length})</div>`;
+      const toggleLabel = _decideShowFee ? 'バリエ・手数料列を隠す' : 'バリエ・手数料列を表示';
+      const warnHtml = (result.warnings && result.warnings.length > 0)
+        ? `<div class="warnings" style="margin-top:8px;"><strong>⚠️ 警告 (${result.warnings.length}件)</strong><ul>${result.warnings.slice(0,20).map(w => `<li>${escapeHtml(w)}</li>`).join('')}</ul></div>`
+        : '';
+
+      container.innerHTML = `
+        <div class="decide-toolbar">
+          <button type="button" id="btn-toggle-fee" class="secondary">${toggleLabel}</button>
+          <span class="decide-stats">${result.stats.output_rows}件 (除外: ${result.stats.excluded_no_price} / 原価未取得: ${result.stats.cost_not_found})</span>
+        </div>
+        <div class="decide-table-scroll">
+          <table class="product-table decide-table">
+            <thead>${head}</thead>
+            <tbody>${body}</tbody>
+          </table>
+        </div>
+        ${warnHtml}
+      `;
+
+      const tg = document.getElementById('btn-toggle-fee');
+      if (tg) tg.addEventListener('click', () => {
+        _decideShowFee = !_decideShowFee;
+        renderDecidePriceTable();
+      });
     }
 
     // ---- 起動時: アーカイブセレクタ初期化 ----
