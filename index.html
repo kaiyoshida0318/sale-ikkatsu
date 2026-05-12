@@ -1049,7 +1049,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.25.0</span>
+      <span class="version">v0.26.0</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1303,11 +1303,60 @@
           </form>
         </div>
       </div>
+
+      <!-- サブビュー: ④ 原価特定-NE-セット無しコード -->
+      <div id="tool-cost-non-set" class="tool-panel">
+        <div class="tool-panel-header">
+          <button type="button" class="back-btn" data-back>← 戻る</button>
+          <h2>④ 原価特定-NE-セット無しコード</h2>
+        </div>
+
+        <div class="card">
+          <h2>1. 検索用ファイルのダウンロード</h2>
+          <div class="howto-list" style="padding-left: 0;">
+            ① で取り込んだ <b>RMSデータCSV</b> から、「<b>バリエーション項目キー2</b>」以降が空欄の行 (=セット無しの単品候補) の SKU を抽出した検索用CSVをダウンロードします。<br>
+            <span style="color: var(--muted); font-size: 12px;">※ヘッダー「商品コード」付き・重複は1件にまとめ</span>
+          </div>
+          <div class="actions" style="margin-top: 12px;">
+            <button type="button" id="btn-dl-nonset-list" class="secondary">検索用CSVをダウンロード</button>
+          </div>
+          <div id="dl-nonset-list-status" class="status"></div>
+        </div>
+
+        <div class="card">
+          <h2>2. ファイルの作成手順</h2>
+          <ol class="howto-list">
+            <li>上の「検索用CSVをダウンロード」で取得したファイルの<b>商品コード (システム連携用SKU番号)</b>をコピー</li>
+            <li>ネクストエンジンの「<b>商品検索</b>」を開く</li>
+            <li>「複数コード」欄に貼り付け → 検索</li>
+            <li>検索結果の一覧を<b>ダウンロード</b>(CSV)</li>
+          </ol>
+        </div>
+
+        <div class="card">
+          <h2>3. CSVをアップロード</h2>
+          <form id="cost-non-set-form">
+            <div class="grid">
+              <div class="file-input" data-target="cost-non-set" style="grid-column: 1 / -1;">
+                <label>NE-セット無しコード CSV</label>
+                <div class="desc">ネクストエンジン「商品検索」のダウンロード結果</div>
+                <input type="file" name="cost_non_set" accept=".csv" required />
+                <div class="filename"></div>
+              </div>
+            </div>
+
+            <div class="actions">
+              <button type="submit" id="btn-cost-non-set-upload">取り込む</button>
+            </div>
+            <div id="cost-non-set-status" class="status"></div>
+          </form>
+        </div>
+      </div>
     </div>
   </main>
 
   <footer>
-    SALE一括 v0.25.0 &nbsp;•&nbsp;
+    SALE一括 v0.26.0 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
     Powered by ExcelJS
   </footer>
@@ -1933,7 +1982,7 @@
           { id: 'prep-add-products', label: '参加商品追加', action: 'open-add-products' },
           { id: 'prep-cost-set-item', label: '原価特定 NE-セット商品コード', action: 'open-cost-set-item' },
           { id: 'prep-cost-set-component', label: '原価特定 NE-セット構成物コード', action: 'open-cost-set-component' },
-          { id: 'prep-cost-non-set', label: '原価特定-NE-セット無しコード' },
+          { id: 'prep-cost-non-set', label: '原価特定-NE-セット無しコード', action: 'open-cost-non-set' },
           { id: 'prep-decide-price', label: 'セール価格決定', action: 'open-decide-price' },
           { id: 'prep-decide-title', label: 'セール用タイトル決定' },
           { id: 'prep-dl-rms-csv', label: 'RMSアップ素材CSVダウンロード' },
@@ -2075,6 +2124,8 @@
             showView('cost-set-item');
           } else if (action === 'open-cost-set-component') {
             showView('cost-set-component');
+          } else if (action === 'open-cost-non-set') {
+            showView('cost-non-set');
           }
         });
       });
@@ -2576,6 +2627,124 @@
         );
       } catch (err) {
         setCostSetComponentStatus('❌ エラー: ' + err.message, 'error');
+        console.error(err);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    // ---- ④ 原価特定-NE-セット無しコード: 検索用CSV作成 + アップロード ----
+    function setCostNonSetStatus(msg, kind) {
+      const el = document.getElementById('cost-non-set-status');
+      if (!el) return;
+      el.className = 'status' + (kind ? ' ' + kind : '');
+      el.innerHTML = msg;
+    }
+    function setDlNonSetListStatus(msg, kind) {
+      const el = document.getElementById('dl-nonset-list-status');
+      if (!el) return;
+      el.className = 'status' + (kind ? ' ' + kind : '');
+      el.innerHTML = msg;
+    }
+
+    // ①で取り込んだ RMSデータCSV から、バリエーション項目キー2以降が空欄の行のSKUを抽出してユニーク化
+    function extractNonSetSkusFromRms(csvText) {
+      const rows = parseCsvText(csvText);
+      if (rows.length < 2) return [];
+      const header = rows[0];
+      const idxSku = header.findIndex(h => h && h.indexOf('システム連携用SKU番号') >= 0);
+      const idxK2 = header.findIndex(h => h && h.trim() === 'バリエーション項目キー2');
+      const idxK3 = header.findIndex(h => h && h.trim() === 'バリエーション項目キー3');
+      const idxK4 = header.findIndex(h => h && h.trim() === 'バリエーション項目キー4');
+      const idxK5 = header.findIndex(h => h && h.trim() === 'バリエーション項目キー5');
+      const idxK6 = header.findIndex(h => h && h.trim() === 'バリエーション項目キー6');
+      if (idxSku < 0) throw new Error('CSVに「システム連携用SKU番号」列が見つかりません');
+      if (idxK2 < 0) throw new Error('CSVに「バリエーション項目キー2」列が見つかりません');
+      // K3-K6は無いCSVもありえるので緩く扱う(無ければ空とみなす)
+      const seen = new Set();
+      const unique = [];
+      for (let i = 1; i < rows.length; i++) {
+        const r = rows[i];
+        if (!r) continue;
+        const sku = (r[idxSku] || '').trim();
+        if (!sku) continue;
+        const k2 = idxK2 >= 0 ? (r[idxK2] || '').trim() : '';
+        const k3 = idxK3 >= 0 ? (r[idxK3] || '').trim() : '';
+        const k4 = idxK4 >= 0 ? (r[idxK4] || '').trim() : '';
+        const k5 = idxK5 >= 0 ? (r[idxK5] || '').trim() : '';
+        const k6 = idxK6 >= 0 ? (r[idxK6] || '').trim() : '';
+        // バリエーション項目キー2以降が全て空欄なら抽出
+        if (k2 === '' && k3 === '' && k4 === '' && k5 === '' && k6 === '') {
+          if (!seen.has(sku)) { seen.add(sku); unique.push(sku); }
+        }
+      }
+      return unique;
+    }
+
+    // 検索用CSVをダウンロード (RMSデータからセット無し単品SKUを抽出)
+    document.getElementById('btn-dl-nonset-list').addEventListener('click', () => {
+      try {
+        setDlNonSetListStatus('', '');
+        const ym = currentYM || getCurrentYM();
+        if (!ym) throw new Error('セール期間(開始日時)が未入力です');
+        const archive = loadArchive();
+        const data = archive[ym];
+        if (!data || !data.rmsCsvB64) {
+          throw new Error('① のRMSデータCSVが未取り込みです');
+        }
+        const buf = b642u8(data.rmsCsvB64);
+        const text = decodeShiftJIS(buf);
+        const codes = extractNonSetSkusFromRms(text);
+        if (codes.length === 0) {
+          throw new Error('セット無しの単品候補(バリエ2以降が空欄)が見つかりませんでした');
+        }
+        // CSV組み立て (ヘッダー「商品コード」+ 縦並び、UTF-8 BOM付きでExcel互換)
+        const csvLines = ['商品コード'].concat(codes);
+        const csvText = csvLines.join('\r\n') + '\r\n';
+        const BOM = '\ufeff';
+        const blob = new Blob([BOM + csvText], { type: 'text/csv;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const now = new Date();
+        const ts = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+        a.download = `検索用_セット無しコード一覧_${ts}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        setDlNonSetListStatus(`✅ ${codes.length}件のSKUをダウンロードしました`, 'success');
+      } catch (err) {
+        setDlNonSetListStatus('❌ エラー: ' + err.message, 'error');
+        console.error(err);
+      }
+    });
+
+    // ④ アップロード
+    document.getElementById('cost-non-set-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btn-cost-non-set-upload');
+      btn.disabled = true;
+      try {
+        const input = e.target.elements['cost_non_set'];
+        if (!input.files || !input.files[0]) {
+          throw new Error('CSVファイルを選択してください');
+        }
+        setCostNonSetStatus('<span class="spinner"></span>CSVを読み込み中...', '');
+        const buf = await input.files[0].arrayBuffer();
+        const ym = currentYM || getCurrentYM();
+        if (!ym) throw new Error('セール期間(開始日時)を先に入力してください');
+        const archive = loadArchive();
+        if (!archive[ym]) archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {}, workflowOpened: {} };
+        archive[ym].nonSetCsvB64 = ab2b64(buf);
+        archive[ym].nonSetCsvName = input.files[0].name;
+        saveArchive(archive);
+        setCostNonSetStatus(
+          `✅ 「${input.files[0].name}」を取り込みました (${(buf.byteLength/1024).toFixed(1)} KB)。`,
+          'success'
+        );
+      } catch (err) {
+        setCostNonSetStatus('❌ エラー: ' + err.message, 'error');
         console.error(err);
       } finally {
         btn.disabled = false;
