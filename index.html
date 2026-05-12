@@ -394,6 +394,20 @@
       font-size: 13px;
       color: #2a5a94;
     }
+    .howto-list {
+      margin: 4px 0 4px;
+      padding-left: 22px;
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--text);
+    }
+    .howto-list li {
+      margin-bottom: 4px;
+    }
+    .howto-list li b {
+      font-weight: 700;
+      color: var(--brand);
+    }
     .progress {
       margin-top: 12px;
       padding: 14px 18px;
@@ -1035,7 +1049,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.23.0</span>
+      <span class="version">v0.24.0</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1203,11 +1217,48 @@
           </div>
         </div>
       </div>
+
+      <!-- サブビュー: ② 原価特定 NE-セット商品コード -->
+      <div id="tool-cost-set-item" class="tool-panel">
+        <div class="tool-panel-header">
+          <button type="button" class="back-btn" data-back>← 戻る</button>
+          <h2>② 原価特定 NE-セット商品コード</h2>
+        </div>
+
+        <div class="card">
+          <h2>ファイルの作成手順</h2>
+          <ol class="howto-list">
+            <li>① でアップした<b>RMSデータCSV</b>の「<b>システム連携用SKU番号</b>」列をコピー</li>
+            <li>ネクストエンジンの「セット商品検索」を開く</li>
+            <li>「複数コード」欄にコピーしたSKU番号を貼り付け → 検索</li>
+            <li>検索結果の一覧を<b>ダウンロード</b>(CSV)</li>
+          </ol>
+        </div>
+
+        <div class="card">
+          <h2>CSVをアップロード</h2>
+          <form id="cost-set-item-form">
+            <div class="grid">
+              <div class="file-input" data-target="cost-set-item" style="grid-column: 1 / -1;">
+                <label>NE-セット商品コード CSV</label>
+                <div class="desc">ネクストエンジン「セット商品検索」のダウンロード結果</div>
+                <input type="file" name="cost_set_item" accept=".csv" required />
+                <div class="filename"></div>
+              </div>
+            </div>
+
+            <div class="actions">
+              <button type="submit" id="btn-cost-set-item-upload">取り込む</button>
+            </div>
+            <div id="cost-set-item-status" class="status"></div>
+          </form>
+        </div>
+      </div>
     </div>
   </main>
 
   <footer>
-    SALE一括 v0.23.0 &nbsp;•&nbsp;
+    SALE一括 v0.24.0 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
     Powered by ExcelJS
   </footer>
@@ -1831,7 +1882,7 @@
         className: 'block-prep',
         buttons: [
           { id: 'prep-add-products', label: '参加商品追加', action: 'open-add-products' },
-          { id: 'prep-cost-set-item', label: '原価特定 NE-セット商品コード' },
+          { id: 'prep-cost-set-item', label: '原価特定 NE-セット商品コード', action: 'open-cost-set-item' },
           { id: 'prep-cost-set-component', label: '原価特定 NE-セット構成物コード' },
           { id: 'prep-cost-non-set', label: '原価特定-NE-セット無しコード' },
           { id: 'prep-decide-price', label: 'セール価格決定', action: 'open-decide-price' },
@@ -1971,6 +2022,8 @@
             showView('add-products');
           } else if (action === 'open-decide-price') {
             showView('decide-price');
+          } else if (action === 'open-cost-set-item') {
+            showView('cost-set-item');
           }
         });
       });
@@ -2320,6 +2373,45 @@
         );
       } catch (err) {
         setAddProductsStatus('❌ エラー: ' + err.message, 'error');
+        console.error(err);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    // ---- ② 原価特定 NE-セット商品コード: CSV取り込み (バイト保存のみ) ----
+    function setCostSetItemStatus(msg, kind) {
+      const el = document.getElementById('cost-set-item-status');
+      if (!el) return;
+      el.className = 'status' + (kind ? ' ' + kind : '');
+      el.innerHTML = msg;
+    }
+
+    document.getElementById('cost-set-item-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btn-cost-set-item-upload');
+      btn.disabled = true;
+      try {
+        const input = e.target.elements['cost_set_item'];
+        if (!input.files || !input.files[0]) {
+          throw new Error('CSVファイルを選択してください');
+        }
+        setCostSetItemStatus('<span class="spinner"></span>CSVを読み込み中...', '');
+        const buf = await input.files[0].arrayBuffer();
+        // 年月別アーカイブに保存 (バイト列のみ・後の処理は今後実装)
+        const ym = currentYM || getCurrentYM();
+        if (!ym) throw new Error('セール期間(開始日時)を先に入力してください');
+        const archive = loadArchive();
+        if (!archive[ym]) archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {}, workflowOpened: {} };
+        archive[ym].setItemCsvB64 = ab2b64(buf);
+        archive[ym].setItemCsvName = input.files[0].name;
+        saveArchive(archive);
+        setCostSetItemStatus(
+          `✅ 「${input.files[0].name}」を取り込みました (${(buf.byteLength/1024).toFixed(1)} KB)。`,
+          'success'
+        );
+      } catch (err) {
+        setCostSetItemStatus('❌ エラー: ' + err.message, 'error');
         console.error(err);
       } finally {
         btn.disabled = false;
