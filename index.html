@@ -597,6 +597,15 @@
       gap: 14px;
       margin: 16px 0 24px;
     }
+    .workflow-toolbar {
+      display: flex;
+      justify-content: flex-end;
+      margin: 12px 0 0;
+    }
+    .workflow-toolbar button {
+      font-size: 13px;
+      padding: 8px 16px;
+    }
 
     .workflow-block {
       display: grid;
@@ -984,7 +993,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.21.0</span>
+      <span class="version">v0.22.0</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1043,6 +1052,9 @@
 
       <!-- メインタブ: セール作業手順 -->
       <div id="tool-workflow" class="tool-panel">
+        <div class="workflow-toolbar">
+          <button type="button" id="btn-clear-checks" class="secondary">全てのチェックを外す</button>
+        </div>
         <div class="workflow" id="workflow"></div>
       </div>
 
@@ -1055,8 +1067,9 @@
 
         <div class="card">
           <div class="hint">
-            以下4つのCSVをアップロードして「Excelを生成」を押してください。<br>
-            CSVはブラウザ内で処理されます（外部サーバーに送信されません）。
+            ネクストエンジンの3つのCSVをアップロードして「表を作成」を押してください。<br>
+            ・RMSデータは「参加商品追加」で取り込んだものを自動で使います<br>
+            ・CSVはブラウザ内で処理されます（外部サーバーに送信されません）
           </div>
         </div>
 
@@ -1064,26 +1077,20 @@
           <h2>CSVをアップロード</h2>
           <form id="upload-form">
             <div class="grid">
-              <div class="file-input" data-target="rms">
-                <label>① RMSデータ</label>
-                <div class="desc">RMSから一括DLした商品情報CSV</div>
-                <input type="file" name="rms" accept=".csv" required />
-                <div class="filename"></div>
-              </div>
               <div class="file-input" data-target="set_item">
-                <label>② NE-セット商品コード</label>
+                <label>① NE-セット商品コード</label>
                 <div class="desc">ネクストエンジンのセット商品検索結果</div>
                 <input type="file" name="set_item" accept=".csv" required />
                 <div class="filename"></div>
               </div>
               <div class="file-input" data-target="set_component">
-                <label>③ NE-セット構成物コード</label>
+                <label>② NE-セット構成物コード</label>
                 <div class="desc">セット構成商品の原価情報</div>
                 <input type="file" name="set_component" accept=".csv" required />
                 <div class="filename"></div>
               </div>
               <div class="file-input" data-target="non_set">
-                <label>④ NE-セット無しコード</label>
+                <label>③ NE-セット無しコード</label>
                 <div class="desc">単品商品の原価情報</div>
                 <input type="file" name="non_set" accept=".csv" required />
                 <div class="filename"></div>
@@ -1091,8 +1098,7 @@
             </div>
 
             <div class="actions">
-              <button type="button" id="btn-preview" class="secondary">プレビュー（統計のみ）</button>
-              <button type="submit" id="btn-generate">Excelを生成してダウンロード</button>
+              <button type="submit" id="btn-generate">表を作成</button>
             </div>
             <div id="status" class="status"></div>
           </form>
@@ -1137,11 +1143,29 @@
           </form>
         </div>
       </div>
+
+      <!-- サブビュー: セール価格決定 (作成済みの計算結果を表で表示) -->
+      <div id="tool-decide-price" class="tool-panel">
+        <div class="tool-panel-header">
+          <button type="button" class="back-btn" data-back>← 戻る</button>
+          <h2>セール価格決定</h2>
+        </div>
+
+        <div id="decide-price-status" class="status"></div>
+        <div id="decide-price-table-wrap" class="product-table-wrap" style="margin-top: 12px;">
+          <div id="decide-price-table-container">
+            <div class="empty-state">
+              まだ計算結果がありません。<br>
+              「セール価格決定表作成」から3つのCSVをアップロードしてください。
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </main>
 
   <footer>
-    SALE一括 v0.21.0 &nbsp;•&nbsp;
+    SALE一括 v0.22.0 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
     Powered by ExcelJS
   </footer>
@@ -1261,6 +1285,10 @@
       // workflow タブを開くときは手順表を再描画
       if (viewId === 'workflow') {
         if (typeof renderWorkflow === 'function') renderWorkflow();
+      }
+      // decide-price サブビューを開くときは表を再描画
+      if (viewId === 'decide-price') {
+        if (typeof renderDecidePriceTable === 'function') renderDecidePriceTable();
       }
 
       // 履歴管理: メインタブ以外(=サブビュー)に入る時だけ pushState
@@ -1755,7 +1783,7 @@
         buttons: [
           { id: 'prep-add-products', label: '参加商品追加', action: 'open-add-products' },
           { id: 'prep-make-price-table', label: 'セール価格決定表作成', action: 'open-sale-price' },
-          { id: 'prep-decide-price', label: 'セール価格決定' },
+          { id: 'prep-decide-price', label: 'セール価格決定', action: 'open-decide-price' },
           { id: 'prep-decide-title', label: 'セール用タイトル決定' },
           { id: 'prep-dl-rms-csv', label: 'RMSアップ素材CSVダウンロード' },
           { id: 'prep-upload-rms', label: 'RMSにアップロード' },
@@ -1844,8 +1872,33 @@
             showView('sale-price');
           } else if (action === 'open-add-products') {
             showView('add-products');
+          } else if (action === 'open-decide-price') {
+            showView('decide-price');
           }
         });
+      });
+    }
+
+    // 全てのチェックを外す: 現在の年月のチェックのみクリア
+    function clearAllWorkflowChecks() {
+      if (!currentYM) return;
+      const archive = loadArchive();
+      if (!archive[currentYM]) return;
+      archive[currentYM].workflow = {};
+      saveArchive(archive);
+      renderWorkflow();
+    }
+    const _clearChecksBtn = document.getElementById('btn-clear-checks');
+    if (_clearChecksBtn) {
+      _clearChecksBtn.addEventListener('click', () => {
+        if (!currentYM) {
+          alert('チェック対象の年月がありません。');
+          return;
+        }
+        const label = currentYM.replace('/', '年') + '月';
+        if (confirm(`${label} の全てのチェックを外しますか？`)) {
+          clearAllWorkflowChecks();
+        }
       });
     }
 
@@ -1883,8 +1936,8 @@
     }
 
     function setButtonsDisabled(d) {
-      document.getElementById('btn-preview').disabled = d;
-      document.getElementById('btn-generate').disabled = d;
+      const b = document.getElementById('btn-generate');
+      if (b) b.disabled = d;
     }
 
     function renderStats(stats) {
@@ -1925,10 +1978,18 @@
       return new Uint8Array(buf);
     }
 
+    // RMSバイトはアーカイブから取り出して再利用、NE系3つはフォームから
     async function collectAllBytes() {
       const form = document.getElementById('upload-form');
+      const ym = currentYM || getCurrentYM();
+      if (!ym) throw new Error('セール期間（開始日時）を先に入力してください');
+      const archive = loadArchive();
+      const data = archive[ym];
+      if (!data || !data.rmsCsvB64) {
+        throw new Error('RMSデータが未登録です。先に「参加商品追加」でRMSデータCSVを取り込んでください');
+      }
       return {
-        rms: await getFileBytes(form.elements['rms']),
+        rms: b642u8(data.rmsCsvB64),
         set_item: await getFileBytes(form.elements['set_item']),
         set_component: await getFileBytes(form.elements['set_component']),
         non_set: await getFileBytes(form.elements['non_set']),
@@ -1941,36 +2002,12 @@
       await appReadyPromise;
     }
 
-    document.getElementById('btn-preview').addEventListener('click', async () => {
-      setButtonsDisabled(true);
-      try {
-        await ensureAppReady();
-        setStatus('<span class="spinner"></span>プレビュー取得中...', '');
-        const b = await collectAllBytes();
-        const result = SaleIkkatsuMerger.mergeAll({
-          rmsBytes: b.rms,
-          setItemBytes: b.set_item,
-          setComponentBytes: b.set_component,
-          nonSetBytes: b.non_set,
-        });
-        renderStats(result.stats);
-        renderWarnings(result.warnings);
-        // 商品データはセール参加商品タブには反映しない(別目的のため温存)
-        setStatus('✅ プレビュー取得完了', 'success');
-      } catch (e) {
-        setStatus('❌ エラー: ' + e.message, 'error');
-        console.error(e);
-      } finally {
-        setButtonsDisabled(false);
-      }
-    });
-
     document.getElementById('upload-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       setButtonsDisabled(true);
       try {
         await ensureAppReady();
-        setStatus('<span class="spinner"></span>Excelを生成中...', '');
+        setStatus('<span class="spinner"></span>表を作成中...', '');
         const b = await collectAllBytes();
         const result = SaleIkkatsuMerger.mergeAll({
           rmsBytes: b.rms,
@@ -1978,26 +2015,25 @@
           setComponentBytes: b.set_component,
           nonSetBytes: b.non_set,
         });
-        const xlsxBuf = await SaleIkkatsuBuilder.buildXlsx(result.rows);
+
+        // 計算結果(rows)をアーカイブに保存
+        const ym = currentYM || getCurrentYM();
+        if (ym) {
+          const archive = loadArchive();
+          if (!archive[ym]) archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
+          archive[ym].priceRows = result.rows;
+          archive[ym].priceStats = result.stats;
+          saveArchive(archive);
+        }
 
         renderStats(result.stats);
         renderWarnings(result.warnings);
-        // 商品データはセール参加商品タブには反映しない(別目的のため温存)
-
-        const blob = new Blob([xlsxBuf], {
-          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        const now = new Date();
-        const ts = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
-        a.download = `利益計算表_${ts}.xlsx`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        setStatus('✅ Excelをダウンロードしました', 'success');
+        setStatus(
+          `✅ 表を作成しました（${result.rows.length}件）。「セール価格決定」で確認できます。`,
+          'success'
+        );
+        // 決定タブの再描画(裏で更新)
+        if (typeof renderDecidePriceTable === 'function') renderDecidePriceTable();
       } catch (e) {
         setStatus('❌ エラー: ' + e.message, 'error');
         console.error(e);
@@ -2131,6 +2167,24 @@
       el.innerHTML = msg;
     }
 
+    // ArrayBuffer → Base64 (localStorage保存用)
+    function ab2b64(buf) {
+      const bytes = new Uint8Array(buf);
+      const chunk = 0x8000;
+      let s = '';
+      for (let i = 0; i < bytes.length; i += chunk) {
+        s += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+      }
+      return btoa(s);
+    }
+    // Base64 → Uint8Array
+    function b642u8(b64) {
+      const s = atob(b64);
+      const u8 = new Uint8Array(s.length);
+      for (let i = 0; i < s.length; i++) u8[i] = s.charCodeAt(i);
+      return u8;
+    }
+
     document.getElementById('add-products-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const btn = document.getElementById('btn-add-products-upload');
@@ -2148,6 +2202,18 @@
           throw new Error('CSVから商品データを抽出できませんでした');
         }
         saveProductRowsToArchive(productRows);
+        // RMSバイト列もアーカイブに保存(セール価格決定表作成で再利用)
+        try {
+          const ym = currentYM || getCurrentYM();
+          if (ym) {
+            const archive = loadArchive();
+            if (!archive[ym]) archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
+            archive[ym].rmsCsvB64 = ab2b64(buf);
+            saveArchive(archive);
+          }
+        } catch (err) {
+          console.warn('RMSバイト保存失敗:', err);
+        }
         // 商品一覧タブの再描画(裏で更新)
         renderProductTable();
         setAddProductsStatus(
@@ -2161,6 +2227,85 @@
         btn.disabled = false;
       }
     });
+
+    // ---- セール価格決定: 計算結果(rows)を表で表示 ----
+    // result.rows の中身は merger.js 出力に依存するため、よく使われそうな列を優先的に表示し、
+    // それ以外は折りたたみとする。配列ベース/オブジェクトベースのどちらにも対応。
+    function getCurrentPriceRows() {
+      if (!currentYM) return [];
+      const archive = loadArchive();
+      return (archive[currentYM] && archive[currentYM].priceRows) || [];
+    }
+
+    function rowToObj(row) {
+      // 既にオブジェクトならそのまま、配列ならExcel仕様の28列順にラベルを付与
+      if (row && typeof row === 'object' && !Array.isArray(row)) return row;
+      if (Array.isArray(row)) {
+        const labels = [
+          '商品名','セット商品コード','商品管理番号','SS用タイトル','通常価格','原価','送料',
+          'バリエ1','バリエ2','バリエ3','バリエ4',
+          '手数料L','手数料M','手数料N','手数料O',
+          '10%OFF価格','10%利益','10%利益率','10%詳細',
+          '20%OFF価格','20%利益','20%利益率','20%詳細',
+          '30%OFF価格','30%利益','30%利益率','30%詳細',
+          '50%OFF価格','50%利益','50%利益率','50%詳細',
+          'セット商品コード(末尾)'
+        ];
+        const obj = {};
+        for (let i = 0; i < row.length; i++) {
+          obj[labels[i] || `col${i+1}`] = row[i];
+        }
+        return obj;
+      }
+      return {};
+    }
+
+    function fmtCell(v) {
+      if (v === null || v === undefined || v === '') return '';
+      if (typeof v === 'number') return v.toLocaleString('ja-JP');
+      return String(v);
+    }
+
+    function renderDecidePriceTable() {
+      const container = document.getElementById('decide-price-table-container');
+      if (!container) return;
+      const rows = getCurrentPriceRows();
+      const status = document.getElementById('decide-price-status');
+      if (status) {
+        status.className = 'status';
+        status.innerHTML = '';
+      }
+      if (!rows || rows.length === 0) {
+        container.innerHTML = `<div class="empty-state">
+          まだ計算結果がありません。<br>
+          「セール作業手順」→「セール価格決定表作成」から3つのCSVをアップロードしてください。
+        </div>`;
+        return;
+      }
+      // 列を決める: 最初の行のキーを使う
+      const first = rowToObj(rows[0]);
+      const keys = Object.keys(first);
+      // 優先列(あるものだけ、順番固定)
+      const preferred = ['商品名','商品管理番号','セット商品コード','通常価格','原価','送料',
+                         '10%OFF価格','10%利益','10%利益率',
+                         '20%OFF価格','20%利益','20%利益率',
+                         '30%OFF価格','30%利益','30%利益率',
+                         '50%OFF価格','50%利益','50%利益率'];
+      const shown = preferred.filter(k => keys.includes(k));
+      const cols = shown.length > 0 ? shown : keys.slice(0, 12);
+
+      const head = `<tr>${cols.map(k => `<th>${escapeHtml(k)}</th>`).join('')}</tr>`;
+      const body = rows.map(r => {
+        const o = rowToObj(r);
+        return `<tr>${cols.map(k => `<td>${escapeHtml(fmtCell(o[k]))}</td>`).join('')}</tr>`;
+      }).join('');
+
+      container.innerHTML = `<table class="product-table">
+        <thead>${head}</thead>
+        <tbody>${body}</tbody>
+      </table>
+      <div class="table-hint">${rows.length}件 / 表示列: ${cols.length} (元の列: ${keys.length})</div>`;
+    }
 
     // ---- 起動時: アーカイブセレクタ初期化 ----
     // URLにサブビューのhashが残っていても、初回ロードはトップから始める
