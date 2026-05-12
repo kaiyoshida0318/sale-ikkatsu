@@ -1132,7 +1132,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.27.0</span>
+      <span class="version">v0.27.1</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1439,7 +1439,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.27.0 &nbsp;•&nbsp;
+    SALE一括 v0.27.1 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
     Powered by ExcelJS
   </footer>
@@ -1533,6 +1533,8 @@
     // ブラウザ/マウスの「戻る」でサブビューから戻れるよう、サブビュー遷移時は history.pushState する
     let _suppressPushState = false; // popstate由来の呼び出しでは積まない
     const MAIN_TABS = ['products', 'workflow'];
+    const VALID_VIEWS = ['products','workflow','sale-price','add-products','decide-price','cost-set-item','cost-set-component','cost-non-set'];
+    const LAST_VIEW_KEY = 'sale-ikkatsu-last-view';
     // 直近のメインタブ(サブビューから戻る時の戻り先)
     let _lastMainTab = 'products';
 
@@ -1575,6 +1577,9 @@
       if (MAIN_TABS.includes(viewId)) {
         _lastMainTab = viewId;
       }
+
+      // F5(リロード)後に同じビューを開けるよう、現在のビューをlocalStorageに保存
+      try { localStorage.setItem(LAST_VIEW_KEY, viewId); } catch (e) {}
 
       // 履歴管理: メインタブ以外(=サブビュー)に入る時だけ pushState
       if (!_suppressPushState) {
@@ -3226,13 +3231,33 @@
     }
 
     // ---- 起動時: アーカイブセレクタ初期化 ----
-    // URLにサブビューのhashが残っていても、初回ロードはトップから始める
-    if (location.hash) {
-      history.replaceState(null, '', location.pathname + location.search);
-    }
     refreshArchiveSelect();
     renderProductTable();
-      if (typeof renderWorkflow === "function") renderWorkflow();
+    if (typeof renderWorkflow === "function") renderWorkflow();
+
+    // F5(リロード)前のビューを復元 (デフォルト: products)
+    (function restoreLastView() {
+      let target = 'products';
+      try {
+        const saved = localStorage.getItem(LAST_VIEW_KEY);
+        if (saved && VALID_VIEWS.includes(saved)) target = saved;
+      } catch (e) {}
+      // URLハッシュは pushState 由来の残骸なので一旦消す
+      if (location.hash) {
+        try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+      }
+      // pushState を抑制した状態で showView を呼ぶ (履歴に余計なものを積まない)
+      _suppressPushState = true;
+      try {
+        showView(target);
+        // サブビューを開いた場合は履歴を1段積んでおく (戻るボタンで前のメインタブに戻れるように)
+        if (!MAIN_TABS.includes(target)) {
+          try { history.replaceState({ view: target }, '', '#' + target); } catch (e) {}
+        }
+      } finally {
+        _suppressPushState = false;
+      }
+    })();
   </script>
 </body>
 </html>
