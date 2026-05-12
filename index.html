@@ -971,7 +971,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.18.1</span>
+      <span class="version">v0.18.2</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1083,7 +1083,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.18.1 &nbsp;•&nbsp;
+    SALE一括 v0.18.2 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
     Powered by ExcelJS
   </footer>
@@ -1174,6 +1174,8 @@
 
     // ---- UI制御 ----
     // メインタブ(products) ⇄ サブビュー(sale-price) の切替
+    // ブラウザ/マウスの「戻る」でトップに戻れるよう、サブビュー遷移時は history.pushState する
+    let _suppressPushState = false; // popstate由来の呼び出しでは積まない
     function showView(viewId) {
       document.querySelectorAll('.tool-panel').forEach(p => p.classList.remove('active'));
       const panel = document.getElementById('tool-' + viewId);
@@ -1196,7 +1198,29 @@
         renderProductTable();
       if (typeof renderWorkflow === "function") renderWorkflow();
       }
+
+      // 履歴管理: サブビューに入る時だけ pushState (二重積み防止のため現stateとも比較)
+      if (!_suppressPushState) {
+        const cur = history.state && history.state.view;
+        if (viewId !== 'products' && cur !== viewId) {
+          history.pushState({ view: viewId }, '', '#' + viewId);
+        } else if (viewId === 'products' && cur && cur !== 'products') {
+          // ボタン等から明示的にトップに戻った時はhash消す(履歴は積まない=replace)
+          history.replaceState(null, '', location.pathname + location.search);
+        }
+      }
     }
+
+    // マウスの「戻る」/ブラウザバック: サブビューに居る時はトップへ戻す
+    window.addEventListener('popstate', (e) => {
+      const v = (e.state && e.state.view) || 'products';
+      _suppressPushState = true;
+      try {
+        showView(v);
+      } finally {
+        _suppressPushState = false;
+      }
+    });
 
     // メインタブのクリック
     document.querySelectorAll('.main-tab[data-main-tab]').forEach(tab => {
@@ -1905,6 +1929,10 @@
     });
 
     // ---- 起動時: アーカイブセレクタ初期化 ----
+    // URLにサブビューのhashが残っていても、初回ロードはトップから始める
+    if (location.hash) {
+      history.replaceState(null, '', location.pathname + location.search);
+    }
     refreshArchiveSelect();
     renderProductTable();
       if (typeof renderWorkflow === "function") renderWorkflow();
