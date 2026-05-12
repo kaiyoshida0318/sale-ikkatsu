@@ -1019,12 +1019,48 @@
     .decide-toolbar {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      justify-content: flex-end;
       gap: 12px;
-      padding: 8px 4px 12px;
+      padding: 4px 4px 6px;
       flex-wrap: wrap;
     }
     .decide-stats { font-size: 12px; color: var(--muted); }
+    /* ⑤画面を全体的に詰める */
+    body[data-view="decide-price"] main {
+      margin-top: 8px;
+    }
+    body[data-view="decide-price"] .tool-panel-header {
+      margin-bottom: 4px;
+    }
+    body[data-view="decide-price"] .tool-panel-header h2 {
+      font-size: 16px;
+    }
+    /* バリエ・手数料トグルボタン: th上に小さく絶対配置 */
+    .decide-table-area {
+      position: relative;
+    }
+    #btn-toggle-fee.fee-toggle-overlay {
+      position: absolute;
+      top: -10px;
+      transform: translateX(-50%);
+      z-index: 5;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      line-height: 1.6;
+      min-width: 0;
+      border-radius: 10px;
+      background: #fff;
+      color: var(--brand);
+      border: 1.5px solid var(--brand);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    #btn-toggle-fee.fee-toggle-overlay:hover {
+      background: var(--brand);
+      color: #fff;
+    }
     .decide-table-scroll {
       overflow-x: auto;
       max-height: 70vh;
@@ -1206,7 +1242,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.29.1</span>
+      <span class="version">v0.29.2</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1513,7 +1549,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.29.1 &nbsp;•&nbsp;
+    SALE一括 v0.29.2 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
     Powered by ExcelJS
   </footer>
@@ -3376,21 +3412,24 @@
         return `<tr>${tds.join('')}</tr>`;
       }).join('');
 
-      const toggleLabel = _decideShowFee ? 'バリエ・手数料列を隠す' : 'バリエ・手数料列を表示';
+      const toggleLabel = _decideShowFee ? '◀ バリエ・手数料 ▶' : '＋ バリエ・手数料';
+      const toggleTitle = _decideShowFee ? 'バリエ・手数料列を隠す' : 'バリエ・手数料列を表示';
       const warnHtml = (result.warnings && result.warnings.length > 0)
         ? `<div class="warnings" style="margin-top:8px;"><strong>⚠️ 警告 (${result.warnings.length}件)</strong><ul>${result.warnings.slice(0,20).map(w => `<li>${escapeHtml(w)}</li>`).join('')}</ul></div>`
         : '';
 
       container.innerHTML = `
         <div class="decide-toolbar">
-          <button type="button" id="btn-toggle-fee" class="secondary">${toggleLabel}</button>
           <span class="decide-stats">${result.stats.output_rows}件 (除外: ${result.stats.excluded_no_price} / 原価未取得: ${result.stats.cost_not_found})</span>
         </div>
-        <div class="decide-table-scroll">
-          <table class="product-table decide-table">
-            <thead>${head}</thead>
-            <tbody>${body}</tbody>
-          </table>
+        <div class="decide-table-area">
+          <button type="button" id="btn-toggle-fee" class="fee-toggle-overlay" title="${escapeHtml(toggleTitle)}">${escapeHtml(toggleLabel)}</button>
+          <div class="decide-table-scroll">
+            <table class="product-table decide-table">
+              <thead>${head}</thead>
+              <tbody>${body}</tbody>
+            </table>
+          </div>
         </div>
         ${warnHtml}
       `;
@@ -3400,6 +3439,19 @@
         _decideShowFee = !_decideShowFee;
         renderDecidePriceTable();
       });
+
+      // バリエ・手数料列のトグルボタンを v4 と feeL の中間 (=feeグループ列のだいたい中央) に配置
+      positionFeeToggleButton();
+      // 横スクロール時にもボタン位置を追随 (scroll要素は再描画ごとに作り直されるのでここで都度バインド)
+      const scrollEl = document.querySelector('.decide-table-scroll');
+      if (scrollEl) {
+        scrollEl.addEventListener('scroll', positionFeeToggleButton, { passive: true });
+      }
+      // ウィンドウリサイズでも追随 (一度だけ登録)
+      if (!window._feeToggleResizeBound) {
+        window._feeToggleResizeBound = true;
+        window.addEventListener('resize', positionFeeToggleButton, { passive: true });
+      }
 
       // 編集可能セルのイベント
       attachEditableCellHandlers(container);
@@ -3426,6 +3478,39 @@
           }
         });
       });
+    }
+
+    // バリエ・手数料トグルボタンの位置を th 実測で決める
+    // 表示時: バリエ4と楽天手数料の境界に置く
+    // 非表示時: 前回の位置を維持 (CSSのデフォルト left:50% を使う)
+    function positionFeeToggleButton() {
+      const btn = document.getElementById('btn-toggle-fee');
+      const area = document.querySelector('.decide-table-area');
+      const scroll = document.querySelector('.decide-table-scroll');
+      if (!btn || !area || !scroll) return;
+      const table = scroll.querySelector('table.decide-table');
+      if (!table) return;
+      if (!_decideShowFee) {
+        // 非表示時: 中央寄せに戻す
+        btn.style.left = '50%';
+        return;
+      }
+      const ths = table.querySelectorAll('thead th');
+      let v4Th = null, feeLTh = null;
+      ths.forEach(th => {
+        const lab = th.textContent.trim();
+        if (lab === 'バリエ4') v4Th = th;
+        if (lab === '楽天手数料') feeLTh = th;
+      });
+      if (!v4Th || !feeLTh) return;
+      const v4Rect = v4Th.getBoundingClientRect();
+      const lRect = feeLTh.getBoundingClientRect();
+      const areaRect = area.getBoundingClientRect();
+      const borderX = (v4Rect.right + lRect.left) / 2;
+      const targetX = borderX - areaRect.left;
+      if (targetX > 0) {
+        btn.style.left = targetX + 'px';
+      }
     }
 
     // 割引率 (SKU別) を保存
