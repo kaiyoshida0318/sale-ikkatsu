@@ -341,6 +341,18 @@
       border: 1px solid var(--border);
     }
     button.secondary:hover:not(:disabled) { background: #e4e4ea; }
+    /* ダウンロード準備完了ボタン (緑) */
+    button.dl-ready {
+      background: #1a7c38;
+      color: #fff;
+      border: 1px solid #156330;
+      font-weight: 700;
+    }
+    button.dl-ready:hover:not(:disabled) { background: #156330; }
+    button.dl-ready::before {
+      content: "⬇ ";
+      font-weight: 700;
+    }
     .status {
       margin-top: 14px;
       font-size: 14px;
@@ -1049,7 +1061,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.26.1</span>
+      <span class="version">v0.26.2</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1356,7 +1368,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.26.1 &nbsp;•&nbsp;
+    SALE一括 v0.26.2 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
     Powered by ExcelJS
   </footer>
@@ -1482,6 +1494,10 @@
       // decide-price サブビューを開くときは表を再描画
       if (viewId === 'decide-price') {
         if (typeof renderDecidePriceTable === 'function') renderDecidePriceTable();
+      }
+      // 検索用DLボタンの活性/非活性更新
+      if (viewId === 'cost-set-component' || viewId === 'cost-non-set') {
+        if (typeof updateSearchDlButtons === 'function') updateSearchDlButtons();
       }
 
       // メインタブを開いた場合は記録 (サブビューから戻る際の戻り先)
@@ -2582,6 +2598,37 @@
         if (!seen.has(c)) { seen.add(c); unique.push(c); }
       }
       return unique;
+    }
+
+    // 検索用DLボタンの活性/非活性を更新 (取り込み済みなら緑、未取り込みは disabled)
+    function updateSearchDlButtons() {
+      const ym = currentYM || getCurrentYM();
+      const archive = loadArchive();
+      const data = (ym && archive[ym]) || {};
+
+      // ③ : ② (setItemCsvB64) が取り込み済みなら有効
+      const btn3 = document.getElementById('btn-dl-search-list');
+      if (btn3) {
+        const ready = !!data.setItemCsvB64;
+        btn3.disabled = !ready;
+        btn3.classList.toggle('dl-ready', ready);
+        btn3.classList.toggle('secondary', !ready);
+        btn3.title = ready
+          ? '取り込み済みのデータからダウンロードします'
+          : '② のNE-セット商品コードCSVを先に取り込んでください';
+      }
+
+      // ④ : ① (rmsCsvB64) が取り込み済みなら有効
+      const btn4 = document.getElementById('btn-dl-nonset-list');
+      if (btn4) {
+        const ready = !!data.rmsCsvB64;
+        btn4.disabled = !ready;
+        btn4.classList.toggle('dl-ready', ready);
+        btn4.classList.toggle('secondary', !ready);
+        btn4.title = ready
+          ? '取り込み済みのデータからダウンロードします'
+          : '① のRMSデータCSVを先に取り込んでください';
+      }
     }
 
     // 検索用CSVをダウンロード
