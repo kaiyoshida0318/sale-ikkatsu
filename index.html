@@ -636,8 +636,17 @@
     .workflow-block.block-prep .workflow-block-buttons {
       grid-template-columns: repeat(5, 1fr);
     }
+    /* セール当日 / セール後 は 3列固定 (当日は1個だが、後ろの3つと同じ幅にする) */
+    .workflow-block.block-day .workflow-block-buttons,
+    .workflow-block.block-after .workflow-block-buttons {
+      grid-template-columns: repeat(3, 1fr);
+    }
     @media (max-width: 720px) {
       .workflow-block.block-prep .workflow-block-buttons {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .workflow-block.block-day .workflow-block-buttons,
+      .workflow-block.block-after .workflow-block-buttons {
         grid-template-columns: repeat(2, 1fr);
       }
     }
@@ -662,9 +671,24 @@
     }
     .wf-btn:hover:not(.is-done) { filter: brightness(0.97); }
     .wf-btn:active { transform: translateY(1px); }
+    .wf-btn {
+      cursor: default;
+    }
     .wf-btn .wf-label {
       flex: 1;
       white-space: normal;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: baseline;
+      gap: 4px;
+    }
+    .wf-btn .wf-label:hover {
+      text-decoration: underline;
+    }
+    .wf-btn .wf-num {
+      font-weight: 700;
+      font-size: 14px;
+      flex-shrink: 0;
     }
     .wf-btn .wf-check {
       width: 20px;
@@ -1011,7 +1035,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.22.1</span>
+      <span class="version">v0.22.2</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1183,7 +1207,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.22.1 &nbsp;•&nbsp;
+    SALE一括 v0.22.2 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
     Powered by ExcelJS
   </footer>
@@ -1881,20 +1905,24 @@
       saveArchive(archive);
     }
 
+    // 丸付き数字 ①〜⑳
+    const WF_NUMBER_MARKS = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫','⑬','⑭','⑮','⑯','⑰','⑱','⑲','⑳'];
+
     function renderWorkflow() {
       const root = document.getElementById('workflow');
       if (!root) return;
       const state = getWorkflowState();
       const opened = getWorkflowOpened();
       const html = WORKFLOW_BLOCKS.map(block => {
-        const btnsHtml = block.buttons.map(btn => {
+        const btnsHtml = block.buttons.map((btn, idx) => {
           const done = !!state[btn.id];
           const inProgress = !done && !!opened[btn.id];
           const classes = ['wf-btn'];
           if (done) classes.push('is-done');
           if (inProgress) classes.push('is-active');
+          const numMark = WF_NUMBER_MARKS[idx] || `(${idx+1})`;
           return `<button type="button" class="${classes.join(' ')}" data-wf-id="${btn.id}" ${btn.action ? `data-wf-action="${btn.action}"` : ''}>
-            <span class="wf-label">${escapeHtml(btn.label)}</span>
+            <span class="wf-label"><span class="wf-num">${numMark}</span>${escapeHtml(btn.label)}</span>
             <input type="checkbox" class="wf-check" data-wf-check="${btn.id}" ${done ? 'checked' : ''} aria-label="完了" />
           </button>`;
         }).join('');
@@ -1921,10 +1949,13 @@
         });
       });
 
-      // ボタン本体クリック: action があれば実行(チェックボックス以外のクリック領域)
+      // 遷移は「wf-label (文字部分)」をクリックした時のみ
       root.querySelectorAll('.wf-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-          if (e.target.classList.contains('wf-check')) return; // チェックボックス自体は除外
+          // チェックボックス自体は除外
+          if (e.target.classList.contains('wf-check')) return;
+          // 文字ラベル (wf-label とその子) の上以外は無視
+          if (!e.target.closest('.wf-label')) return;
           const id = btn.getAttribute('data-wf-id');
           const action = btn.getAttribute('data-wf-action');
           if (!action) return; // action 未定義のボタンは何もしない (進行中マークも付けない)
