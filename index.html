@@ -269,6 +269,10 @@
       margin: 24px auto;
       padding: 0 16px;
     }
+    /* セール価格決定タブの時だけ画面幅いっぱい */
+    body[data-view="decide-price"] main {
+      max-width: 100%;
+    }
     .card {
       background: var(--card);
       border: 1px solid var(--border);
@@ -1132,7 +1136,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.27.1</span>
+      <span class="version">v0.27.2</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1439,7 +1443,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.27.1 &nbsp;•&nbsp;
+    SALE一括 v0.27.2 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
     Powered by ExcelJS
   </footer>
@@ -1580,6 +1584,8 @@
 
       // F5(リロード)後に同じビューを開けるよう、現在のビューをlocalStorageに保存
       try { localStorage.setItem(LAST_VIEW_KEY, viewId); } catch (e) {}
+      // body に現在ビューIDをセット (CSS で参照: 決定タブだけ全幅化など)
+      document.body.setAttribute('data-view', viewId);
 
       // 履歴管理: メインタブ以外(=サブビュー)に入る時だけ pushState
       if (!_suppressPushState) {
