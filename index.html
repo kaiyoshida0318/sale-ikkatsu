@@ -619,6 +619,15 @@
       grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
       gap: 10px;
     }
+    /* セール開始準備は10ボタン → 5列×2行で固定 */
+    .workflow-block.block-prep .workflow-block-buttons {
+      grid-template-columns: repeat(5, 1fr);
+    }
+    @media (max-width: 720px) {
+      .workflow-block.block-prep .workflow-block-buttons {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
     .wf-btn {
       display: flex;
       align-items: center;
@@ -971,7 +980,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.18.2</span>
+      <span class="version">v0.19.1</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1079,11 +1088,47 @@
           <div id="warnings" class="warnings" hidden></div>
         </div>
       </div>
+
+      <!-- サブビュー: 参加商品追加 (RMSデータCSV → 商品一覧) -->
+      <div id="tool-add-products" class="tool-panel">
+        <div class="tool-panel-header">
+          <button type="button" class="back-btn" data-back>← 戻る</button>
+          <h2>参加商品追加</h2>
+        </div>
+
+        <div class="card">
+          <div class="hint">
+            楽天RMSからダウンロードした商品データCSV（Shift_JIS）をアップロードすると、<br>
+            「セール参加商品」の <b>全体タブ</b> に商品一覧が反映されます。<br>
+            ・商品管理番号が同じ行は1つにまとめます<br>
+            ・システム連携用SKU番号の <b>共通プレフィクス</b>（ハイフン区切り）を商品コードにします
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>RMSデータCSVをアップロード</h2>
+          <form id="add-products-form">
+            <div class="grid">
+              <div class="file-input" data-target="rms-products" style="grid-column: 1 / -1;">
+                <label>RMSデータCSV</label>
+                <div class="desc">楽天RMSから一括ダウンロードした商品情報CSV</div>
+                <input type="file" name="rms_products" accept=".csv" required />
+                <div class="filename"></div>
+              </div>
+            </div>
+
+            <div class="actions">
+              <button type="submit" id="btn-add-products-upload">取り込んで一覧に反映</button>
+            </div>
+            <div id="add-products-status" class="status"></div>
+          </form>
+        </div>
+      </div>
     </div>
   </main>
 
   <footer>
-    SALE一括 v0.18.2 &nbsp;•&nbsp;
+    SALE一括 v0.19.1 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
     Powered by ExcelJS
   </footer>
@@ -1651,15 +1696,28 @@
         <th class="col-pname">商品名</th>
       </tr>`;
 
-      // データ行は完全に空(0行)。情報CSVアップ機能ができたら後で埋める
+      const rows = getCurrentRows();
+      let bodyHtml = '';
+      if (rows && rows.length > 0) {
+        bodyHtml = rows.map(r => `<tr>
+          <td class="mgr">${escapeHtml(r.mgr || '')}</td>
+          <td class="mgr">${escapeHtml(r.itemCode || '')}</td>
+          <td class="img-cell"><div class="img-placeholder">未取得</div></td>
+          <td class="name">${escapeHtml(r.name || '')}</td>
+        </tr>`).join('');
+      }
+
+      const hintText = rows && rows.length > 0
+        ? `${currentYM ? currentYM.replace('/', '年') + '月' : ''} のセール参加商品: ${rows.length}件`
+        : (currentYM
+            ? (currentYM.replace('/', '年') + '月 のセール参加商品（「参加商品追加」からRMSデータCSVを取り込んでください）')
+            : 'セール期間（開始日時）を入力すると、年月のセールが履歴に追加されます。');
+
       container.innerHTML = `<table class="product-table">
         <thead>${headHtml}</thead>
-        <tbody></tbody>
+        <tbody>${bodyHtml}</tbody>
       </table>
-      <div class="table-hint">${currentYM
-        ? (currentYM.replace('/', '年') + '月 のセール参加商品（情報CSVアップロード待ち）')
-        : 'セール期間（開始日時）を入力すると、年月のセールが履歴に追加されます。'
-      }</div>`;
+      <div class="table-hint">${escapeHtml(hintText)}</div>`;
     }
 
     function escapeHtml(s) {
@@ -1677,7 +1735,7 @@
         label: 'セール開始準備',
         className: 'block-prep',
         buttons: [
-          { id: 'prep-add-products', label: '参加商品追加' },
+          { id: 'prep-add-products', label: '参加商品追加', action: 'open-add-products' },
           { id: 'prep-make-price-table', label: 'セール価格決定表作成', action: 'open-sale-price' },
           { id: 'prep-decide-price', label: 'セール価格決定' },
           { id: 'prep-decide-title', label: 'セール用タイトル決定' },
@@ -1766,6 +1824,8 @@
           const action = btn.getAttribute('data-wf-action');
           if (action === 'open-sale-price') {
             showView('sale-price');
+          } else if (action === 'open-add-products') {
+            showView('add-products');
           }
         });
       });
@@ -1925,6 +1985,162 @@
         console.error(e);
       } finally {
         setButtonsDisabled(false);
+      }
+    });
+
+    // ---- 参加商品追加: RMSデータCSV → 商品一覧 ----
+    // CSVを Shift_JIS で読んで、商品管理番号で重複排除、SKUの共通プレフィクスを商品コードに
+    function parseCsvText(text) {
+      // 簡易CSVパーサ (改行・カンマ・"" エスケープ対応)
+      const rows = [];
+      let cur = [];
+      let field = '';
+      let inQuote = false;
+      for (let i = 0; i < text.length; i++) {
+        const c = text[i];
+        if (inQuote) {
+          if (c === '"') {
+            if (text[i + 1] === '"') { field += '"'; i++; }
+            else { inQuote = false; }
+          } else {
+            field += c;
+          }
+        } else {
+          if (c === '"') { inQuote = true; }
+          else if (c === ',') { cur.push(field); field = ''; }
+          else if (c === '\r') { /* skip */ }
+          else if (c === '\n') { cur.push(field); rows.push(cur); cur = []; field = ''; }
+          else { field += c; }
+        }
+      }
+      if (field !== '' || cur.length > 0) { cur.push(field); rows.push(cur); }
+      return rows;
+    }
+
+    // SKUの配列から、ハイフン区切りの共通プレフィクスを抽出
+    // 例: ["ep-anker-25-01-q10-no-no", "ep-anker-25-01-q20-no-black"] → "ep-anker-25-01"
+    function commonPrefixByHyphen(skus) {
+      const list = skus.filter(s => s && s.length > 0);
+      if (list.length === 0) return '';
+      if (list.length === 1) return list[0];
+      const parts = list.map(s => s.split('-'));
+      const common = [];
+      const maxLen = Math.min(...parts.map(p => p.length));
+      for (let i = 0; i < maxLen; i++) {
+        const v = parts[0][i];
+        if (parts.every(p => p[i] === v)) common.push(v);
+        else break;
+      }
+      return common.join('-');
+    }
+
+    // ArrayBuffer (Shift_JIS) → 文字列
+    function decodeShiftJIS(buf) {
+      try {
+        const dec = new TextDecoder('shift_jis', { fatal: false });
+        return dec.decode(buf);
+      } catch (e) {
+        // フォールバック: UTF-8
+        return new TextDecoder('utf-8', { fatal: false }).decode(buf);
+      }
+    }
+
+    // CSVから商品一覧(rows形式)を組み立てる
+    // 戻り値: [{ mgr, itemCode, name }, ...]
+    function buildProductsFromRmsCsv(csvText) {
+      const rows = parseCsvText(csvText);
+      if (rows.length < 2) return [];
+      const header = rows[0];
+      const idxMgr = header.findIndex(h => h && h.indexOf('商品管理番号') >= 0);
+      const idxName = header.findIndex(h => h && h.trim() === '商品名');
+      const idxSku = header.findIndex(h => h && h.indexOf('システム連携用SKU番号') >= 0);
+      if (idxMgr < 0 || idxName < 0 || idxSku < 0) {
+        throw new Error('CSVの列が見つかりません (商品管理番号 / 商品名 / システム連携用SKU番号)');
+      }
+      // 商品管理番号でグルーピング
+      const groups = new Map();
+      for (let i = 1; i < rows.length; i++) {
+        const r = rows[i];
+        if (!r || r.length === 0) continue;
+        const mgr = (r[idxMgr] || '').trim();
+        if (!mgr) continue;
+        const name = (r[idxName] || '').trim();
+        const sku = (r[idxSku] || '').trim();
+        if (!groups.has(mgr)) groups.set(mgr, { name, skus: [] });
+        const g = groups.get(mgr);
+        if (!g.name && name) g.name = name;
+        if (sku) g.skus.push(sku);
+      }
+      // rows化
+      const result = [];
+      for (const [mgr, g] of groups) {
+        result.push({
+          mgr: mgr,
+          itemCode: commonPrefixByHyphen(g.skus),
+          name: g.name,
+        });
+      }
+      return result;
+    }
+
+    // 取り込み結果を currentYM の rows に保存
+    function saveProductRowsToArchive(productRows) {
+      // 現在の年月: archive選択 or 開始日時から
+      let ym = currentYM || getCurrentYM();
+      if (!ym) {
+        throw new Error('セール期間（開始日時）を先に入力してください（年月が必要です）');
+      }
+      const archive = loadArchive();
+      if (!archive[ym]) {
+        archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
+      }
+      archive[ym].rows = productRows;
+      // 開始/終了日時も最新を反映 (空でなければ)
+      const period = getCurrentPeriod();
+      if (period.startDt) archive[ym].startDt = period.startDt;
+      if (period.endDt) archive[ym].endDt = period.endDt;
+      saveArchive(archive);
+      currentYM = ym;
+      localStorage.setItem(SALE_ARCHIVE_CURRENT, ym);
+      refreshArchiveSelect();
+    }
+
+    // フォーム送信ハンドラ
+    function setAddProductsStatus(msg, kind) {
+      const el = document.getElementById('add-products-status');
+      if (!el) return;
+      el.className = 'status' + (kind ? ' ' + kind : '');
+      el.innerHTML = msg;
+    }
+
+    document.getElementById('add-products-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btn-add-products-upload');
+      btn.disabled = true;
+      try {
+        const input = e.target.elements['rms_products'];
+        if (!input.files || !input.files[0]) {
+          throw new Error('CSVファイルを選択してください');
+        }
+        setAddProductsStatus('<span class="spinner"></span>CSVを読み込み中...', '');
+        const buf = await input.files[0].arrayBuffer();
+        const text = decodeShiftJIS(buf);
+        const productRows = buildProductsFromRmsCsv(text);
+        if (productRows.length === 0) {
+          throw new Error('CSVから商品データを抽出できませんでした');
+        }
+        saveProductRowsToArchive(productRows);
+        // 商品一覧タブの再描画(裏で更新)
+        renderProductTable();
+        setAddProductsStatus(
+          `✅ ${productRows.length}件の商品を取り込みました。「セール参加商品」タブで確認できます。`,
+          'success'
+        );
+      } catch (err) {
+        setAddProductsStatus('❌ エラー: ' + err.message, 'error');
+        console.error(err);
+      } finally {
+        btn.disabled = false;
       }
     });
 
