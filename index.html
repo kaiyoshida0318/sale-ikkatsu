@@ -684,6 +684,12 @@
       background: #f0f6fc;
       color: #1c4b8a;
     }
+    .workflow-block.block-prep .wf-btn.is-active {
+      border-color: #1c4b8a;
+      border-width: 3px;
+      padding: 9px 11px; /* border幅増分を相殺してサイズ維持 */
+      box-shadow: 0 0 0 1px rgba(28, 75, 138, 0.15);
+    }
     .workflow-block.block-prep .wf-btn.is-done {
       background: #1c4b8a;
       color: #fff;
@@ -700,6 +706,12 @@
       background: #fdf3e7;
       color: #a14d0a;
     }
+    .workflow-block.block-day .wf-btn.is-active {
+      border-color: #a14d0a;
+      border-width: 3px;
+      padding: 9px 11px;
+      box-shadow: 0 0 0 1px rgba(161, 77, 10, 0.15);
+    }
     .workflow-block.block-day .wf-btn.is-done {
       background: #a14d0a;
       color: #fff;
@@ -715,6 +727,12 @@
       border-color: #b9dec3;
       background: #eef7f0;
       color: #165d28;
+    }
+    .workflow-block.block-after .wf-btn.is-active {
+      border-color: #165d28;
+      border-width: 3px;
+      padding: 9px 11px;
+      box-shadow: 0 0 0 1px rgba(22, 93, 40, 0.15);
     }
     .workflow-block.block-after .wf-btn.is-done {
       background: #165d28;
@@ -993,7 +1011,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.22.0</span>
+      <span class="version">v0.22.1</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1165,7 +1183,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.22.0 &nbsp;•&nbsp;
+    SALE一括 v0.22.1 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
     Powered by ExcelJS
   </footer>
@@ -1255,10 +1273,12 @@
     applyFs(FS_LEVELS[getFsIndex()]);
 
     // ---- UI制御 ----
-    // メインタブ(products, workflow) ⇄ サブビュー(sale-price, add-products) の切替
+    // メインタブ(products, workflow) ⇄ サブビュー(sale-price, add-products, decide-price) の切替
     // ブラウザ/マウスの「戻る」でサブビューから戻れるよう、サブビュー遷移時は history.pushState する
     let _suppressPushState = false; // popstate由来の呼び出しでは積まない
     const MAIN_TABS = ['products', 'workflow'];
+    // 直近のメインタブ(サブビューから戻る時の戻り先)
+    let _lastMainTab = 'products';
 
     function showView(viewId) {
       document.querySelectorAll('.tool-panel').forEach(p => p.classList.remove('active'));
@@ -1291,6 +1311,11 @@
         if (typeof renderDecidePriceTable === 'function') renderDecidePriceTable();
       }
 
+      // メインタブを開いた場合は記録 (サブビューから戻る際の戻り先)
+      if (MAIN_TABS.includes(viewId)) {
+        _lastMainTab = viewId;
+      }
+
       // 履歴管理: メインタブ以外(=サブビュー)に入る時だけ pushState
       if (!_suppressPushState) {
         const cur = history.state && history.state.view;
@@ -1306,7 +1331,7 @@
 
     // マウスの「戻る」/ブラウザバック
     window.addEventListener('popstate', (e) => {
-      const v = (e.state && e.state.view) || 'products';
+      const v = (e.state && e.state.view) || _lastMainTab || 'products';
       _suppressPushState = true;
       try {
         showView(v);
@@ -1322,9 +1347,9 @@
       });
     });
 
-    // 戻るボタン → セール参加商品タブへ
+    // 戻るボタン → 直前のメインタブへ (workflowから来たならworkflow、productsから来たならproducts)
     document.querySelectorAll('[data-back]').forEach(btn => {
-      btn.addEventListener('click', () => showView('products'));
+      btn.addEventListener('click', () => showView(_lastMainTab || 'products'));
     });
 
     // ロゴクリック → セール参加商品タブへ(最新月の表)
@@ -1815,19 +1840,44 @@
 
     // チェック状態: 年月別に保存
     // 構造: archive[YYYY/MM].workflow = { 'prep-add-products': true, ... }
+    //       archive[YYYY/MM].workflowOpened = { 'prep-add-products': true, ... }  ← 開いた=進行中
     function getWorkflowState() {
       if (!currentYM) return {};
       const archive = loadArchive();
       return (archive[currentYM] && archive[currentYM].workflow) || {};
     }
+    function getWorkflowOpened() {
+      if (!currentYM) return {};
+      const archive = loadArchive();
+      return (archive[currentYM] && archive[currentYM].workflowOpened) || {};
+    }
     function setWorkflowDone(btnId, done) {
       if (!currentYM) return;
       const archive = loadArchive();
-      if (!archive[currentYM]) archive[currentYM] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
+      if (!archive[currentYM]) archive[currentYM] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {}, workflowOpened: {} };
       const wf = archive[currentYM].workflow || {};
-      if (done) wf[btnId] = true;
-      else delete wf[btnId];
+      const op = archive[currentYM].workflowOpened || {};
+      if (done) {
+        wf[btnId] = true;
+        // チェック入れた瞬間に「進行中(外枠)」は外す
+        delete op[btnId];
+      } else {
+        delete wf[btnId];
+      }
       archive[currentYM].workflow = wf;
+      archive[currentYM].workflowOpened = op;
+      saveArchive(archive);
+    }
+    // ボタンを開いた = 進行中マーク (チェック済みの場合は付けない)
+    function markWorkflowOpened(btnId) {
+      if (!currentYM) return;
+      const archive = loadArchive();
+      if (!archive[currentYM]) archive[currentYM] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {}, workflowOpened: {} };
+      const wf = archive[currentYM].workflow || {};
+      if (wf[btnId]) return; // 既にチェック済みなら何もしない
+      const op = archive[currentYM].workflowOpened || {};
+      op[btnId] = true;
+      archive[currentYM].workflowOpened = op;
       saveArchive(archive);
     }
 
@@ -1835,10 +1885,15 @@
       const root = document.getElementById('workflow');
       if (!root) return;
       const state = getWorkflowState();
+      const opened = getWorkflowOpened();
       const html = WORKFLOW_BLOCKS.map(block => {
         const btnsHtml = block.buttons.map(btn => {
           const done = !!state[btn.id];
-          return `<button type="button" class="wf-btn ${done ? 'is-done' : ''}" data-wf-id="${btn.id}" ${btn.action ? `data-wf-action="${btn.action}"` : ''}>
+          const inProgress = !done && !!opened[btn.id];
+          const classes = ['wf-btn'];
+          if (done) classes.push('is-done');
+          if (inProgress) classes.push('is-active');
+          return `<button type="button" class="${classes.join(' ')}" data-wf-id="${btn.id}" ${btn.action ? `data-wf-action="${btn.action}"` : ''}>
             <span class="wf-label">${escapeHtml(btn.label)}</span>
             <input type="checkbox" class="wf-check" data-wf-check="${btn.id}" ${done ? 'checked' : ''} aria-label="完了" />
           </button>`;
@@ -1859,7 +1914,10 @@
           const id = chk.getAttribute('data-wf-check');
           setWorkflowDone(id, chk.checked);
           const btn = chk.closest('.wf-btn');
-          if (btn) btn.classList.toggle('is-done', chk.checked);
+          if (btn) {
+            btn.classList.toggle('is-done', chk.checked);
+            if (chk.checked) btn.classList.remove('is-active'); // 進行中外枠を外す
+          }
         });
       });
 
@@ -1867,7 +1925,12 @@
       root.querySelectorAll('.wf-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
           if (e.target.classList.contains('wf-check')) return; // チェックボックス自体は除外
+          const id = btn.getAttribute('data-wf-id');
           const action = btn.getAttribute('data-wf-action');
+          if (!action) return; // action 未定義のボタンは何もしない (進行中マークも付けない)
+          // 進行中(=外枠)に記録
+          markWorkflowOpened(id);
+          // 画面遷移
           if (action === 'open-sale-price') {
             showView('sale-price');
           } else if (action === 'open-add-products') {
@@ -1885,6 +1948,7 @@
       const archive = loadArchive();
       if (!archive[currentYM]) return;
       archive[currentYM].workflow = {};
+      archive[currentYM].workflowOpened = {};
       saveArchive(archive);
       renderWorkflow();
     }
