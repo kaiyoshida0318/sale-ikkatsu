@@ -1080,6 +1080,34 @@
       border-left: 0;
       border-right: 0;
     }
+    /* 編集可能セル */
+    .product-table.decide-table td.editable {
+      cursor: text;
+      background-image: linear-gradient(rgba(255,255,255,0), rgba(255,255,255,0));
+      box-shadow: inset 0 0 0 1px rgba(30,58,95,0.08);
+    }
+    .product-table.decide-table td.editable:hover {
+      background-color: #fffef0 !important;
+      box-shadow: inset 0 0 0 1px rgba(30,58,95,0.25);
+    }
+    .product-table.decide-table td.editable:focus {
+      outline: none;
+      background-color: #fffef0 !important;
+      box-shadow: inset 0 0 0 2px var(--brand);
+    }
+    /* 商品画像セル */
+    .product-table.decide-table td .img-placeholder {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 50px;
+      height: 50px;
+      background: #f0f0f2;
+      border: 1px dashed #c9c9d1;
+      border-radius: 4px;
+      font-size: 10px;
+      color: #999;
+    }
   </style>
 </head>
 <body>
@@ -1136,7 +1164,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.27.2</span>
+      <span class="version">v0.28.0</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1205,7 +1233,7 @@
       <div id="tool-sale-price" class="tool-panel">
         <div class="tool-panel-header">
           <button type="button" class="back-btn" data-back>← 戻る</button>
-          <h2>セール価格決定用</h2>
+          <h2>⑬ セール価格決定表作成</h2>
         </div>
 
         <div class="card">
@@ -1255,7 +1283,7 @@
       <div id="tool-add-products" class="tool-panel">
         <div class="tool-panel-header">
           <button type="button" class="back-btn" data-back>← 戻る</button>
-          <h2>参加商品追加</h2>
+          <h2>① 参加商品追加</h2>
         </div>
 
         <div class="card">
@@ -1291,7 +1319,7 @@
       <div id="tool-decide-price" class="tool-panel">
         <div class="tool-panel-header">
           <button type="button" class="back-btn" data-back>← 戻る</button>
-          <h2>セール価格決定</h2>
+          <h2>⑤ セール価格決定</h2>
         </div>
 
         <div id="decide-price-status" class="status"></div>
@@ -1443,7 +1471,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.27.2 &nbsp;•&nbsp;
+    SALE一括 v0.28.0 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
     Powered by ExcelJS
   </footer>
@@ -3024,11 +3052,14 @@
       const rows = [];
       const warnings = [];
       let prevMgr = null;
-      let lastPriceInMgr = null; // 同一商品管理番号内の直前の通常価格
       let countTotal = 0;
       let countExcludedNoPrice = 0;
       let countCostFound = 0;
       let countCostNotFound = 0;
+
+      // 編集セルを取得 (商品名/SS用タイトル/送料)
+      // 構造: editedCells = { [sku]: { name?, ssTitle?, ship? } }
+      const editedCells = (data.editedCells && typeof data.editedCells === 'object') ? data.editedCells : {};
 
       for (let i = 1; i < rmsRows.length; i++) {
         const r = rmsRows[i];
@@ -3044,27 +3075,18 @@
         if (price === null) { countExcludedNoPrice++; continue; }
 
         // 商品管理番号切替時に空行を挟む
+        const isFirstInMgr = (prevMgr === null) || (mgr !== prevMgr);
         if (prevMgr !== null && mgr !== prevMgr) {
           rows.push({ isBlankRow: true });
-          lastPriceInMgr = null;
         }
         prevMgr = mgr;
-
-        // E列重複スキップ: 同一商品管理番号内で同じ価格が直前と同じなら空欄
-        let priceDisp = price;
-        if (lastPriceInMgr !== null && lastPriceInMgr === price) {
-          priceDisp = ''; // 2回目以降は空欄
-        } else {
-          lastPriceInMgr = price;
-        }
 
         const v1 = iV1 >= 0 ? (r[iV1]||'') : '';
         const v2 = iV2 >= 0 ? (r[iV2]||'') : '';
         const v3 = iV3 >= 0 ? (r[iV3]||'') : '';
         const v4 = iV4 >= 0 ? (r[iV4]||'') : '';
 
-        // 原価計算 (priceが空欄表示でも原価は出す。Excel仕様: 通常価格セル内容がある=Rowは原価入る)
-        // ただし計算対象の "通常価格" は priceDisp ではなく実価格を使う
+        // 原価計算
         const cc = calcCostForSku(sku, setItemMap, componentCost, nonSetCost);
         const cost = cc.cost;
         if (cost === null) {
@@ -3077,11 +3099,16 @@
           }
         }
 
-        // OFF価格と利益額・利益率の計算 (Excel数式と同等)
-        // ROUNDDOWN(price*rate, -1) → Math.floor(price*rate/10)*10
-        // 利益 = ROUNDDOWN(P - F - G - P*0.01*L - P*0.01*M - P*0.01*N - O, 0)
-        // 利益率 = ROUNDDOWN((Q/P)*100, 0) (P=0なら "")
-        const G = 0; // 送料(空)
+        // 編集セル: 商品名(初期は元データ)/SS用タイトル/送料
+        const ed = editedCells[sku] || {};
+        const dispName = (ed.name !== undefined && ed.name !== null) ? ed.name : name;
+        const dispSs = (ed.ssTitle !== undefined && ed.ssTitle !== null) ? ed.ssTitle : '';
+        const dispShip = (ed.ship !== undefined && ed.ship !== null) ? ed.ship : '';
+        // 送料を数値化 (空・非数値は0)
+        const shipNum = toNum(dispShip) ?? 0;
+
+        // OFF価格と利益額・利益率の計算
+        const G = shipNum; // 送料はユーザー入力値
         const L = 6, M = 3.5, N = 1, O = 10;
         function offCalc(rate) {
           const offPriceRaw = price * rate;
@@ -3099,9 +3126,13 @@
 
         rows.push({
           isBlankRow: false,
-          name, setCode: sku, mgr, ssTitle: '',
-          price: priceDisp, priceActual: price,
-          cost, ship: '', v1, v2, v3, v4,
+          // 元の商品名 (SKU毎、編集可)
+          name: dispName,
+          // 表示用 商品名 (同一管理番号の最初の行のみ出す。renderで分岐)
+          isFirstInMgr,
+          setCode: sku, mgr, image: '', ssTitle: dispSs,
+          price, priceActual: price,
+          cost, ship: dispShip, v1, v2, v3, v4,
           feeL: L, feeM: M, feeN: N, feeO: O,
           off10p: off10.offPrice, off10profit: off10.profit, off10rate: off10.rate,
           off20p: off20.offPrice, off20profit: off20.profit, off20rate: off20.rate,
@@ -3140,10 +3171,11 @@
       { key: 'name',         label: '商品名',         cls: 'col-name', group: 'main' },
       { key: 'setCode',      label: 'セット商品コード', cls: 'col-red',  group: 'main' },
       { key: 'mgr',          label: '商品管理番号',   cls: 'col-red',  group: 'main' },
-      { key: 'ssTitle',      label: 'SS用タイトル',   cls: 'col-red',  group: 'main' },
+      { key: 'image',        label: '商品画像',       cls: 'col-red',  group: 'main' },
+      { key: 'ssTitle',      label: 'SS用タイトル',   cls: 'col-red',  group: 'main', editable: true },
       { key: 'price',        label: '通常価格',       cls: 'col-green',group: 'main' },
       { key: 'cost',         label: '原価',           cls: 'col-green',group: 'main' },
-      { key: 'ship',         label: '送料',           cls: 'col-green',group: 'main' },
+      { key: 'ship',         label: '送料',           cls: 'col-green',group: 'main', editable: true },
       { key: 'v1',           label: 'バリエ1',        cls: 'col-gray', group: 'fee' },
       { key: 'v2',           label: 'バリエ2',        cls: 'col-gray', group: 'fee' },
       { key: 'v3',           label: 'バリエ3',        cls: 'col-gray', group: 'fee' },
@@ -3152,20 +3184,23 @@
       { key: 'feeM',         label: '楽天ペイ',       cls: 'col-gray', group: 'fee' },
       { key: 'feeN',         label: 'ポイント',       cls: 'col-gray', group: 'fee' },
       { key: 'feeO',         label: 'NE手数料',       cls: 'col-gray', group: 'fee' },
-      { key: 'off10p',       label: '10%OFF価格',     cls: 'col-off10',group: 'main' },
+      { key: 'off10p',       label: '10%OFF',         cls: 'col-off10',group: 'main' },
       { key: 'off10profit',  label: '10%利益',        cls: 'col-off10',group: 'main' },
-      { key: 'off10rate',    label: '10%率',          cls: 'col-off10',group: 'main' },
-      { key: 'off20p',       label: '20%OFF価格',     cls: 'col-off20',group: 'main' },
+      { key: 'off10rate',    label: '10%利益率',      cls: 'col-off10',group: 'main' },
+      { key: 'off20p',       label: '20%OFF',         cls: 'col-off20',group: 'main' },
       { key: 'off20profit',  label: '20%利益',        cls: 'col-off20',group: 'main' },
-      { key: 'off20rate',    label: '20%率',          cls: 'col-off20',group: 'main' },
-      { key: 'off30p',       label: '30%OFF価格',     cls: 'col-off30',group: 'main' },
+      { key: 'off20rate',    label: '20%利益率',      cls: 'col-off20',group: 'main' },
+      { key: 'off30p',       label: '30%OFF',         cls: 'col-off30',group: 'main' },
       { key: 'off30profit',  label: '30%利益',        cls: 'col-off30',group: 'main' },
-      { key: 'off30rate',    label: '30%率',          cls: 'col-off30',group: 'main' },
-      { key: 'off50p',       label: '50%OFF価格',     cls: 'col-off50',group: 'main' },
+      { key: 'off30rate',    label: '30%利益率',      cls: 'col-off30',group: 'main' },
+      { key: 'off50p',       label: '50%OFF',         cls: 'col-off50',group: 'main' },
       { key: 'off50profit',  label: '50%利益',        cls: 'col-off50',group: 'main' },
-      { key: 'off50rate',    label: '50%率',          cls: 'col-off50',group: 'main' },
+      { key: 'off50rate',    label: '50%利益率',      cls: 'col-off50',group: 'main' },
       { key: 'setCodeEnd',   label: 'セット商品コード', cls: 'col-red',  group: 'main' },
     ];
+
+    // A列 (商品名) も編集可
+    DECIDE_COLS[0].editable = true;
 
     let _decideShowFee = true; // バリエ・手数料グループの表示/非表示
 
@@ -3200,14 +3235,29 @@
           // 空行: 全列空セル
           return `<tr class="blank-row">${cols.map(c => `<td class="${c.cls}">&nbsp;</td>`).join('')}</tr>`;
         }
-        return `<tr>${cols.map(c => {
+        const tds = cols.map(c => {
           let v = r[c.key];
-          // 利益率は値があれば "%" 付き
-          if (c.key.endsWith('rate') && v !== null && v !== undefined && v !== '') {
-            return `<td class="${c.cls}">${escapeHtml(fmtCell(v))}%</td>`;
+          // A列「商品名」: 同一商品管理番号の最初の行だけ表示 (それ以外は空)
+          let dispV = v;
+          if (c.key === 'name' && !r.isFirstInMgr) {
+            dispV = '';
           }
-          return `<td class="${c.cls}">${escapeHtml(fmtCell(v))}</td>`;
-        }).join('')}</tr>`;
+          // 利益率は値があれば "%" 付き
+          let cellInner;
+          if (c.key.endsWith('rate') && dispV !== null && dispV !== undefined && dispV !== '') {
+            cellInner = escapeHtml(fmtCell(dispV)) + '%';
+          } else if (c.key === 'image') {
+            cellInner = `<div class="img-placeholder">未取得</div>`;
+          } else {
+            cellInner = escapeHtml(fmtCell(dispV));
+          }
+          // 編集可能セル
+          if (c.editable) {
+            return `<td class="${c.cls} editable" data-sku="${escapeHtml(r.setCode)}" data-field="${c.key}" contenteditable="true">${cellInner}</td>`;
+          }
+          return `<td class="${c.cls}">${cellInner}</td>`;
+        });
+        return `<tr>${tds.join('')}</tr>`;
       }).join('');
 
       const toggleLabel = _decideShowFee ? 'バリエ・手数料列を隠す' : 'バリエ・手数料列を表示';
@@ -3234,6 +3284,58 @@
         _decideShowFee = !_decideShowFee;
         renderDecidePriceTable();
       });
+
+      // 編集可能セルのイベント
+      attachEditableCellHandlers(container);
+    }
+
+    // 編集セル: blur(離脱)時に保存・送料変更なら再描画して利益再計算
+    function attachEditableCellHandlers(container) {
+      container.querySelectorAll('td.editable').forEach(cell => {
+        cell.addEventListener('focus', () => {
+          cell.dataset.original = cell.textContent.trim();
+        });
+        cell.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            cell.blur();
+          } else if (e.key === 'Escape') {
+            cell.textContent = cell.dataset.original || '';
+            cell.blur();
+          }
+        });
+        cell.addEventListener('blur', () => {
+          const sku = cell.getAttribute('data-sku');
+          const field = cell.getAttribute('data-field');
+          const newVal = cell.textContent.trim();
+          const original = cell.dataset.original ?? '';
+          if (newVal === original) return; // 変化なし
+          saveEditedCell(sku, field, newVal);
+          // 送料変更 → 利益が変わるので再描画
+          if (field === 'ship') {
+            renderDecidePriceTable();
+          }
+        });
+      });
+    }
+
+    // 編集セル保存
+    function saveEditedCell(sku, field, value) {
+      const ym = currentYM || getCurrentYM();
+      if (!ym) return;
+      const archive = loadArchive();
+      if (!archive[ym]) archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
+      if (!archive[ym].editedCells) archive[ym].editedCells = {};
+      if (!archive[ym].editedCells[sku]) archive[ym].editedCells[sku] = {};
+      if (value === '' || value === null || value === undefined) {
+        delete archive[ym].editedCells[sku][field];
+        if (Object.keys(archive[ym].editedCells[sku]).length === 0) {
+          delete archive[ym].editedCells[sku];
+        }
+      } else {
+        archive[ym].editedCells[sku][field] = value;
+      }
+      saveArchive(archive);
     }
 
     // ---- 起動時: アーカイブセレクタ初期化 ----
