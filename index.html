@@ -1108,6 +1108,43 @@
       font-size: 10px;
       color: #999;
     }
+    /* 割引率列 (2x2ミニボタン) */
+    .product-table.decide-table th.col-discount {
+      background: #1e3a5f;
+      color: #fff;
+    }
+    .product-table.decide-table td.col-discount {
+      background: #f0f4fb;
+      padding: 4px;
+    }
+    .discount-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3px;
+      min-width: 92px;
+    }
+    .disc-btn {
+      background: #fff;
+      color: #555;
+      border: 1.5px solid #c9c9d1;
+      border-radius: 4px;
+      padding: 3px 0;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background .1s, color .1s, border-color .1s, box-shadow .1s;
+    }
+    .disc-btn:hover:not(.is-selected) {
+      background: #f5f7fa;
+      border-color: #98a4b8;
+    }
+    /* 選択中: タブ色に合わせる */
+    .disc-btn.is-selected { color: #fff; }
+    .disc-btn.disc-10.is-selected { background: #1c4b8a; border-color: #1c4b8a; box-shadow: 0 0 0 2px rgba(28,75,138,0.25); }
+    .disc-btn.disc-20.is-selected { background: #a14d0a; border-color: #a14d0a; box-shadow: 0 0 0 2px rgba(161,77,10,0.25); }
+    .disc-btn.disc-30.is-selected { background: #165d28; border-color: #165d28; box-shadow: 0 0 0 2px rgba(22,93,40,0.25); }
+    .disc-btn.disc-50.is-selected { background: #a81f1f; border-color: #a81f1f; box-shadow: 0 0 0 2px rgba(168,31,31,0.25); }
   </style>
 </head>
 <body>
@@ -1164,7 +1201,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.28.0</span>
+      <span class="version">v0.29.0</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1471,7 +1508,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.28.0 &nbsp;•&nbsp;
+    SALE一括 v0.29.0 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
     Powered by ExcelJS
   </footer>
@@ -2071,10 +2108,39 @@
         <th class="col-pname">商品名</th>
       </tr>`;
 
-      const rows = getCurrentRows();
+      // ⑤の merger 結果を試す。①〜④が揃っていれば代表SKU行+割引率で表示
+      let displayRows = null;
+      let usedMerger = false;
+      try {
+        const merged = mergeAllFromArchive();
+        // 代表行(同一商品管理番号の最初のSKU)のみ
+        const reps = merged.rows.filter(r => !r.isBlankRow && r.isFirstInMgr);
+        // 現在のOFF率タブで絞り込み
+        let filtered;
+        if (currentOffRate === 'all') {
+          // 全体: 割引率が設定されているもの
+          filtered = reps.filter(r => r.discount !== null && r.discount !== undefined);
+        } else {
+          const target = parseInt(currentOffRate, 10);
+          filtered = reps.filter(r => r.discount === target);
+        }
+        displayRows = filtered.map(r => ({
+          mgr: r.mgr, itemCode: r.setCode, name: r.name, discount: r.discount
+        }));
+        usedMerger = true;
+      } catch (e) {
+        // ①のみ取り込み済み or データ不足 → 従来の add-products の rows でフォールバック (全体のみ表示)
+        if (currentOffRate === 'all') {
+          const rows = getCurrentRows();
+          if (rows && rows.length > 0) {
+            displayRows = rows.map(r => ({ mgr: r.mgr, itemCode: r.itemCode, name: r.name, discount: null }));
+          }
+        }
+      }
+
       let bodyHtml = '';
-      if (rows && rows.length > 0) {
-        bodyHtml = rows.map(r => `<tr>
+      if (displayRows && displayRows.length > 0) {
+        bodyHtml = displayRows.map(r => `<tr>
           <td class="mgr">${escapeHtml(r.mgr || '')}</td>
           <td class="mgr">${escapeHtml(r.itemCode || '')}</td>
           <td class="img-cell"><div class="img-placeholder">未取得</div></td>
@@ -2082,11 +2148,27 @@
         </tr>`).join('');
       }
 
-      const hintText = rows && rows.length > 0
-        ? `${currentYM ? currentYM.replace('/', '年') + '月' : ''} のセール参加商品: ${rows.length}件`
-        : (currentYM
-            ? (currentYM.replace('/', '年') + '月 のセール参加商品（「参加商品追加」からRMSデータCSVを取り込んでください）')
-            : 'セール期間（開始日時）を入力すると、年月のセールが履歴に追加されます。');
+      let hintText;
+      if (displayRows && displayRows.length > 0) {
+        const ymLabel = currentYM ? currentYM.replace('/', '年') + '月 ' : '';
+        if (usedMerger) {
+          if (currentOffRate === 'all') {
+            hintText = `${ymLabel}のセール参加商品 (割引率が設定済み): ${displayRows.length}件`;
+          } else {
+            hintText = `${ymLabel}${currentOffRate}%OFFの商品: ${displayRows.length}件`;
+          }
+        } else {
+          hintText = `${ymLabel}のセール参加商品: ${displayRows.length}件 (① のみ取り込み・割引率は ⑤ で設定可)`;
+        }
+      } else {
+        if (currentOffRate !== 'all' && usedMerger) {
+          hintText = `${currentOffRate}%OFF に設定された商品はありません。⑤「セール価格決定」で各商品に割引率を選んでください。`;
+        } else if (currentYM) {
+          hintText = currentYM.replace('/', '年') + '月 のセール参加商品（「参加商品追加」からRMSデータCSVを取り込んでください）';
+        } else {
+          hintText = 'セール期間（開始日時）を入力すると、年月のセールが履歴に追加されます。';
+        }
+      }
 
       container.innerHTML = `<table class="product-table">
         <thead>${headHtml}</thead>
@@ -3060,6 +3142,9 @@
       // 編集セルを取得 (商品名/SS用タイトル/送料)
       // 構造: editedCells = { [sku]: { name?, ssTitle?, ship? } }
       const editedCells = (data.editedCells && typeof data.editedCells === 'object') ? data.editedCells : {};
+      // 割引率を取得 (SKU別)
+      // 構造: discounts = { [sku]: 10|20|30|50 }
+      const discounts = (data.discounts && typeof data.discounts === 'object') ? data.discounts : {};
 
       for (let i = 1; i < rmsRows.length; i++) {
         const r = rmsRows[i];
@@ -3131,6 +3216,7 @@
           // 表示用 商品名 (同一管理番号の最初の行のみ出す。renderで分岐)
           isFirstInMgr,
           setCode: sku, mgr, image: '', ssTitle: dispSs,
+          discount: discounts[sku] ?? null,
           price, priceActual: price,
           cost, ship: dispShip, v1, v2, v3, v4,
           feeL: L, feeM: M, feeN: N, feeO: O,
@@ -3173,6 +3259,7 @@
       { key: 'mgr',          label: '商品管理番号',   cls: 'col-red',  group: 'main' },
       { key: 'image',        label: '商品画像',       cls: 'col-red',  group: 'main' },
       { key: 'ssTitle',      label: 'SS用タイトル',   cls: 'col-red',  group: 'main', editable: true },
+      { key: 'discount',     label: '割引率',         cls: 'col-discount', group: 'main' },
       { key: 'price',        label: '通常価格',       cls: 'col-green',group: 'main' },
       { key: 'cost',         label: '原価',           cls: 'col-green',group: 'main' },
       { key: 'ship',         label: '送料',           cls: 'col-green',group: 'main', editable: true },
@@ -3248,6 +3335,12 @@
             cellInner = escapeHtml(fmtCell(dispV)) + '%';
           } else if (c.key === 'image') {
             cellInner = `<div class="img-placeholder">未取得</div>`;
+          } else if (c.key === 'discount') {
+            // 割引率: 2x2 のミニボタン 10/20/30/50
+            const cur = r.discount ?? null;
+            cellInner = `<div class="discount-grid" data-sku="${escapeHtml(r.setCode)}">
+              ${[10,20,30,50].map(v => `<button type="button" class="disc-btn ${cur===v ? 'is-selected disc-'+v : ''}" data-discount="${v}">${v}%</button>`).join('')}
+            </div>`;
           } else {
             cellInner = escapeHtml(fmtCell(dispV));
           }
@@ -3287,6 +3380,44 @@
 
       // 編集可能セルのイベント
       attachEditableCellHandlers(container);
+
+      // 割引率ミニボタンのイベント
+      container.querySelectorAll('.discount-grid .disc-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const grid = btn.closest('.discount-grid');
+          const sku = grid.getAttribute('data-sku');
+          const v = parseInt(btn.getAttribute('data-discount'), 10);
+          // 既に選択中のものを再クリック → 解除
+          const alreadySelected = btn.classList.contains('is-selected');
+          // 同じグリッド内の他ボタンの選択を外す
+          grid.querySelectorAll('.disc-btn').forEach(b => {
+            b.classList.remove('is-selected','disc-10','disc-20','disc-30','disc-50');
+          });
+          if (!alreadySelected) {
+            btn.classList.add('is-selected', 'disc-' + v);
+            saveDiscount(sku, v);
+          } else {
+            saveDiscount(sku, null);
+          }
+        });
+      });
+    }
+
+    // 割引率 (SKU別) を保存
+    function saveDiscount(sku, value) {
+      const ym = currentYM || getCurrentYM();
+      if (!ym) return;
+      const archive = loadArchive();
+      if (!archive[ym]) archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
+      if (!archive[ym].discounts) archive[ym].discounts = {};
+      if (value === null || value === undefined) {
+        delete archive[ym].discounts[sku];
+      } else {
+        archive[ym].discounts[sku] = value;
+      }
+      saveArchive(archive);
     }
 
     // 編集セル: blur(離脱)時に保存・送料変更なら再描画して利益再計算
