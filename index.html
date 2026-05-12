@@ -120,7 +120,7 @@
       box-shadow: inset 0 0 0 3px rgba(30, 58, 95, 0.15);
     }
 
-    /* セール期間入力 */
+    /* セール期間入力 (年/月/日/時/分の独立ブロック) */
     .sale-period {
       display: inline-flex;
       align-items: stretch;
@@ -133,7 +133,7 @@
       display: flex;
       flex-direction: column;
       align-items: stretch;
-      min-width: 200px;
+      min-width: 210px;
     }
     .sale-period .period-cell + .period-cell {
       border-left: 2px solid var(--brand);
@@ -148,32 +148,46 @@
       text-align: center;
     }
     .sale-period .period-input-wrap {
-      padding: 6px 14px 8px;
+      padding: 6px 12px 8px;
       display: flex;
       align-items: center;
       justify-content: center;
+      gap: 3px;
     }
-    .sale-period input {
-      border: 0;
-      background: transparent;
+    .sale-period .dt-input {
+      border: 1.5px solid #d0d8e3;
+      background: #fff;
       font-size: 17px;
       font-weight: 700;
       font-family: inherit;
       font-variant-numeric: tabular-nums;
-      padding: 2px 0;
-      width: 100%;
+      padding: 3px 2px;
       text-align: center;
       color: var(--brand);
       letter-spacing: 0.02em;
-    }
-    .sale-period input:focus {
-      outline: none;
-      background: #e8eef7;
       border-radius: 4px;
+      box-sizing: border-box;
+      transition: border-color .12s, background .12s;
     }
-    .sale-period input::placeholder {
-      color: #a8b3c6;
+    .sale-period .dt-input.dt-year { width: 56px; }
+    .sale-period .dt-input.dt-2digit { width: 36px; }
+    .sale-period .dt-input:hover { border-color: #a8b3c6; }
+    .sale-period .dt-input:focus {
+      outline: none;
+      border-color: var(--brand);
+      background: #f0f4fb;
+      box-shadow: 0 0 0 2px rgba(30, 58, 95, 0.15);
+    }
+    .sale-period .dt-input::placeholder {
+      color: #c5cdd9;
       font-weight: 700;
+    }
+    .sale-period .dt-sep {
+      color: var(--brand);
+      font-weight: 700;
+      font-size: 16px;
+      padding: 0 1px;
+      user-select: none;
     }
     /* 右上の v0.x.x バージョン表示 + 文字サイズコントロール */
     header .header-right {
@@ -756,14 +770,30 @@
     <div class="sale-period" role="group" aria-label="セール期間">
       <div class="period-cell">
         <span class="period-label">開始日時</span>
-        <div class="period-input-wrap">
-          <input type="text" id="sale-start" placeholder="0000/00/00 00:00" autocomplete="off" />
+        <div class="period-input-wrap" data-dt="start">
+          <input type="text" inputmode="numeric" maxlength="4" class="dt-input dt-year" data-part="year" placeholder="0000" aria-label="開始 年" />
+          <span class="dt-sep">/</span>
+          <input type="text" inputmode="numeric" maxlength="2" class="dt-input dt-2digit" data-part="month" placeholder="00" aria-label="開始 月" />
+          <span class="dt-sep">/</span>
+          <input type="text" inputmode="numeric" maxlength="2" class="dt-input dt-2digit" data-part="day" placeholder="00" aria-label="開始 日" />
+          <span class="dt-sep" style="padding-left:4px;padding-right:1px;">&nbsp;</span>
+          <input type="text" inputmode="numeric" maxlength="2" class="dt-input dt-2digit" data-part="hour" placeholder="00" aria-label="開始 時" />
+          <span class="dt-sep">:</span>
+          <input type="text" inputmode="numeric" maxlength="2" class="dt-input dt-2digit" data-part="minute" placeholder="00" aria-label="開始 分" />
         </div>
       </div>
       <div class="period-cell">
         <span class="period-label">終了日時</span>
-        <div class="period-input-wrap">
-          <input type="text" id="sale-end" placeholder="0000/00/00 00:00" autocomplete="off" />
+        <div class="period-input-wrap" data-dt="end">
+          <input type="text" inputmode="numeric" maxlength="4" class="dt-input dt-year" data-part="year" placeholder="0000" aria-label="終了 年" />
+          <span class="dt-sep">/</span>
+          <input type="text" inputmode="numeric" maxlength="2" class="dt-input dt-2digit" data-part="month" placeholder="00" aria-label="終了 月" />
+          <span class="dt-sep">/</span>
+          <input type="text" inputmode="numeric" maxlength="2" class="dt-input dt-2digit" data-part="day" placeholder="00" aria-label="終了 日" />
+          <span class="dt-sep" style="padding-left:4px;padding-right:1px;">&nbsp;</span>
+          <input type="text" inputmode="numeric" maxlength="2" class="dt-input dt-2digit" data-part="hour" placeholder="00" aria-label="終了 時" />
+          <span class="dt-sep">:</span>
+          <input type="text" inputmode="numeric" maxlength="2" class="dt-input dt-2digit" data-part="minute" placeholder="00" aria-label="終了 分" />
         </div>
       </div>
     </div>
@@ -773,7 +803,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.14.0</span>
+      <span class="version">v0.15.0</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -881,7 +911,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.14.0 &nbsp;•&nbsp;
+    SALE一括 v0.15.0 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
     Powered by ExcelJS
   </footer>
@@ -1041,231 +1071,170 @@
     saleTypeEl.addEventListener('change', updateSaleTypeColor);
     updateSaleTypeColor();
 
-    // セール期間 永続化＋マスク入力
+    // セール期間 永続化＋分割ブロック入力 (年/月/日/時/分)
     const SALE_PERIOD_START = 'sale-ikkatsu-period-start';
     const SALE_PERIOD_END = 'sale-ikkatsu-period-end';
-    const saleStartEl = document.getElementById('sale-start');
-    const saleEndEl = document.getElementById('sale-end');
 
-    // テンプレート: 0000/00/00 00:00 (16文字)
-    // 数字位置(0以外でも上書き可): 0,1,2,3, 5,6, 8,9, 11,12, 14,15
-    // 固定位置: 4='/', 7='/', 10=' ', 13=':'
-    const MASK_TEMPLATE = '0000/00/00 00:00';
-    const MASK_FIXED = { 4: '/', 7: '/', 10: ' ', 13: ':' };
-    const DIGIT_POSITIONS = [0,1,2,3,5,6,8,9,11,12,14,15];
+    const PART_LEN = { year: 4, month: 2, day: 2, hour: 2, minute: 2 };
+    const PART_ORDER = ['year', 'month', 'day', 'hour', 'minute'];
 
-    function isFixedPos(pos) {
-      return pos in MASK_FIXED;
-    }
-
-    function nextDigitPos(pos) {
-      for (const p of DIGIT_POSITIONS) {
-        if (p > pos) return p;
+    // wrap (data-dt) 内の値を文字列 "YYYY/MM/DD HH:MM" に
+    function readDtWrap(wrap) {
+      const get = (p) => wrap.querySelector(`.dt-input[data-part="${p}"]`).value;
+      const y = (get('year') || '').padStart(4, '0');
+      const m = (get('month') || '').padStart(2, '0');
+      const d = (get('day') || '').padStart(2, '0');
+      const h = (get('hour') || '').padStart(2, '0');
+      const mi = (get('minute') || '').padStart(2, '0');
+      // どれか1つでも空なら "" を返す
+      if (!get('year') && !get('month') && !get('day') && !get('hour') && !get('minute')) {
+        return '';
       }
-      return MASK_TEMPLATE.length; // 末尾(超過)
+      return `${y}/${m}/${d} ${h}:${mi}`;
     }
 
-    function prevDigitPos(pos) {
-      for (let i = DIGIT_POSITIONS.length - 1; i >= 0; i--) {
-        if (DIGIT_POSITIONS[i] < pos) return DIGIT_POSITIONS[i];
-      }
-      return 0;
+    // 文字列 "YYYY/MM/DD HH:MM" を5入力に書き戻す
+    function writeDtWrap(wrap, s) {
+      const m = String(s || '').match(/^(\d{0,4})[\/\-]?(\d{0,2})[\/\-]?(\d{0,2})[\sT]?(\d{0,2}):?(\d{0,2})/);
+      if (!m) return;
+      const set = (p, v) => { wrap.querySelector(`.dt-input[data-part="${p}"]`).value = v || ''; };
+      set('year', m[1]);
+      set('month', m[2]);
+      set('day', m[3]);
+      set('hour', m[4]);
+      set('minute', m[5]);
     }
 
-    function ensureMaskValue(el) {
-      // 16文字未満ならテンプレートで埋める。固定位置がずれてたら正規化
-      let v = el.value || '';
-      if (v.length < MASK_TEMPLATE.length) {
-        // 既存値を保持しつつテンプレートで埋める
-        const buf = MASK_TEMPLATE.split('');
-        for (let i = 0; i < Math.min(v.length, MASK_TEMPLATE.length); i++) {
-          if (isFixedPos(i)) continue;
-          if (/[0-9]/.test(v[i])) buf[i] = v[i];
-        }
-        v = buf.join('');
-      } else {
-        // 固定位置を強制
-        const buf = v.slice(0, MASK_TEMPLATE.length).split('');
-        for (const [pos, ch] of Object.entries(MASK_FIXED)) {
-          buf[pos] = ch;
-        }
-        v = buf.join('');
-      }
-      el.value = v;
-    }
+    function attachDtBlock(wrap, storageKey) {
+      const inputs = PART_ORDER.map(p => wrap.querySelector(`.dt-input[data-part="${p}"]`));
 
-    function attachMaskInput(el, storageKey) {
-      // 初期値: localStorageに値があればそれを使い、なければテンプレートで埋める
+      // 復元
       const stored = localStorage.getItem(storageKey);
-      if (stored && stored.length === MASK_TEMPLATE.length) {
-        el.value = stored;
-      } else {
-        el.value = MASK_TEMPLATE;
+      if (stored) writeDtWrap(wrap, stored);
+
+      // 永続化
+      function persist() {
+        const v = readDtWrap(wrap);
+        if (v) localStorage.setItem(storageKey, v);
+        else localStorage.removeItem(storageKey);
       }
-      ensureMaskValue(el);
 
-      // フォーカス時: 最初の "0" 位置にカーソル
-      el.addEventListener('focus', () => {
-        // 最初の "0" を含む数字位置を探す
-        let pos = 0;
-        let found = false;
-        for (const p of DIGIT_POSITIONS) {
-          if (el.value[p] === '0') {
-            pos = p;
-            found = true;
-            break;
-          }
-        }
-        if (!found) {
-          // 全部埋まってたら最後の数字位置
-          pos = DIGIT_POSITIONS[DIGIT_POSITIONS.length - 1];
-        }
-        // requestAnimationFrame でブラウザがフォーカス処理を終えた後に位置調整
-        requestAnimationFrame(() => {
-          try { el.setSelectionRange(pos, pos + 1); } catch (e) {}
+      inputs.forEach((inp, idx) => {
+        const part = inp.dataset.part;
+        const max = PART_LEN[part];
+
+        // フォーカス時: 全選択(上から打ち込みやすく)
+        inp.addEventListener('focus', () => {
+          requestAnimationFrame(() => {
+            try { inp.select(); } catch (e) {}
+          });
         });
-      });
-
-      // クリック時: クリック位置が固定位置なら直近の数字位置にスナップ
-      el.addEventListener('click', () => {
-        requestAnimationFrame(() => {
-          let pos = el.selectionStart;
-          if (pos >= MASK_TEMPLATE.length) pos = DIGIT_POSITIONS[DIGIT_POSITIONS.length - 1];
-          while (isFixedPos(pos) && pos < MASK_TEMPLATE.length) pos++;
-          try { el.setSelectionRange(pos, pos + 1); } catch (e) {}
+        // クリック時も全選択(中間にカーソルが入るのを防ぐ)
+        inp.addEventListener('mouseup', (e) => {
+          // 既にこのinputがactiveなら無視(部分選択保護)
+          if (document.activeElement !== inp) return;
+          // 選択範囲がゼロ幅なら全選択
+          if (inp.selectionStart === inp.selectionEnd) {
+            try { inp.select(); } catch (e) {}
+          }
         });
-      });
 
-      // キーボード処理
-      el.addEventListener('keydown', (e) => {
-        // 修飾キーは普通に動作させる(コピペとかタブ移動)
-        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        // 入力: 数字以外を除去、桁数満たしたら次へ
+        inp.addEventListener('input', () => {
+          let v = inp.value.replace(/[^0-9]/g, '');
+          if (v.length > max) v = v.slice(0, max);
+          inp.value = v;
+          persist();
+          // 桁数満たしたら次のinputへ
+          if (v.length >= max && idx < inputs.length - 1) {
+            const next = inputs[idx + 1];
+            next.focus();
+          }
+        });
 
-        // まず現在位置を「数字位置にスナップ」
-        let pos = el.selectionStart;
-        // 範囲外なら最後の数字位置
-        if (pos >= MASK_TEMPLATE.length) {
-          pos = DIGIT_POSITIONS[DIGIT_POSITIONS.length - 1];
-        }
-        // 固定位置なら次の数字位置
-        while (isFixedPos(pos) && pos < MASK_TEMPLATE.length) pos++;
-        if (pos >= MASK_TEMPLATE.length) pos = DIGIT_POSITIONS[DIGIT_POSITIONS.length - 1];
+        // キーボード処理
+        inp.addEventListener('keydown', (e) => {
+          if (e.ctrlKey || e.metaKey || e.altKey) return;
 
-        const selLen = el.selectionEnd - el.selectionStart;
+          if (e.key === 'Backspace') {
+            // 空のときに前のinputへ
+            if (inp.value === '' && idx > 0) {
+              e.preventDefault();
+              const prev = inputs[idx - 1];
+              prev.focus();
+              prev.setSelectionRange(prev.value.length, prev.value.length);
+            }
+            return;
+          }
+          if (e.key === 'ArrowLeft') {
+            if (inp.selectionStart === 0 && idx > 0) {
+              e.preventDefault();
+              const prev = inputs[idx - 1];
+              prev.focus();
+              prev.setSelectionRange(prev.value.length, prev.value.length);
+            }
+            return;
+          }
+          if (e.key === 'ArrowRight') {
+            if (inp.selectionEnd === inp.value.length && idx < inputs.length - 1) {
+              e.preventDefault();
+              const next = inputs[idx + 1];
+              next.focus();
+              next.setSelectionRange(0, 0);
+            }
+            return;
+          }
+          // セパレータキー: 次のinputへジャンプ
+          if (e.key === '/' || e.key === ':' || e.key === ' ' || e.key === 'Enter' || e.key === 'Tab') {
+            if (e.key !== 'Tab' && idx < inputs.length - 1) {
+              e.preventDefault();
+              inputs[idx + 1].focus();
+            }
+            return;
+          }
+          // 数字なら許可、それ以外でmodifierなしは拒否
+          if (!/^\d$/.test(e.key) && e.key.length === 1) {
+            e.preventDefault();
+          }
+        });
 
-        if (/^[0-9]$/.test(e.key)) {
+        // ペースト: 数字以外除去して埋める。全部の桁を埋めるならまたぐ
+        inp.addEventListener('paste', (e) => {
           e.preventDefault();
-          // pos は既に数字位置にスナップ済み
-          const buf = el.value.split('');
-          buf[pos] = e.key;
-          el.value = buf.join('');
-          // 次の数字位置に移動
-          const np = nextDigitPos(pos);
-          if (np < MASK_TEMPLATE.length) {
-            el.setSelectionRange(np, np + 1);
+          const text = (e.clipboardData || window.clipboardData).getData('text');
+          const digits = text.replace(/[^0-9]/g, '');
+          // 最初のinputがyearの場合、フルテンプレートとみなして全部分配
+          if (idx === 0 && digits.length >= PART_LEN.year) {
+            let pos = 0;
+            for (let i = 0; i < inputs.length; i++) {
+              const len = PART_LEN[inputs[i].dataset.part];
+              inputs[i].value = digits.slice(pos, pos + len);
+              pos += len;
+              if (pos >= digits.length) break;
+            }
+            // 最後の入力済みinputにフォーカス
+            let lastFilledIdx = 0;
+            for (let i = 0; i < inputs.length; i++) {
+              if (inputs[i].value) lastFilledIdx = i;
+            }
+            const targetIdx = inputs[lastFilledIdx].value.length >= PART_LEN[inputs[lastFilledIdx].dataset.part]
+              && lastFilledIdx < inputs.length - 1
+              ? lastFilledIdx + 1 : lastFilledIdx;
+            inputs[targetIdx].focus();
           } else {
-            el.setSelectionRange(pos, pos + 1);
+            // このinputだけ埋める
+            inp.value = digits.slice(0, max);
+            if (inp.value.length >= max && idx < inputs.length - 1) {
+              inputs[idx + 1].focus();
+            }
           }
-          // input イベント発火(localStorage保存のため)
-          el.dispatchEvent(new Event('input', { bubbles: true }));
-          return;
-        }
-
-        if (e.key === 'Backspace') {
-          e.preventDefault();
-          const buf = el.value.split('');
-          // 現在位置自体を 0 に戻し、前に移動
-          // ただし、現在位置が末尾(最後の数字位置)で、その値が 0 でなければ現在位置を 0 に
-          // それ以外は前の数字位置を 0 に
-          let target;
-          if (selLen > 0) {
-            target = pos;
-          } else if (el.selectionStart >= MASK_TEMPLATE.length || el.value[pos] !== '0') {
-            // 現在位置が初期値以外なら現在位置を消す
-            target = pos;
-          } else {
-            target = prevDigitPos(pos);
-          }
-          if (target >= 0 && !isFixedPos(target)) {
-            buf[target] = '0';
-            el.value = buf.join('');
-            el.setSelectionRange(target, target + 1);
-            el.dispatchEvent(new Event('input', { bubbles: true }));
-          }
-          return;
-        }
-
-        if (e.key === 'Delete') {
-          e.preventDefault();
-          const buf = el.value.split('');
-          if (!isFixedPos(pos)) {
-            buf[pos] = '0';
-            el.value = buf.join('');
-            el.setSelectionRange(pos, pos + 1);
-            el.dispatchEvent(new Event('input', { bubbles: true }));
-          }
-          return;
-        }
-
-        if (e.key === 'ArrowLeft') {
-          e.preventDefault();
-          const np = prevDigitPos(pos);
-          el.setSelectionRange(np, np + 1);
-          return;
-        }
-        if (e.key === 'ArrowRight') {
-          e.preventDefault();
-          let np = nextDigitPos(pos);
-          if (np >= MASK_TEMPLATE.length) np = DIGIT_POSITIONS[DIGIT_POSITIONS.length - 1];
-          el.setSelectionRange(np, np + 1);
-          return;
-        }
-        if (e.key === 'Home') {
-          e.preventDefault();
-          el.setSelectionRange(0, 1);
-          return;
-        }
-        if (e.key === 'End') {
-          e.preventDefault();
-          const last = DIGIT_POSITIONS[DIGIT_POSITIONS.length - 1];
-          el.setSelectionRange(last, last + 1);
-          return;
-        }
-        if (e.key === 'Tab' || e.key === 'Enter' || e.key === 'Escape') {
-          // ブラウザ標準動作
-          return;
-        }
-        // それ以外のキーは無効化
-        e.preventDefault();
-      });
-
-      // ペースト対応: 数字以外を除去して埋める
-      el.addEventListener('paste', (e) => {
-        e.preventDefault();
-        const text = (e.clipboardData || window.clipboardData).getData('text');
-        const digits = text.replace(/[^0-9]/g, '').slice(0, 12);
-        const buf = el.value.split('');
-        let dpIdx = 0;
-        for (const p of DIGIT_POSITIONS) {
-          if (dpIdx < digits.length) {
-            buf[p] = digits[dpIdx++];
-          }
-        }
-        el.value = buf.join('');
-        const lastPos = nextDigitPos(DIGIT_POSITIONS[Math.min(digits.length, DIGIT_POSITIONS.length) - 1] || 0);
-        el.setSelectionRange(lastPos, lastPos + 1);
-        el.dispatchEvent(new Event('input', { bubbles: true }));
-      });
-
-      // 入力時: 値が壊れてないか正規化＋永続化
-      el.addEventListener('input', () => {
-        ensureMaskValue(el);
-        localStorage.setItem(storageKey, el.value);
+          persist();
+        });
       });
     }
 
-    attachMaskInput(saleStartEl, SALE_PERIOD_START);
-    attachMaskInput(saleEndEl, SALE_PERIOD_END);
+    attachDtBlock(document.querySelector('.period-input-wrap[data-dt="start"]'), SALE_PERIOD_START);
+    attachDtBlock(document.querySelector('.period-input-wrap[data-dt="end"]'), SALE_PERIOD_END);
 
     // ---- 商品一覧タブ ----
     // 直近のプレビュー/生成結果の rows を保持して、タブで表示を切り替える
