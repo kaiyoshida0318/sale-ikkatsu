@@ -1015,6 +1015,28 @@
       border-radius: 6px;
     }
 
+    /* セール参加商品タブ: アーカイブセレクタ/サブタブ/表ヘッダーを sticky 固定 */
+    body[data-view="products"] .archive-selector-bar {
+      position: sticky;
+      z-index: 30;
+      background: var(--bg);
+      margin: 0;
+      padding: 8px 0;
+    }
+    body[data-view="products"] .tabs {
+      position: sticky;
+      z-index: 29;
+      background: var(--bg);
+    }
+    body[data-view="products"] .product-table-wrap {
+      padding-top: 0;
+    }
+    body[data-view="products"] .product-table thead th {
+      position: sticky;
+      z-index: 28;
+      background: #f4f5f8;
+    }
+
     /* セール価格決定表 */
     .decide-toolbar {
       display: flex;
@@ -1136,6 +1158,26 @@
       background-color: #fffef0 !important;
       box-shadow: inset 0 0 0 2px var(--brand);
     }
+    /* 列幅リサイズハンドル (商品名・SSタイトル列の th 右端) */
+    .product-table.decide-table th.resizable {
+      position: sticky;
+      overflow: visible;
+    }
+    .col-resize-handle {
+      position: absolute;
+      top: 0;
+      right: -3px;
+      width: 6px;
+      height: 100%;
+      cursor: col-resize;
+      user-select: none;
+      z-index: 3;
+    }
+    .col-resize-handle:hover,
+    .col-resize-handle.is-dragging {
+      background: rgba(255,255,255,0.5);
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.8);
+    }
     /* 商品画像セル */
     .product-table.decide-table td .img-placeholder {
       display: inline-flex;
@@ -1242,7 +1284,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.29.2</span>
+      <span class="version">v0.30.0</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1549,7 +1591,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.29.2 &nbsp;•&nbsp;
+    SALE一括 v0.30.0 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
     Powered by ExcelJS
   </footer>
@@ -1639,21 +1681,39 @@
     applyFs(FS_LEVELS[getFsIndex()]);
 
     // ヘッダーとタブを sticky 固定: タブの top をヘッダー高さに追随させる
+    // さらに productsタブのアーカイブセレクタ/サブタブ/表ヘッダーも段重ねで sticky
     (function syncStickyTabs() {
       const header = document.querySelector('header');
       const tabs = document.querySelector('.main-tabs-bar');
       if (!header || !tabs) return;
       function update() {
-        // ヘッダー実高 (折り返し時にも追随)
-        const h = header.getBoundingClientRect().height;
-        tabs.style.top = h + 'px';
+        const hH = header.getBoundingClientRect().height;
+        tabs.style.top = hH + 'px';
+        // 段重ね: メインタブの下にアーカイブセレクタ、その下にサブタブ、その下に表ヘッダー
+        const tabsBottom = hH + tabs.getBoundingClientRect().height;
+        const archive = document.querySelector('body[data-view="products"] .archive-selector-bar');
+        if (archive) {
+          archive.style.top = tabsBottom + 'px';
+          const aH = archive.getBoundingClientRect().height;
+          const subTabs = document.querySelector('body[data-view="products"] .tabs');
+          if (subTabs) {
+            subTabs.style.top = (tabsBottom + aH) + 'px';
+            const stH = subTabs.getBoundingClientRect().height;
+            document.querySelectorAll('body[data-view="products"] .product-table thead th').forEach(th => {
+              th.style.top = (tabsBottom + aH + stH) + 'px';
+            });
+          }
+        }
       }
       update();
       window.addEventListener('resize', update);
-      // ヘッダー内の要素変化(ドロップダウン選択でwrap変化など)にも追随
       if (typeof ResizeObserver !== 'undefined') {
         new ResizeObserver(update).observe(header);
+        const tabs2 = document.querySelector('.main-tabs-bar');
+        if (tabs2) new ResizeObserver(update).observe(tabs2);
       }
+      // showView 後にも更新する必要があるため、グローバルに公開
+      window._syncStickyTabs = update;
     })();
 
     // ---- UI制御 ----
@@ -1710,6 +1770,11 @@
       try { localStorage.setItem(LAST_VIEW_KEY, viewId); } catch (e) {}
       // body に現在ビューIDをセット (CSS で参照: 決定タブだけ全幅化など)
       document.body.setAttribute('data-view', viewId);
+      // sticky の top 値を更新 (data-viewが変わると sticky 対象が変わるため)
+      if (typeof window._syncStickyTabs === 'function') {
+        // 次のフレームで実行 (DOMが反映された後)
+        requestAnimationFrame(() => window._syncStickyTabs());
+      }
 
       // 履歴管理: メインタブ以外(=サブビュー)に入る時だけ pushState
       if (!_suppressPushState) {
@@ -3314,10 +3379,11 @@
     // class: th/td に付けるクラス(色分け用)
     const DECIDE_COLS = [
       { key: 'name',         label: '商品名',         cls: 'col-name', group: 'main' },
+      { key: 'name',         label: '商品名',         cls: 'col-name', group: 'main', resizable: true, defaultWidth: 280 },
       { key: 'setCode',      label: 'セット商品コード', cls: 'col-red',  group: 'main' },
       { key: 'mgr',          label: '商品管理番号',   cls: 'col-red',  group: 'main' },
       { key: 'image',        label: '商品画像',       cls: 'col-red',  group: 'main' },
-      { key: 'ssTitle',      label: 'SS用タイトル',   cls: 'col-red',  group: 'main', editable: true },
+      { key: 'ssTitle',      label: 'SS用タイトル',   cls: 'col-red',  group: 'main', editable: true, resizable: true, defaultWidth: 200 },
       { key: 'discount',     label: '割引率',         cls: 'col-discount', group: 'main' },
       { key: 'price',        label: '通常価格',       cls: 'col-green',group: 'main' },
       { key: 'cost',         label: '原価',           cls: 'col-green',group: 'main' },
@@ -3375,7 +3441,15 @@
 
       const cols = DECIDE_COLS.filter(c => _decideShowFee || c.group !== 'fee');
 
-      const head = `<tr>${cols.map(c => `<th class="${c.cls}">${escapeHtml(c.label)}</th>`).join('')}</tr>`;
+      // 保存された列幅を適用
+      const colWidths = loadColWidths();
+      const head = `<tr>${cols.map(c => {
+        const cls = c.cls + (c.resizable ? ' resizable' : '');
+        const width = c.resizable ? (colWidths[c.key] || c.defaultWidth) : null;
+        const style = width ? ` style="width:${width}px;min-width:${width}px;max-width:${width}px;"` : '';
+        const handle = c.resizable ? `<div class="col-resize-handle" data-resize-col="${c.key}"></div>` : '';
+        return `<th class="${cls}"${style}>${escapeHtml(c.label)}${handle}</th>`;
+      }).join('')}</tr>`;
       const body = rows.map(r => {
         if (r.isBlankRow) {
           // 空行: 全列空セル
@@ -3405,7 +3479,13 @@
           }
           // 編集可能セル
           if (c.editable) {
-            return `<td class="${c.cls} editable" data-sku="${escapeHtml(r.setCode)}" data-field="${c.key}" contenteditable="true">${cellInner}</td>`;
+            const w = c.resizable ? (colWidths[c.key] || c.defaultWidth) : null;
+            const style = w ? ` style="max-width:${w}px;"` : '';
+            return `<td class="${c.cls} editable"${style} data-sku="${escapeHtml(r.setCode)}" data-field="${c.key}" contenteditable="true">${cellInner}</td>`;
+          }
+          if (c.resizable) {
+            const w = colWidths[c.key] || c.defaultWidth;
+            return `<td class="${c.cls}" style="max-width:${w}px;">${cellInner}</td>`;
           }
           return `<td class="${c.cls}">${cellInner}</td>`;
         });
@@ -3455,6 +3535,9 @@
 
       // 編集可能セルのイベント
       attachEditableCellHandlers(container);
+
+      // 列幅リサイズハンドル (商品名・SS用タイトル)
+      attachColumnResizeHandlers(container);
 
       // 割引率ミニボタンのイベント
       container.querySelectorAll('.discount-grid .disc-btn').forEach(btn => {
@@ -3554,6 +3637,68 @@
           if (field === 'ship') {
             renderDecidePriceTable();
           }
+        });
+      });
+    }
+
+    // ⑤の列幅をlocalStorageから読み書き (列キー: name, ssTitle)
+    const COL_WIDTHS_KEY = 'sale-ikkatsu-col-widths';
+    function loadColWidths() {
+      try {
+        return JSON.parse(localStorage.getItem(COL_WIDTHS_KEY) || '{}');
+      } catch (e) { return {}; }
+    }
+    function saveColWidth(key, width) {
+      const cw = loadColWidths();
+      if (width && width > 0) cw[key] = Math.round(width);
+      else delete cw[key];
+      try { localStorage.setItem(COL_WIDTHS_KEY, JSON.stringify(cw)); } catch (e) {}
+    }
+
+    // 列幅リサイズ: ハンドルをドラッグして th + td の幅を変える
+    function attachColumnResizeHandlers(container) {
+      container.querySelectorAll('.col-resize-handle').forEach(handle => {
+        handle.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          const colKey = handle.getAttribute('data-resize-col');
+          const th = handle.parentElement;
+          const startX = e.clientX;
+          const startWidth = th.getBoundingClientRect().width;
+          handle.classList.add('is-dragging');
+          document.body.style.cursor = 'col-resize';
+          document.body.style.userSelect = 'none';
+
+          function onMove(ev) {
+            const dx = ev.clientX - startX;
+            let newW = startWidth + dx;
+            if (newW < 60) newW = 60;
+            if (newW > 800) newW = 800;
+            // th と同じ列の全 td に幅を反映
+            th.style.width = newW + 'px';
+            th.style.minWidth = newW + 'px';
+            th.style.maxWidth = newW + 'px';
+            // 該当列のtdすべて
+            const table = th.closest('table');
+            if (table) {
+              const colIdx = Array.from(th.parentElement.children).indexOf(th);
+              table.querySelectorAll('tbody tr').forEach(tr => {
+                const td = tr.children[colIdx];
+                if (td) td.style.maxWidth = newW + 'px';
+              });
+            }
+          }
+          function onUp() {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            handle.classList.remove('is-dragging');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            // 最終幅を保存
+            const finalW = th.getBoundingClientRect().width;
+            saveColWidth(colKey, finalW);
+          }
+          document.addEventListener('mousemove', onMove);
+          document.addEventListener('mouseup', onUp);
         });
       });
     }
