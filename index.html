@@ -512,7 +512,7 @@
       cursor: pointer;
       font-family: inherit;
     }
-    .back-btn:hover {
+    .back-btn:hover:not(:disabled) {
       background: #f0f0f2;
       color: var(--text);
     }
@@ -980,7 +980,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.19.1</span>
+      <span class="version">v0.19.2</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1128,7 +1128,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.19.1 &nbsp;•&nbsp;
+    SALE一括 v0.19.2 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
     Powered by ExcelJS
   </footer>
