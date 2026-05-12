@@ -717,12 +717,26 @@
       font-size: 12px;
       color: var(--text);
     }
-    .product-table th.col-mgr { min-width: 110px; }
+    .product-table th.col-mgr { min-width: 130px; }
+    .product-table th.col-itemcode { min-width: 160px; }
+    .product-table th.col-img { width: 120px; }
+    .product-table th.col-pname { min-width: 320px; }
     .product-table th.col-name { min-width: 240px; max-width: 360px; }
-    .product-table th.col-img { width: 80px; }
     .product-table th.col-discount { min-width: 200px; }
     .product-table th.col-title { min-width: 240px; max-width: 360px; }
     .product-table th.col-saletitle { min-width: 220px; }
+    .product-table .empty-row {
+      text-align: center;
+      padding: 40px 16px;
+      color: var(--muted);
+      font-size: 13px;
+      font-style: italic;
+    }
+    .table-hint {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
     .product-table .img-cell { text-align: center; }
     .product-table .img-placeholder {
       width: 64px;
@@ -844,7 +858,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.16.0</span>
+      <span class="version">v0.17.0</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -960,7 +974,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.16.0 &nbsp;•&nbsp;
+    SALE一括 v0.17.0 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
     Powered by ExcelJS
   </footer>
@@ -1065,6 +1079,17 @@
       if (viewId === 'products') {
         const mt = document.querySelector('.main-tab[data-main-tab="products"]');
         if (mt) mt.classList.add('active');
+        // 最新の年月に自動で切り替え＆表示更新
+        const archive = loadArchive();
+        const yms = sortYMs(Object.keys(archive));
+        if (yms.length > 0) {
+          currentYM = yms[0]; // 最新
+          const sel = document.getElementById('archive-select');
+          if (sel) sel.value = currentYM;
+          localStorage.setItem(SALE_ARCHIVE_CURRENT, currentYM);
+          updateArchivePeriodLabel();
+        }
+        renderProductTable();
       }
     }
 
@@ -1490,126 +1515,24 @@
     function renderProductTable() {
       const container = document.getElementById('product-table-container');
       if (!container) return;
-      const rowsAll = getCurrentRows();
-      if (!rowsAll || rowsAll.length === 0) {
-        if (!currentYM) {
-          container.innerHTML = '<div class="empty-state">セール期間（開始日時）を入力してから「+ セール価格決定用」でCSVをアップロードしてください。</div>';
-        } else {
-          container.innerHTML = `<div class="empty-state">${currentYM.replace('/', '年')}月 のデータはまだありません。<br>「+ セール価格決定用」からCSVをアップロードしてください。</div>`;
-        }
-        return;
-      }
-      // 空白行を除外、商品管理番号でユニークに(同じ管理番号のSKU別行を1行に集約)
-      const seenMgr = new Set();
-      const rows = [];
-      for (const r of rowsAll) {
-        if (r._blank) continue;
-        const mgr = r['商品管理番号'] || '';
-        if (!mgr || seenMgr.has(mgr)) continue;
-        seenMgr.add(mgr);
-        rows.push(r);
-      }
 
-      const rate = currentOffRate;
-      const saleTitles = loadSaleTitles();
-
-      // 共通: 画像プレースホルダー（後で別CSVで埋められるよう構造を整えておく）
-      function imageCell(mgr) {
-        return `<td class="img-cell"><div class="img-placeholder" data-mgr="${escapeHtml(mgr)}" title="画像（後で追加予定）">画像なし</div></td>`;
-      }
-
-      // 共通: セール用タイトルセル(編集可能)
-      function saleTitleCell(mgr) {
-        const v = saleTitles[mgr] || '';
-        return `<td><div class="editable-cell" contenteditable="true" data-mgr="${escapeHtml(mgr)}" data-field="sale-title" spellcheck="false">${escapeHtml(v)}</div></td>`;
-      }
-
-      // 割引率の表示文字列
-      function discountText(rateMode, price) {
-        if (rateMode === 'all') {
-          const p10 = formatYen(calcOffPrice(price, 10));
-          const p20 = formatYen(calcOffPrice(price, 20));
-          const p30 = formatYen(calcOffPrice(price, 30));
-          const p50 = formatYen(calcOffPrice(price, 50));
-          return `<div class="discount-multi">
-            <span><b>10%</b> ${p10}</span>
-            <span><b>20%</b> ${p20}</span>
-            <span><b>30%</b> ${p30}</span>
-            <span><b>50%</b> ${p50}</span>
-          </div>`;
-        }
-        const rateNum = Number(rateMode);
-        const offPrice = calcOffPrice(price, rateNum);
-        const cost = Number.isFinite(price) ? null : null; // 後で外から渡すので、ここでは未使用
-        return `<div class="discount-single"><b>${rateNum}%OFF</b> ${formatYen(offPrice)}</div>`;
-      }
-
+      // 列ヘッダー(4列固定)
       const headHtml = `<tr>
         <th class="col-mgr">商品管理番号</th>
-        <th class="col-name">商品名</th>
-        <th class="col-img">画像</th>
-        <th class="col-discount">${rate === 'all' ? '割引率（10/20/30/50%）' : (rate + '%OFF')}</th>
-        <th class="col-title">通常タイトル</th>
-        <th class="col-saletitle">セール用タイトル</th>
+        <th class="col-itemcode">商品コード</th>
+        <th class="col-img">商品画像</th>
+        <th class="col-pname">商品名</th>
       </tr>`;
 
-      const rowsHtml = rows.map(r => {
-        const mgr = r['商品管理番号'] || '';
-        const name = r['商品名'] || '';
-        const price = Number(r['通常価格']);
-        const cost = Number(r['原価']);
-        let discountCell;
-        if (rate === 'all') {
-          const p10 = formatYen(calcOffPrice(price, 10));
-          const p20 = formatYen(calcOffPrice(price, 20));
-          const p30 = formatYen(calcOffPrice(price, 30));
-          const p50 = formatYen(calcOffPrice(price, 50));
-          discountCell = `<td><div class="discount-multi">
-            <span><b>10%</b> ${p10}</span>
-            <span><b>20%</b> ${p20}</span>
-            <span><b>30%</b> ${p30}</span>
-            <span><b>50%</b> ${p50}</span>
-          </div></td>`;
-        } else {
-          const rateNum = Number(rate);
-          const offPrice = calcOffPrice(price, rateNum);
-          const profit = calcProfit(offPrice, cost);
-          const profitRate = calcProfitRate(profit, offPrice);
-          discountCell = `<td><div class="discount-single">
-            <div class="discount-price"><b>${rateNum}%OFF</b> ${formatYen(offPrice)}</div>
-            <div class="discount-detail">利益 ${profit !== null ? formatYen(profit) : '—'} / ${profitRate !== null ? profitRate + '%' : '—'}</div>
-          </div></td>`;
-        }
-        return `<tr>
-          <td class="mgr">${escapeHtml(mgr)}</td>
-          <td class="name placeholder-cell">（未登録）</td>
-          ${imageCell(mgr)}
-          ${discountCell}
-          <td class="name placeholder-cell">（未登録）</td>
-          ${saleTitleCell(mgr)}
-        </tr>`;
-      }).join('');
-
+      // データ行は完全に空(0行)。情報CSVアップ機能ができたら後で埋める
       container.innerHTML = `<table class="product-table">
         <thead>${headHtml}</thead>
-        <tbody>${rowsHtml}</tbody>
+        <tbody></tbody>
       </table>
-      <div style="margin-top:10px;font-size:12px;color:var(--muted);">表示: ${rows.length}件 ${rate === 'all' ? '（全体）' : '（' + rate + '%OFF）'}</div>`;
-
-      // セール用タイトルの編集 → 保存
-      container.querySelectorAll('.editable-cell[data-field="sale-title"]').forEach(el => {
-        el.addEventListener('input', () => {
-          const mgr = el.getAttribute('data-mgr');
-          saveSaleTitle(mgr, el.textContent);
-        });
-        // Enter で改行を防ぎつつ blur 扱い
-        el.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            el.blur();
-          }
-        });
-      });
+      <div class="table-hint">${currentYM
+        ? (currentYM.replace('/', '年') + '月 のセール参加商品（情報CSVアップロード待ち）')
+        : 'セール期間（開始日時）を入力すると、年月のセールが履歴に追加されます。'
+      }</div>`;
     }
 
     function escapeHtml(s) {
@@ -1723,13 +1646,8 @@
         });
         renderStats(result.stats);
         renderWarnings(result.warnings);
-        const savedYM = saveCurrentResultToArchive(result.rows);
-        if (!savedYM) {
-          setStatus("⚠️ 開始日時の年月が未入力のため、アーカイブに保存できませんでした。期間を入れてから再実行してください。", "error");
-          return;
-        }
-        renderProductTable();
-        setStatus('✅ プレビュー取得完了（セール参加商品タブに商品一覧が表示されます）', 'success');
+        // 商品データはセール参加商品タブには反映しない(別目的のため温存)
+        setStatus('✅ プレビュー取得完了', 'success');
       } catch (e) {
         setStatus('❌ エラー: ' + e.message, 'error');
         console.error(e);
@@ -1755,12 +1673,7 @@
 
         renderStats(result.stats);
         renderWarnings(result.warnings);
-        const savedYM = saveCurrentResultToArchive(result.rows);
-        if (!savedYM) {
-          setStatus("⚠️ 開始日時の年月が未入力のため、アーカイブに保存できませんでした。期間を入れてから再実行してください。", "error");
-          return;
-        }
-        renderProductTable();
+        // 商品データはセール参加商品タブには反映しない(別目的のため温存)
 
         const blob = new Blob([xlsxBuf], {
           type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
