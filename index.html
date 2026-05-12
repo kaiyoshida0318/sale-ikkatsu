@@ -587,6 +587,47 @@
     .btn-mini:active:not(:disabled) { transform: translateY(1px); }
     .btn-mini .plus { font-size: 15px; font-weight: 700; line-height: 1; }
 
+    /* セール期間アーカイブセレクタ */
+    .archive-selector-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0 12px;
+      margin: 0;
+      flex-wrap: wrap;
+    }
+    .archive-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .archive-select {
+      font-size: 14px;
+      font-weight: 600;
+      padding: 7px 32px 7px 12px;
+      border: 2px solid var(--brand);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--brand);
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' stroke='%231e3a5f' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      min-width: 130px;
+      font-family: inherit;
+    }
+    .archive-select:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.15);
+    }
+    .archive-period {
+      font-size: 12px;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+
     /* サブタブ(OFF率切替) */
     .tabs {
       display: flex;
@@ -803,7 +844,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.15.0</span>
+      <span class="version">v0.16.0</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -834,6 +875,14 @@
     <div id="app">
       <!-- メインタブ: セール参加商品 (デフォルト表示) -->
       <div id="tool-products" class="tool-panel active">
+        <div class="archive-selector-bar">
+          <label for="archive-select" class="archive-label">セール期間：</label>
+          <select id="archive-select" class="archive-select">
+            <option value="">（履歴なし）</option>
+          </select>
+          <span id="archive-period" class="archive-period"></span>
+        </div>
+
         <div class="tabs" role="tablist">
           <button type="button" class="tab active" data-offrate="all" role="tab">全体</button>
           <button type="button" class="tab tab-10" data-offrate="10" role="tab">10%OFF</button>
@@ -911,7 +960,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.15.0 &nbsp;•&nbsp;
+    SALE一括 v0.16.0 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
     Powered by ExcelJS
   </footer>
@@ -1112,11 +1161,22 @@
       const stored = localStorage.getItem(storageKey);
       if (stored) writeDtWrap(wrap, stored);
 
-      // 永続化
+      // 永続化＋アーカイブ追加
       function persist() {
         const v = readDtWrap(wrap);
         if (v) localStorage.setItem(storageKey, v);
         else localStorage.removeItem(storageKey);
+        // 開始日時の年月が揃ったらアーカイブに自動追加
+        if (storageKey === SALE_PERIOD_START) {
+          const yearEl = wrap.querySelector('.dt-input[data-part="year"]');
+          const monthEl = wrap.querySelector('.dt-input[data-part="month"]');
+          if (yearEl.value.length === 4 && monthEl.value.length === 2) {
+            const ym = `${yearEl.value}/${monthEl.value}`;
+            if (typeof addArchiveYM === 'function') {
+              addArchiveYM(ym);
+            }
+          }
+        }
       }
 
       inputs.forEach((inp, idx) => {
@@ -1237,9 +1297,136 @@
     attachDtBlock(document.querySelector('.period-input-wrap[data-dt="end"]'), SALE_PERIOD_END);
 
     // ---- 商品一覧タブ ----
-    // 直近のプレビュー/生成結果の rows を保持して、タブで表示を切り替える
-    let lastProductRows = null;
+    // セールアーカイブ: 年月キー(YYYY/MM)別に rows と セール用タイトル を保存
+    // 構造: { "2026/03": { rows: [...], titles: { mgrCode: "セール用タイトル" }, startDt: "2026/03/04 20:00", endDt: "2026/03/11 01:59" } }
+    const SALE_ARCHIVE_KEY = 'sale-ikkatsu-archive';
+    const SALE_ARCHIVE_CURRENT = 'sale-ikkatsu-archive-current';
     let currentOffRate = 'all';
+    let currentYM = null; // 現在表示中の年月
+
+    function loadArchive() {
+      try {
+        return JSON.parse(localStorage.getItem(SALE_ARCHIVE_KEY) || '{}');
+      } catch (e) {
+        return {};
+      }
+    }
+    function saveArchive(archive) {
+      try {
+        localStorage.setItem(SALE_ARCHIVE_KEY, JSON.stringify(archive));
+      } catch (e) {
+        console.warn('アーカイブ保存失敗:', e);
+      }
+    }
+    // 年月の昇順→降順の並び替え(最新優先)
+    function sortYMs(yms) {
+      return yms.slice().sort((a, b) => b.localeCompare(a));
+    }
+    // アーカイブの選択肢を更新
+    function refreshArchiveSelect() {
+      const sel = document.getElementById('archive-select');
+      if (!sel) return;
+      const archive = loadArchive();
+      const yms = sortYMs(Object.keys(archive));
+      const prevSelected = sel.value;
+      sel.innerHTML = '';
+      if (yms.length === 0) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = '（履歴なし）';
+        sel.appendChild(opt);
+        currentYM = null;
+        document.getElementById('archive-period').textContent = '';
+        return;
+      }
+      for (const ym of yms) {
+        const opt = document.createElement('option');
+        opt.value = ym;
+        opt.textContent = ym.replace('/', '年') + '月';
+        sel.appendChild(opt);
+      }
+      // 復元: 直前の選択 or localStorage の current or 最新
+      let target = prevSelected && yms.includes(prevSelected) ? prevSelected : null;
+      if (!target) {
+        const saved = localStorage.getItem(SALE_ARCHIVE_CURRENT);
+        if (saved && yms.includes(saved)) target = saved;
+      }
+      if (!target) target = yms[0]; // 最新
+      sel.value = target;
+      currentYM = target;
+      localStorage.setItem(SALE_ARCHIVE_CURRENT, target);
+      updateArchivePeriodLabel();
+    }
+    function updateArchivePeriodLabel() {
+      const el = document.getElementById('archive-period');
+      if (!el) return;
+      if (!currentYM) { el.textContent = ''; return; }
+      const archive = loadArchive();
+      const data = archive[currentYM];
+      if (data && data.startDt && data.endDt) {
+        el.textContent = `${data.startDt} 〜 ${data.endDt}`;
+      } else {
+        el.textContent = '';
+      }
+    }
+    // 開始日時の年月入力時に、空のアーカイブ枠を作る(データはまだ無くてもOK)
+    function addArchiveYM(ym) {
+      const archive = loadArchive();
+      if (!archive[ym]) {
+        archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '' };
+        saveArchive(archive);
+        refreshArchiveSelect();
+        // 追加した年月を選択状態に
+        const sel = document.getElementById('archive-select');
+        if (sel) {
+          sel.value = ym;
+          currentYM = ym;
+          localStorage.setItem(SALE_ARCHIVE_CURRENT, ym);
+          updateArchivePeriodLabel();
+          renderProductTable();
+        }
+      }
+    }
+    // 現在の開始日時/終了日時を取得
+    function getCurrentPeriod() {
+      return {
+        startDt: localStorage.getItem(SALE_PERIOD_START) || '',
+        endDt: localStorage.getItem(SALE_PERIOD_END) || '',
+      };
+    }
+    // 開始日時から年月を取得
+    function getCurrentYM() {
+      const s = localStorage.getItem(SALE_PERIOD_START) || '';
+      const m = s.match(/^(\d{4})\/(\d{2})/);
+      return m ? `${m[1]}/${m[2]}` : null;
+    }
+    // CSV処理結果を現在の年月アーカイブに保存
+    function saveCurrentResultToArchive(rows) {
+      const ym = getCurrentYM();
+      if (!ym) {
+        console.warn('開始日時の年月が未入力のため、アーカイブに保存できません');
+        return null;
+      }
+      const archive = loadArchive();
+      const period = getCurrentPeriod();
+      archive[ym] = archive[ym] || { rows: [], titles: {}, startDt: '', endDt: '' };
+      archive[ym].rows = rows;
+      archive[ym].startDt = period.startDt;
+      archive[ym].endDt = period.endDt;
+      // titles は既存を保持(上書き運用なので残してOK)
+      archive[ym].titles = archive[ym].titles || {};
+      saveArchive(archive);
+      currentYM = ym;
+      localStorage.setItem(SALE_ARCHIVE_CURRENT, ym);
+      refreshArchiveSelect();
+      return ym;
+    }
+    // 現在の表示用 rows を取得
+    function getCurrentRows() {
+      if (!currentYM) return [];
+      const archive = loadArchive();
+      return (archive[currentYM] && archive[currentYM].rows) || [];
+    }
 
     function formatYen(n) {
       if (n === null || n === undefined || n === '') return '';
@@ -1270,40 +1457,52 @@
       return Math.floor((profit / offPrice) * 100);
     }
 
-    // セール用タイトル(ユーザー編集) を localStorage に保存
-    const SALE_TITLE_KEY = 'sale-ikkatsu-sale-titles';
+    // セール用タイトル(年月別) を localStorage に保存
     function loadSaleTitles() {
-      try {
-        return JSON.parse(localStorage.getItem(SALE_TITLE_KEY) || '{}');
-      } catch (e) {
-        return {};
-      }
+      if (!currentYM) return {};
+      const archive = loadArchive();
+      return (archive[currentYM] && archive[currentYM].titles) || {};
     }
     function saveSaleTitle(mgrCode, value) {
-      const data = loadSaleTitles();
+      if (!currentYM) return;
+      const archive = loadArchive();
+      if (!archive[currentYM]) archive[currentYM] = { rows: [], titles: {}, startDt: '', endDt: '' };
+      const titles = archive[currentYM].titles || {};
       if (value && value.trim()) {
-        data[mgrCode] = value;
+        titles[mgrCode] = value;
       } else {
-        delete data[mgrCode];
+        delete titles[mgrCode];
       }
-      try {
-        localStorage.setItem(SALE_TITLE_KEY, JSON.stringify(data));
-      } catch (e) {
-        console.warn('セール用タイトル保存失敗:', e);
-      }
+      archive[currentYM].titles = titles;
+      saveArchive(archive);
     }
+
+    // アーカイブ選択変更時
+    document.getElementById('archive-select').addEventListener('change', (e) => {
+      currentYM = e.target.value || null;
+      if (currentYM) {
+        localStorage.setItem(SALE_ARCHIVE_CURRENT, currentYM);
+      }
+      updateArchivePeriodLabel();
+      renderProductTable();
+    });
 
     function renderProductTable() {
       const container = document.getElementById('product-table-container');
       if (!container) return;
-      if (!lastProductRows || lastProductRows.length === 0) {
-        container.innerHTML = '<div class="empty-state">まだデータがありません。<br>「セール価格決定用」でCSVをアップロードすると、ここに商品一覧が表示されます。</div>';
+      const rowsAll = getCurrentRows();
+      if (!rowsAll || rowsAll.length === 0) {
+        if (!currentYM) {
+          container.innerHTML = '<div class="empty-state">セール期間（開始日時）を入力してから「+ セール価格決定用」でCSVをアップロードしてください。</div>';
+        } else {
+          container.innerHTML = `<div class="empty-state">${currentYM.replace('/', '年')}月 のデータはまだありません。<br>「+ セール価格決定用」からCSVをアップロードしてください。</div>`;
+        }
         return;
       }
       // 空白行を除外、商品管理番号でユニークに(同じ管理番号のSKU別行を1行に集約)
       const seenMgr = new Set();
       const rows = [];
-      for (const r of lastProductRows) {
+      for (const r of rowsAll) {
         if (r._blank) continue;
         const mgr = r['商品管理番号'] || '';
         if (!mgr || seenMgr.has(mgr)) continue;
@@ -1524,7 +1723,11 @@
         });
         renderStats(result.stats);
         renderWarnings(result.warnings);
-        lastProductRows = result.rows;
+        const savedYM = saveCurrentResultToArchive(result.rows);
+        if (!savedYM) {
+          setStatus("⚠️ 開始日時の年月が未入力のため、アーカイブに保存できませんでした。期間を入れてから再実行してください。", "error");
+          return;
+        }
         renderProductTable();
         setStatus('✅ プレビュー取得完了（セール参加商品タブに商品一覧が表示されます）', 'success');
       } catch (e) {
@@ -1552,7 +1755,11 @@
 
         renderStats(result.stats);
         renderWarnings(result.warnings);
-        lastProductRows = result.rows;
+        const savedYM = saveCurrentResultToArchive(result.rows);
+        if (!savedYM) {
+          setStatus("⚠️ 開始日時の年月が未入力のため、アーカイブに保存できませんでした。期間を入れてから再実行してください。", "error");
+          return;
+        }
         renderProductTable();
 
         const blob = new Blob([xlsxBuf], {
@@ -1576,6 +1783,10 @@
         setButtonsDisabled(false);
       }
     });
+
+    // ---- 起動時: アーカイブセレクタ初期化 ----
+    refreshArchiveSelect();
+    renderProductTable();
   </script>
 </body>
 </html>
