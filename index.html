@@ -1047,12 +1047,24 @@
       flex-wrap: wrap;
     }
     .decide-stats { font-size: 12px; color: var(--muted); }
-    /* ⑤画面: 詰めるだけにして、固定高さ化は撤去 (表が見切れる問題の応急対応) */
+    /* ⑤画面: タイトル+ツールバーは固定、groups-scrollだけスクロールエリア */
     body[data-view="decide-price"] main {
       margin-top: 4px;
+      /* 画面高さからヘッダー + メインタブ + margin等を引いた残り */
+      height: calc(100vh - var(--top-bar-h, 130px) - 20px);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    body[data-view="decide-price"] #tool-decide-price.tool-panel.active {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
     }
     body[data-view="decide-price"] .tool-panel-header {
       margin-bottom: 2px;
+      flex-shrink: 0;
     }
     body[data-view="decide-price"] .tool-panel-header h2 {
       font-size: 16px;
@@ -1065,14 +1077,31 @@
     body[data-view="decide-price"] #decide-price-status {
       margin-top: 0;
       min-height: 0;
+      flex-shrink: 0;
     }
     body[data-view="decide-price"] .product-table-wrap {
       padding: 0;
       border: 0;
       background: transparent;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    body[data-view="decide-price"] #decide-price-table-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    /* groups-scroll が残り全部の縦領域を占有 */
+    body[data-view="decide-price"] .groups-scroll {
+      flex: 1;
+      min-height: 0;
     }
     body[data-view="decide-price"] .decide-toolbar {
       padding: 0 2px 2px;
+      flex-shrink: 0;
     }
     /* バリエ・手数料トグルボタン: ツールバー内に配置 */
     .decide-table-area {
@@ -1098,12 +1127,30 @@
       background: var(--brand);
       color: #fff;
     }
-    .decide-table-scroll {
-      overflow-x: auto;
-      max-height: 70vh;
+    /* ⑤画面: タイトル+ツールバー固定、グループコンテナがスクロール */
+    .groups-scroll {
       overflow-y: auto;
+      overflow-x: auto;
       border: 1px solid var(--border);
       border-radius: 6px;
+      background: #fff;
+    }
+    /* 各商品グループ */
+    .product-group + .product-group {
+      margin-top: 8px;
+      border-top: 4px solid #e2e2e8;
+    }
+    .product-group-header {
+      padding: 10px 14px;
+      border: 1px solid #d8d8de;
+      border-bottom: 2px solid #b5b5c0;
+    }
+    /* 各商品のSKU表ラッパー: テーブル内でのみスクロール、スクロール伝搬は止める */
+    .product-group-table-wrap {
+      overflow-x: auto;
+      overflow-y: auto;
+      max-height: 50vh;
+      overscroll-behavior: contain;
     }
     .product-table.decide-table {
       font-size: 12px;
@@ -1443,7 +1490,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.36.2</span>
+      <span class="version">v0.37.0</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1566,7 +1613,7 @@
       <div id="tool-cost-set-item" class="tool-panel">
         <div class="tool-panel-header">
           <button type="button" class="back-btn" data-back>← 戻る</button>
-          <h2>② 原価特定 NE-セット商品コード</h2>
+          <h2>② 原価特定-NE-セット商品コード</h2>
         </div>
 
         <div class="card">
@@ -1603,7 +1650,7 @@
       <div id="tool-cost-set-component" class="tool-panel">
         <div class="tool-panel-header">
           <button type="button" class="back-btn" data-back>← 戻る</button>
-          <h2>③ 原価特定 NE-セット構成物コード</h2>
+          <h2>③ 原価特定-NE-セット構成物コード</h2>
         </div>
 
         <div class="card">
@@ -1700,7 +1747,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.36.2 &nbsp;•&nbsp;
+    SALE一括 v0.37.0 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
@@ -2433,12 +2480,13 @@
         className: 'block-prep',
         buttons: [
           { id: 'prep-add-products', label: '参加商品追加', action: 'open-add-products' },
-          { id: 'prep-cost-set-item', label: '原価特定 NE-セット商品コード', action: 'open-cost-set-item' },
-          { id: 'prep-cost-set-component', label: '原価特定 NE-セット構成物コード', action: 'open-cost-set-component' },
+          { id: 'prep-cost-set-item', label: '原価特定-NE-セット商品コード', action: 'open-cost-set-item' },
+          { id: 'prep-cost-set-component', label: '原価特定-NE-セット構成物コード', action: 'open-cost-set-component' },
           { id: 'prep-cost-non-set', label: '原価特定-NE-セット無しコード', action: 'open-cost-non-set' },
           { id: 'prep-decide-price', label: '割引率決定', action: 'open-decide-price' },
           { id: 'prep-decide-title', label: 'セール用タイトル決定' },
           { id: 'prep-dl-rms-csv', label: 'RMSアップ素材CSVダウンロード' },
+          { id: 'prep-make-rms-csv', label: 'RMSアップ用CSV作成' },
           { id: 'prep-upload-rms', label: 'RMSにアップロード' },
           { id: 'prep-rms-event', label: 'RMSイベント申請' },
           { id: 'prep-sku-record', label: '倉庫入れSKU記録' },
@@ -3471,39 +3519,33 @@
         const btns = [10,20,30,50].map(v =>
           `<button type="button" class="disc-btn ${cur===v ? 'is-selected disc-'+v : ''}" data-discount="${v}">${v}%</button>`
         ).join('');
-        // 割引率に応じて行の背景色を薄く
         const bgColor = cur === 10 ? '#e8f0fa'
           : cur === 20 ? '#fcefe2'
           : cur === 30 ? '#e8f4ec'
           : cur === 50 ? '#faeaea'
           : '#f7f8fc';
-        // 下段: SS用タイトル入力 + 割引率ボタン
-        // ※ SS用タイトルは「商品管理番号単位」で1つ。保存は代表SKU (=最初のSKU=row.setCode) に紐付け。
-        return `<tr class="group-header-row" style="background:${bgColor};">
-          <td colspan="${colCount}" class="group-header-cell">
-            <div class="group-header-stack">
-              <div class="group-header-row1">
-                <span class="group-mgr">${escapeHtml(mgr)}</span>
-                <span class="group-name">${escapeHtml(name)}</span>
+        // ※ セール用タイトルは「商品管理番号単位」で1つ。保存は代表SKU (=最初のSKU=row.setCode) に紐付け。
+        return `<div class="product-group-header" style="background:${bgColor};">
+          <div class="group-header-stack">
+            <div class="group-header-row1">
+              <span class="group-mgr">${escapeHtml(mgr)}</span>
+              <span class="group-name">${escapeHtml(name)}</span>
+            </div>
+            <div class="group-header-row2">
+              <div class="group-ss-wrap">
+                <span class="ss-label">セール用タイトル</span>
+                <div class="ss-edit editable" contenteditable="true" data-sku="${escapeHtml(sku)}" data-field="ssTitle" data-mgr="${escapeHtml(mgr)}">${escapeHtml(ssTitle)}</div>
               </div>
-              <div class="group-header-row2">
-                <div class="group-ss-wrap">
-                  <span class="ss-label">SS用タイトル</span>
-                  <div class="ss-edit editable" contenteditable="true" data-sku="${escapeHtml(sku)}" data-field="ssTitle" data-mgr="${escapeHtml(mgr)}">${escapeHtml(ssTitle)}</div>
-                </div>
-                <div class="group-disc-wrap">
-                  <span class="group-disc-label">割引率</span>
-                  <div class="discount-grid" data-sku="${escapeHtml(sku)}">${btns}</div>
-                </div>
+              <div class="group-disc-wrap">
+                <span class="group-disc-label">割引率</span>
+                <div class="discount-grid" data-sku="${escapeHtml(sku)}">${btns}</div>
               </div>
             </div>
-          </td>
-        </tr>`;
+          </div>
+        </div>`;
       }
 
-      // 行構築
-      let body = '';
-      // 列ヘッダー行 (グループ毎に再表示)
+      // 列ヘッダー行 (グループ毎に再表示) - thead内で sticky
       function subHeaderRowHtml() {
         return `<tr class="sub-header-row">${cols.map(c => {
           const cls = c.cls + (c.resizable ? ' resizable' : '');
@@ -3514,25 +3556,11 @@
         }).join('')}</tr>`;
       }
 
-      let lastMgr = null;
-      for (const r of rows) {
-        if (r.isBlankRow) {
-          // 空行は表示しない (グループヘッダーが境目を担うので不要)
-          continue;
-        }
-        // 商品管理番号の切替時にグループヘッダー行+列ヘッダー行を挿入
-        if (r.mgr !== lastMgr) {
-          if (lastMgr !== null) {
-            body += `<tr class="group-spacer"><td colspan="${colCount}"></td></tr>`;
-          }
-          body += groupHeaderHtml(r);
-          body += subHeaderRowHtml();
-          lastMgr = r.mgr;
-        }
+      // SKU行のhtmlを返す
+      function skuRowHtml(r) {
         const tds = cols.map(c => {
           let v = r[c.key];
           let dispV = v;
-          // 利益率は値があれば "%" 付き
           let cellInner;
           if (c.key.endsWith('rate') && dispV !== null && dispV !== undefined && dispV !== '') {
             cellInner = escapeHtml(fmtCell(dispV)) + '%';
@@ -3541,11 +3569,9 @@
           } else {
             cellInner = escapeHtml(fmtCell(dispV));
           }
-          // 編集可能セル
           if (c.editable) {
             const w = c.resizable ? (colWidths[c.key] || c.defaultWidth) : null;
             const style = w ? ` style="max-width:${w}px;"` : '';
-            // 送料セルはフィルハンドル付き
             const fillHandle = (c.key === 'ship') ? '<span class="fill-handle" data-fill-handle contenteditable="false"></span>' : '';
             return `<td class="${c.cls} editable"${style} data-sku="${escapeHtml(r.setCode)}" data-field="${c.key}" data-mgr="${escapeHtml(r.mgr || '')}" contenteditable="true">${cellInner}${fillHandle}</td>`;
           }
@@ -3555,8 +3581,35 @@
           }
           return `<td class="${c.cls}">${cellInner}</td>`;
         });
-        body += `<tr>${tds.join('')}</tr>`;
+        return `<tr>${tds.join('')}</tr>`;
       }
+
+      // 商品管理番号ごとにグループ化
+      const groups = []; // [{ headerRow, skuRows: [] }]
+      let curGroup = null;
+      for (const r of rows) {
+        if (r.isBlankRow) continue;
+        if (curGroup === null || curGroup.mgr !== r.mgr) {
+          curGroup = { mgr: r.mgr, headerRow: r, skuRows: [] };
+          groups.push(curGroup);
+        }
+        curGroup.skuRows.push(r);
+      }
+
+      // 各グループのhtmlを構築
+      const groupsHtml = groups.map(g => {
+        const subHeader = subHeaderRowHtml();
+        const bodyRows = g.skuRows.map(skuRowHtml).join('');
+        return `<div class="product-group">
+          ${groupHeaderHtml(g.headerRow)}
+          <div class="product-group-table-wrap">
+            <table class="product-table decide-table">
+              <thead>${subHeader}</thead>
+              <tbody>${bodyRows}</tbody>
+            </table>
+          </div>
+        </div>`;
+      }).join('');
 
       const toggleLabel = _decideShowFee ? '◀ バリエ・手数料 ▶' : '＋ バリエ・手数料';
       const toggleTitle = _decideShowFee ? 'バリエ・手数料列を隠す' : 'バリエ・手数料列を表示';
@@ -3569,12 +3622,8 @@
           <button type="button" id="btn-toggle-fee" class="fee-toggle" title="${escapeHtml(toggleTitle)}">${escapeHtml(toggleLabel)}</button>
           <span class="decide-stats">${result.stats.output_rows}件 (除外: ${result.stats.excluded_no_price} / 原価未取得: ${result.stats.cost_not_found})</span>
         </div>
-        <div class="decide-table-area">
-          <div class="decide-table-scroll">
-            <table class="product-table decide-table">
-              <tbody>${body}</tbody>
-            </table>
-          </div>
+        <div class="groups-scroll">
+          ${groupsHtml}
         </div>
         ${warnHtml}
       `;
@@ -3722,17 +3771,21 @@
     }
 
     // ship セルの行リスト (tbody順、blank-rowもセルは無いがtr.blank-rowが入る)
-    function getShipCellsInOrder(container) {
-      const all = container.querySelectorAll('table.decide-table tbody tr');
+    // フィルハンドルの伝搬範囲は「同一商品グループ (=同一<table>)」に限定
+    function getShipCellsInOrder(container, sourceCell) {
+      // sourceCellの所属tableのtbody trだけを集める
+      let table;
+      if (sourceCell) {
+        table = sourceCell.closest('table.decide-table');
+      } else {
+        table = container.querySelector('table.decide-table');
+      }
+      if (!table) return [];
+      const all = table.querySelectorAll('tbody tr');
       const result = [];
       all.forEach(tr => {
-        if (tr.classList.contains('blank-row') || tr.classList.contains('group-header-row')) {
-          // ブランク行/グループヘッダー行は ship セルなし、商品管理番号境界として扱う
-          result.push({ tr, cell: null, isBlank: true });
-        } else {
-          const cell = tr.querySelector('td.col-green.editable[data-field="ship"]');
-          result.push({ tr, cell, isBlank: false });
-        }
+        const cell = tr.querySelector('td.col-green.editable[data-field="ship"]');
+        result.push({ tr, cell, isBlank: false });
       });
       return result;
     }
@@ -3743,7 +3796,7 @@
       if (!container) return;
       const value = readEditableCellValue(sourceCell);
       if (value === '') return; // 元セルが空なら何もしない
-      const list = getShipCellsInOrder(container);
+      const list = getShipCellsInOrder(container, sourceCell);
       const sourceIdx = list.findIndex(x => x.cell === sourceCell);
       if (sourceIdx < 0) return;
 
@@ -3766,7 +3819,7 @@
       const container = document.getElementById('decide-price-table-container');
       if (!container) return;
       const value = readEditableCellValue(sourceCell);
-      const list = getShipCellsInOrder(container);
+      const list = getShipCellsInOrder(container, sourceCell);
       const sourceIdx = list.findIndex(x => x.cell === sourceCell);
       if (sourceIdx < 0) return;
 
@@ -4097,11 +4150,27 @@
     renderProductTable();
     if (typeof renderWorkflow === "function") renderWorkflow();
 
-    // ⑤画面: ホイール転送 (固定レイアウト前提なので一旦無効化)
-    // 必要になったら関数を呼ぶ
+    // ⑤画面: タイトル+ツールバー部分でホイール操作されたら、groups-scrollに転送
     (function bindDecideWheelForward() {
-      // 一旦無効化
-      return;
+      const panel = document.getElementById('tool-decide-price');
+      if (!panel) return;
+      panel.addEventListener('wheel', (e) => {
+        if (document.body.getAttribute('data-view') !== 'decide-price') return;
+        // 各商品テーブル上でのホイールはネイティブ動作 (テーブル内スクロール)
+        const tableWrap = e.target.closest && e.target.closest('.product-group-table-wrap');
+        if (tableWrap) return;
+        // それ以外 (タイトル/ツールバー/グループ間など) は groups-scroll を動かす
+        const scrollEl = document.querySelector('.groups-scroll');
+        if (!scrollEl) return;
+        // groups-scroll の中のターゲットでもスクロール可能ならネイティブ任せ (例: 横スクロール)
+        if (scrollEl.contains(e.target)) {
+          // groups-scroll 自体がスクロールしうるが、ターゲットが.product-group-table-wrap以外なら親が動くべき
+          // → ネイティブ任せでOK (groups-scrollがその子のとき)
+          return;
+        }
+        e.preventDefault();
+        scrollEl.scrollTop += e.deltaY;
+      }, { passive: false });
     })();
 
     // F5(リロード)前のビューを復元 (デフォルト: products)
