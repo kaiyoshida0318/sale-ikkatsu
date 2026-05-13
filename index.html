@@ -1742,7 +1742,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.43.0</span>
+      <span class="version">v0.44.0</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1896,6 +1896,32 @@
         </div>
       </div>
 
+      <!-- サブビュー: ⑦ RMSアップ用素材ダウンロード -->
+      <div id="tool-dl-rms-csv" class="tool-panel">
+        <div class="tool-panel-header">
+          <button type="button" class="back-btn" data-back>← 戻る</button>
+          <h2>⑦ RMSアップ用素材ダウンロード</h2>
+        </div>
+
+        <div class="card">
+          <h2>CSVファイルのダウンロード</h2>
+          <p class="card-lead">
+            すでに取り込み済みのデータと、⑤で選んだ割引率・⑥で入力したセール用タイトルから、
+            RMSアップ用のCSVを生成してダウンロードします。<br>
+            割引率が <b>未選択</b> の商品はスキップされます。
+          </p>
+          <div class="actions">
+            <button type="button" id="btn-dl-rms-csv" class="secondary">CSVをダウンロード</button>
+          </div>
+          <div id="dl-rms-csv-status" class="status"></div>
+        </div>
+
+        <div class="card">
+          <h2>RMSデータのダウンロード</h2>
+          <p class="card-lead">（手順を後で追加）</p>
+        </div>
+      </div>
+
       <!-- サブビュー: ② 原価特定 NE-セット商品コード -->
       <div id="tool-cost-set-item" class="tool-panel">
         <div class="tool-panel-header">
@@ -2034,7 +2060,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.43.0 &nbsp;•&nbsp;
+    SALE一括 v0.44.0 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
@@ -2161,7 +2187,7 @@
     // ブラウザ/マウスの「戻る」でサブビューから戻れるよう、サブビュー遷移時は history.pushState する
     let _suppressPushState = false; // popstate由来の呼び出しでは積まない
     const MAIN_TABS = ['products', 'workflow'];
-    const VALID_VIEWS = ['products','workflow','add-products','decide-price','decide-title','cost-set-item','cost-set-component','cost-non-set'];
+    const VALID_VIEWS = ['products','workflow','add-products','decide-price','decide-title','dl-rms-csv','cost-set-item','cost-set-component','cost-non-set'];
     const LAST_VIEW_KEY = 'sale-ikkatsu-last-view';
     // 直近のメインタブ(サブビューから戻る時の戻り先)
     let _lastMainTab = 'products';
@@ -2804,7 +2830,7 @@
           { id: 'prep-cost-non-set', label: '原価特定-NE-セット無しコード', action: 'open-cost-non-set' },
           { id: 'prep-decide-price', label: '割引率決定', action: 'open-decide-price' },
           { id: 'prep-decide-title', label: 'セール用タイトル決定', action: 'open-decide-title' },
-          { id: 'prep-dl-rms-csv', label: 'RMSアップ素材CSVダウンロード' },
+          { id: 'prep-dl-rms-csv', label: 'RMSアップ用素材ダウンロード', action: 'open-dl-rms-csv' },
           { id: 'prep-make-rms-csv', label: 'RMSアップ用CSV作成' },
           { id: 'prep-upload-rms', label: 'RMSにアップロード' },
           { id: 'prep-rms-event', label: 'RMSイベント申請' },
@@ -2944,6 +2970,8 @@
             showView('cost-non-set');
           } else if (action === 'open-decide-title') {
             showView('decide-title');
+          } else if (action === 'open-dl-rms-csv') {
+            showView('dl-rms-csv');
           }
         });
       });
@@ -3951,6 +3979,133 @@
         });
       });
     }
+
+    // ⑦ RMSアップ用素材ダウンロード: CSV生成
+    //   列: 商品管理番号 / 表示価格 / 通常購入販売価格 / セール用タイトル
+    //   ・⑤割引率決定で割引率が選択された商品の全SKUを対象 (未選択商品はスキップ)
+    //   ・表示価格 = 元の通常価格 (row.price)
+    //   ・通常購入販売価格 = 選んだ割引率のOFF価格 (10→off10p, 20→off20p, 30→off30p, 50→off50p)
+    //   ・商品管理番号 と セール用タイトル は同一商品管理番号の連続行で最初の行のみ値を入れる
+    function buildRmsUploadCsvRows() {
+      let result;
+      try {
+        result = mergeAllFromArchive();
+      } catch (err) {
+        throw err;
+      }
+      const rows = result.rows;
+      if (!rows || rows.length === 0) {
+        return { headers: [], dataRows: [], stats: { kept: 0, skipped: 0 } };
+      }
+      // 商品管理番号ごとの代表SKU = isFirstInMgr=true の setCode
+      // editedCells[代表SKU].ssTitle を引いてセール用タイトルとする
+      const ym = currentYM || getCurrentYM();
+      const archive = loadArchive();
+      const editedCells = (ym && archive[ym] && archive[ym].editedCells) ? archive[ym].editedCells : {};
+      const mgrFirstSku = {};
+      for (const r of rows) {
+        if (r.isBlankRow) continue;
+        if (r.isFirstInMgr && !mgrFirstSku[r.mgr]) mgrFirstSku[r.mgr] = r.setCode;
+      }
+      const mgrSsTitle = {};
+      for (const mgr in mgrFirstSku) {
+        const ed = editedCells[mgrFirstSku[mgr]];
+        mgrSsTitle[mgr] = (ed && ed.ssTitle) ? ed.ssTitle : '';
+      }
+      // 採用する商品管理番号 = discount が 10/20/30/50 のもの
+      // 各商品管理番号の代表行 (isFirstInMgr=true) の row.discount を見て判定
+      const mgrDiscount = {};
+      for (const r of rows) {
+        if (r.isBlankRow) continue;
+        if (r.isFirstInMgr) mgrDiscount[r.mgr] = r.discount;
+      }
+      const validMgr = new Set();
+      for (const mgr in mgrDiscount) {
+        const d = mgrDiscount[mgr];
+        if (d === 10 || d === 20 || d === 30 || d === 50) validMgr.add(mgr);
+      }
+
+      const headers = ['商品管理番号', '表示価格', '通常購入販売価格', 'セール用タイトル'];
+      const dataRows = [];
+      let kept = 0;
+      let skippedMgrs = new Set();
+      // mgrごとに連続して出すため rows を順に走査
+      let lastEmittedMgr = null;
+      for (const r of rows) {
+        if (r.isBlankRow) continue;
+        const mgr = r.mgr;
+        if (!validMgr.has(mgr)) {
+          skippedMgrs.add(mgr);
+          continue;
+        }
+        const d = mgrDiscount[mgr];
+        const offPrice = d === 10 ? r.off10p : d === 20 ? r.off20p : d === 30 ? r.off30p : r.off50p;
+        const isFirstOfMgrEmit = (mgr !== lastEmittedMgr);
+        dataRows.push([
+          isFirstOfMgrEmit ? mgr : '',
+          (r.price !== null && r.price !== undefined && r.price !== '') ? String(r.price) : '',
+          (offPrice !== null && offPrice !== undefined && offPrice !== '') ? String(offPrice) : '',
+          isFirstOfMgrEmit ? (mgrSsTitle[mgr] || '') : '',
+        ]);
+        lastEmittedMgr = mgr;
+        kept++;
+      }
+      return { headers, dataRows, stats: { kept, skipped: skippedMgrs.size } };
+    }
+
+    // CSVセル値のエスケープ: " を "" に置換し、,/"/改行を含む場合は " で囲む
+    function csvEscapeCell(v) {
+      const s = (v === null || v === undefined) ? '' : String(v);
+      if (s.indexOf('"') >= 0 || s.indexOf(',') >= 0 || s.indexOf('\n') >= 0 || s.indexOf('\r') >= 0) {
+        return '"' + s.replace(/"/g, '""') + '"';
+      }
+      return s;
+    }
+    function rowsToCsvText(headers, dataRows) {
+      const lines = [headers.map(csvEscapeCell).join(',')];
+      for (const r of dataRows) lines.push(r.map(csvEscapeCell).join(','));
+      return lines.join('\r\n') + '\r\n';
+    }
+
+    // ⑦ ダウンロードボタンのハンドラ
+    (function bindDlRmsCsv() {
+      const btn = document.getElementById('btn-dl-rms-csv');
+      const status = document.getElementById('dl-rms-csv-status');
+      if (!btn) return;
+      function setStatus(msg, type) {
+        if (!status) return;
+        status.textContent = msg;
+        status.className = 'status' + (type ? ' ' + type : '');
+      }
+      btn.addEventListener('click', () => {
+        setStatus('', '');
+        try {
+          const { headers, dataRows, stats } = buildRmsUploadCsvRows();
+          if (dataRows.length === 0) {
+            setStatus('❌ 対象データがありません。⑤で割引率を選択した商品が必要です。', 'error');
+            return;
+          }
+          const csvText = rowsToCsvText(headers, dataRows);
+          const BOM = '\ufeff';
+          const blob = new Blob([BOM + csvText], { type: 'text/csv;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          const now = new Date();
+          const ts = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+          a.download = `RMSアップ用素材_${ts}.csv`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          const skippedText = stats.skipped > 0 ? `（割引率未選択でスキップ: ${stats.skipped}商品）` : '';
+          setStatus(`✅ ${stats.kept}行のCSVをダウンロードしました${skippedText}`, 'success');
+        } catch (err) {
+          setStatus('❌ エラー: ' + (err.message || String(err)), 'error');
+          console.error(err);
+        }
+      });
+    })();
 
     function renderDecidePriceTable() {
       const container = document.getElementById('decide-price-table-container');
