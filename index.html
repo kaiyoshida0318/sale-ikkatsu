@@ -1047,12 +1047,25 @@
       flex-wrap: wrap;
     }
     .decide-stats { font-size: 12px; color: var(--muted); }
-    /* ⑤画面を全体的に詰める */
+    /* ⑤画面: 画面全体を縦flexにしてタイトル+ツールバー+表に分割、表だけスクロール
+       スクロールはホイールイベントを表に転送するJSと併用 */
     body[data-view="decide-price"] main {
       margin-top: 4px;
+      /* ヘッダー + メインタブを引いた残り高さ (JSで --top-bar-h を設定) */
+      height: calc(100vh - var(--top-bar-h, 130px));
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    body[data-view="decide-price"] #tool-decide-price.tool-panel.active {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
     }
     body[data-view="decide-price"] .tool-panel-header {
       margin-bottom: 2px;
+      flex-shrink: 0;
     }
     body[data-view="decide-price"] .tool-panel-header h2 {
       font-size: 16px;
@@ -1066,41 +1079,61 @@
     body[data-view="decide-price"] #decide-price-status {
       margin-top: 0;
       min-height: 0;
+      flex-shrink: 0;
     }
-    /* テーブルラップの余白を詰める */
+    /* テーブルラップ: flex領域全体を占有 */
     body[data-view="decide-price"] .product-table-wrap {
       padding: 0;
       border: 0;
       background: transparent;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    body[data-view="decide-price"] #decide-price-table-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    body[data-view="decide-price"] .decide-table-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    body[data-view="decide-price"] .decide-table-scroll {
+      flex: 1;
+      max-height: none;
+      min-height: 0;
     }
     /* 統計行(decide-toolbar)を限界まで詰める */
     body[data-view="decide-price"] .decide-toolbar {
       padding: 0 2px 2px;
+      flex-shrink: 0;
     }
-    /* バリエ・手数料トグルボタン: 表上端の外側に配置(表ヘッダーに被らない) */
+    /* バリエ・手数料トグルボタン: ツールバー内に配置 */
     .decide-table-area {
       position: relative;
-      margin-top: 22px; /* トグルボタン分の余白 */
     }
-    #btn-toggle-fee.fee-toggle-overlay {
-      position: absolute;
-      top: -22px;
-      transform: translateX(-50%);
-      z-index: 5;
-      font-size: 10px;
-      font-weight: 700;
-      padding: 2px 8px;
-      line-height: 1.6;
-      min-width: 0;
-      border-radius: 10px;
+    #btn-toggle-fee.fee-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
       background: #fff;
       color: var(--brand);
       border: 1.5px solid var(--brand);
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      white-space: nowrap;
+      border-radius: 14px;
+      padding: 4px 12px;
+      font-size: 11px;
+      font-weight: 700;
       cursor: pointer;
+      font-family: inherit;
+      white-space: nowrap;
+      transition: background .12s, color .12s;
     }
-    #btn-toggle-fee.fee-toggle-overlay:hover {
+    #btn-toggle-fee.fee-toggle:hover {
       background: var(--brand);
       color: #fff;
     }
@@ -1272,9 +1305,13 @@
       border-top: 0;
       border-bottom: 0;
     }
-    /* サブヘッダー行 (グループ毎に再表示される列ヘッダー) */
+    /* サブヘッダー行 (グループ毎に再表示される列ヘッダー)
+       スクロールコンテナ内で sticky にして、グループに入ると上端に固定、
+       別グループの sub-header-row が来ると押し上げて切り替わる */
     .product-table.decide-table tr.sub-header-row th {
-      position: static;  /* 通常の th は sticky だが、グループ毎の再表示なので固定しない */
+      position: sticky;
+      top: 0;
+      z-index: 3;
       font-weight: 700;
       color: #fff;
     }
@@ -1445,7 +1482,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.35.0</span>
+      <span class="version">v0.36.0</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1702,7 +1739,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.35.0 &nbsp;•&nbsp;
+    SALE一括 v0.36.0 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
@@ -1769,6 +1806,8 @@
         tabs.style.top = hH + 'px';
         // 段重ね: メインタブの下にアーカイブセレクタ、その下にサブタブ、その下に表ヘッダー
         const tabsBottom = hH + tabs.getBoundingClientRect().height;
+        // CSS変数: ⑤画面のmain高さ計算用 (ヘッダー + メインタブ)
+        document.documentElement.style.setProperty('--top-bar-h', tabsBottom + 'px');
         const archive = document.querySelector('body[data-view="products"] .archive-selector-bar');
         if (archive) {
           archive.style.top = tabsBottom + 'px';
@@ -3566,10 +3605,10 @@
 
       container.innerHTML = `
         <div class="decide-toolbar">
+          <button type="button" id="btn-toggle-fee" class="fee-toggle" title="${escapeHtml(toggleTitle)}">${escapeHtml(toggleLabel)}</button>
           <span class="decide-stats">${result.stats.output_rows}件 (除外: ${result.stats.excluded_no_price} / 原価未取得: ${result.stats.cost_not_found})</span>
         </div>
         <div class="decide-table-area">
-          <button type="button" id="btn-toggle-fee" class="fee-toggle-overlay" title="${escapeHtml(toggleTitle)}">${escapeHtml(toggleLabel)}</button>
           <div class="decide-table-scroll">
             <table class="product-table decide-table">
               <tbody>${body}</tbody>
@@ -3584,19 +3623,6 @@
         _decideShowFee = !_decideShowFee;
         renderDecidePriceTable();
       });
-
-      // バリエ・手数料列のトグルボタンを v4 と feeL の中間 (=feeグループ列のだいたい中央) に配置
-      positionFeeToggleButton();
-      // 横スクロール時にもボタン位置を追随 (scroll要素は再描画ごとに作り直されるのでここで都度バインド)
-      const scrollEl = document.querySelector('.decide-table-scroll');
-      if (scrollEl) {
-        scrollEl.addEventListener('scroll', positionFeeToggleButton, { passive: true });
-      }
-      // ウィンドウリサイズでも追随 (一度だけ登録)
-      if (!window._feeToggleResizeBound) {
-        window._feeToggleResizeBound = true;
-        window.addEventListener('resize', positionFeeToggleButton, { passive: true });
-      }
 
       // 編集可能セルのイベント
       attachEditableCellHandlers(container);
@@ -3635,38 +3661,6 @@
           recordDiscountChange(sku, oldVal, newVal);
         });
       });
-    }
-
-    // バリエ・手数料トグルボタンの位置を th 実測で決める
-    // 表示時: バリエ1の真上 (列の中央) に置く
-    // 非表示時: 中央寄せに戻す (左側に出すと不自然なので)
-    function positionFeeToggleButton() {
-      const btn = document.getElementById('btn-toggle-fee');
-      const area = document.querySelector('.decide-table-area');
-      const scroll = document.querySelector('.decide-table-scroll');
-      if (!btn || !area || !scroll) return;
-      const table = scroll.querySelector('table.decide-table');
-      if (!table) return;
-      if (!_decideShowFee) {
-        // 非表示時: 中央寄せに戻す
-        btn.style.left = '50%';
-        return;
-      }
-      const ths = table.querySelectorAll('thead th');
-      let v1Th = null;
-      ths.forEach(th => {
-        const lab = th.textContent.trim();
-        if (lab === 'バリエ1') v1Th = th;
-      });
-      if (!v1Th) return;
-      const v1Rect = v1Th.getBoundingClientRect();
-      const areaRect = area.getBoundingClientRect();
-      // バリエ1列の中央
-      const centerX = (v1Rect.left + v1Rect.right) / 2;
-      const targetX = centerX - areaRect.left;
-      if (targetX > 0) {
-        btn.style.left = targetX + 'px';
-      }
     }
 
     // 割引率 (SKU別) を保存
@@ -4141,6 +4135,23 @@
     refreshArchiveSelect();
     renderProductTable();
     if (typeof renderWorkflow === "function") renderWorkflow();
+
+    // ⑤画面: タイトル+ツールバー上にホバー中のホイール操作を表のスクロールに転送
+    (function bindDecideWheelForward() {
+      const panel = document.getElementById('tool-decide-price');
+      if (!panel) return;
+      panel.addEventListener('wheel', (e) => {
+        // body.data-view が decide-price でない時は無視
+        if (document.body.getAttribute('data-view') !== 'decide-price') return;
+        // 表エリア (.decide-table-scroll) の中で発生したホイールはネイティブ動作 (= 表内スクロール)
+        const scrollEl = document.querySelector('.decide-table-scroll');
+        if (!scrollEl) return;
+        if (scrollEl.contains(e.target)) return;
+        // それ以外 (タイトル + ツールバー上のホバー) は表のスクロールに転送
+        e.preventDefault();
+        scrollEl.scrollTop += e.deltaY;
+      }, { passive: false });
+    })();
 
     // F5(リロード)前のビューを復元 (デフォルト: products)
     (function restoreLastView() {
