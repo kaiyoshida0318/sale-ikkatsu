@@ -1024,7 +1024,23 @@
     .product-table th.col-img { width: 120px; }
     .product-table th.col-pname { min-width: 320px; }
     .product-table th.col-name { min-width: 240px; max-width: 360px; }
-    .product-table th.col-discount { min-width: 200px; }
+    .product-table th.col-discount,
+    .product-table td.col-discount {
+      width: 110px;
+      white-space: nowrap;
+      text-align: center;
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .product-table td.col-discount.disc-10 { color: #1c4b8a; }
+    .product-table td.col-discount.disc-20 { color: #a14d0a; }
+    .product-table td.col-discount.disc-30 { color: #165d28; }
+    .product-table td.col-discount.disc-50 { color: #a81f1f; }
+    .product-table td.col-discount.disc-none {
+      color: #888;
+      font-weight: 500;
+      font-size: 12px;
+    }
     .product-table th.col-title { min-width: 240px; max-width: 360px; }
     .product-table th.col-saletitle { min-width: 220px; }
     .product-table .empty-row {
@@ -1842,7 +1858,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.47.4</span>
+      <span class="version">v0.48.0</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2177,7 +2193,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.47.4 &nbsp;•&nbsp;
+    SALE一括 v0.48.0 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
@@ -2821,11 +2837,12 @@
       const container = document.getElementById('product-table-container');
       if (!container) return;
 
-      // 列ヘッダー(4列固定)
+      // 列ヘッダー(5列固定)
       const headHtml = `<tr>
         <th class="col-mgr">商品管理番号</th>
         <th class="col-itemcode">商品コード</th>
         <th class="col-img">商品画像</th>
+        <th class="col-discount">割引率</th>
         <th class="col-pname">商品名</th>
       </tr>`;
 
@@ -2904,12 +2921,18 @@
 
       let bodyHtml = '';
       if (displayRows && displayRows.length > 0) {
-        bodyHtml = displayRows.map(r => `<tr>
-          <td class="mgr">${escapeHtml(r.mgr || '')}</td>
-          <td class="mgr">${escapeHtml(r.itemCode || '')}</td>
-          <td class="img-cell"><div class="img-placeholder">未取得</div></td>
-          <td class="name">${escapeHtml(r.name || '')}</td>
-        </tr>`).join('');
+        bodyHtml = displayRows.map(r => {
+          const disc = r.discount;
+          const discClass = (disc === 10 || disc === 20 || disc === 30 || disc === 50) ? ` disc-${disc}` : ' disc-none';
+          const discLabel = (disc === 10 || disc === 20 || disc === 30 || disc === 50) ? `${disc}%OFF` : '未選択';
+          return `<tr>
+            <td class="mgr">${escapeHtml(r.mgr || '')}</td>
+            <td class="mgr">${escapeHtml(r.itemCode || '')}</td>
+            <td class="img-cell"><div class="img-placeholder">未取得</div></td>
+            <td class="col-discount${discClass}">${discLabel}</td>
+            <td class="name">${escapeHtml(r.name || '')}</td>
+          </tr>`;
+        }).join('');
       }
 
       let hintText;
