@@ -1101,6 +1101,7 @@
     /* セール参加商品タブ: アーカイブセレクタ/サブタブ/表ヘッダーを sticky 固定 */
     body[data-view="products"] .archive-selector-bar {
       position: sticky;
+      top: var(--top-bar-h, 130px);
       z-index: 30;
       background: var(--bg);
       margin: 0;
@@ -1108,14 +1109,19 @@
     }
     body[data-view="products"] .tabs {
       position: sticky;
+      top: var(--top-bar-h, 130px);
       z-index: 29;
       background: var(--bg);
     }
     body[data-view="products"] .product-table-wrap {
       padding-top: 0;
+      /* 横スクロールコンテキストを作ると thead の sticky が wrap 内に閉じ込められる。
+         viewport を基準に sticky させたいので overflow を visible に戻す。 */
+      overflow: visible;
     }
     body[data-view="products"] .product-table thead th {
       position: sticky;
+      top: var(--top-bar-h, 130px);
       z-index: 28;
       background: #f4f5f8;
     }
@@ -1772,7 +1778,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.45.2</span>
+      <span class="version">v0.45.3</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2108,7 +2114,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.45.2 &nbsp;•&nbsp;
+    SALE一括 v0.45.3 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
@@ -2170,26 +2176,37 @@
       const header = document.querySelector('header');
       const tabs = document.querySelector('.main-tabs-bar');
       if (!header || !tabs) return;
-      function update() {
+      let _pending = false;
+      function rawUpdate() {
+        _pending = false;
+        const archive = document.querySelector('body[data-view="products"] .archive-selector-bar');
+        const subTabs = document.querySelector('body[data-view="products"] .tabs');
+        const thList = document.querySelectorAll('body[data-view="products"] .product-table thead th');
+        // まず top をリセット (旧値で getBoundingClientRect の結果がずれることを防ぐ)
+        tabs.style.top = '';
+        if (archive) archive.style.top = '';
+        if (subTabs) subTabs.style.top = '';
+        thList.forEach(th => { th.style.top = ''; });
+        // 1回目の reflow を待ってから計測
         const hH = header.getBoundingClientRect().height;
         tabs.style.top = hH + 'px';
-        // 段重ね: メインタブの下にアーカイブセレクタ、その下にサブタブ、その下に表ヘッダー
-        const tabsBottom = hH + tabs.getBoundingClientRect().height;
-        // CSS変数: ⑤画面のmain高さ計算用 (ヘッダー + メインタブ)
+        const tH = tabs.getBoundingClientRect().height;
+        const tabsBottom = hH + tH;
         document.documentElement.style.setProperty('--top-bar-h', tabsBottom + 'px');
-        const archive = document.querySelector('body[data-view="products"] .archive-selector-bar');
-        if (archive) {
-          archive.style.top = tabsBottom + 'px';
-          const aH = archive.getBoundingClientRect().height;
-          const subTabs = document.querySelector('body[data-view="products"] .tabs');
-          if (subTabs) {
-            subTabs.style.top = (tabsBottom + aH) + 'px';
-            const stH = subTabs.getBoundingClientRect().height;
-            document.querySelectorAll('body[data-view="products"] .product-table thead th').forEach(th => {
-              th.style.top = (tabsBottom + aH + stH) + 'px';
-            });
-          }
-        }
+        if (!archive) return;
+        archive.style.top = tabsBottom + 'px';
+        const aH = archive.getBoundingClientRect().height;
+        if (!subTabs) return;
+        subTabs.style.top = (tabsBottom + aH) + 'px';
+        const stH = subTabs.getBoundingClientRect().height;
+        const theadTop = tabsBottom + aH + stH;
+        thList.forEach(th => { th.style.top = theadTop + 'px'; });
+      }
+      function update() {
+        // 同じフレームで複数回呼ばれてもまとめる
+        if (_pending) return;
+        _pending = true;
+        requestAnimationFrame(rawUpdate);
       }
       update();
       window.addEventListener('resize', update);
@@ -2198,7 +2215,6 @@
         const tabs2 = document.querySelector('.main-tabs-bar');
         if (tabs2) new ResizeObserver(update).observe(tabs2);
       }
-      // 段重ね: メインタブの下にアーカイブセレクタ、その下にサブタブ、その下に表ヘッダー
       // showView 後にも更新する必要があるため、グローバルに公開
       window._syncStickyTabs = update;
     })();
