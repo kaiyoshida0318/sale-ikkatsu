@@ -1047,30 +1047,16 @@
       flex-wrap: wrap;
     }
     .decide-stats { font-size: 12px; color: var(--muted); }
-    /* ⑤画面: 画面全体を縦flexにしてタイトル+ツールバー+表に分割、表だけスクロール
-       スクロールはホイールイベントを表に転送するJSと併用 */
+    /* ⑤画面: 詰めるだけにして、固定高さ化は撤去 (表が見切れる問題の応急対応) */
     body[data-view="decide-price"] main {
       margin-top: 4px;
-      /* ヘッダー + メインタブを引いた残り高さ (JSで --top-bar-h を設定) */
-      height: calc(100vh - var(--top-bar-h, 130px));
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    body[data-view="decide-price"] #tool-decide-price.tool-panel.active {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
     }
     body[data-view="decide-price"] .tool-panel-header {
       margin-bottom: 2px;
-      flex-shrink: 0;
     }
     body[data-view="decide-price"] .tool-panel-header h2 {
       font-size: 16px;
     }
-    /* statusが空の時は場所を取らない */
     body[data-view="decide-price"] #decide-price-status:empty {
       display: none;
       margin: 0;
@@ -1079,39 +1065,14 @@
     body[data-view="decide-price"] #decide-price-status {
       margin-top: 0;
       min-height: 0;
-      flex-shrink: 0;
     }
-    /* テーブルラップ: flex領域全体を占有 */
     body[data-view="decide-price"] .product-table-wrap {
       padding: 0;
       border: 0;
       background: transparent;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
     }
-    body[data-view="decide-price"] #decide-price-table-container {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-    }
-    body[data-view="decide-price"] .decide-table-area {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-    }
-    body[data-view="decide-price"] .decide-table-scroll {
-      flex: 1;
-      max-height: none;
-      min-height: 0;
-    }
-    /* 統計行(decide-toolbar)を限界まで詰める */
     body[data-view="decide-price"] .decide-toolbar {
       padding: 0 2px 2px;
-      flex-shrink: 0;
     }
     /* バリエ・手数料トグルボタン: ツールバー内に配置 */
     .decide-table-area {
@@ -1482,7 +1443,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.36.0</span>
+      <span class="version">v0.36.1</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1739,7 +1700,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.36.0 &nbsp;•&nbsp;
+    SALE一括 v0.36.1 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
@@ -4136,21 +4097,11 @@
     renderProductTable();
     if (typeof renderWorkflow === "function") renderWorkflow();
 
-    // ⑤画面: タイトル+ツールバー上にホバー中のホイール操作を表のスクロールに転送
+    // ⑤画面: ホイール転送 (固定レイアウト前提なので一旦無効化)
+    // 必要になったら関数を呼ぶ
     (function bindDecideWheelForward() {
-      const panel = document.getElementById('tool-decide-price');
-      if (!panel) return;
-      panel.addEventListener('wheel', (e) => {
-        // body.data-view が decide-price でない時は無視
-        if (document.body.getAttribute('data-view') !== 'decide-price') return;
-        // 表エリア (.decide-table-scroll) の中で発生したホイールはネイティブ動作 (= 表内スクロール)
-        const scrollEl = document.querySelector('.decide-table-scroll');
-        if (!scrollEl) return;
-        if (scrollEl.contains(e.target)) return;
-        // それ以外 (タイトル + ツールバー上のホバー) は表のスクロールに転送
-        e.preventDefault();
-        scrollEl.scrollTop += e.deltaY;
-      }, { passive: false });
+      // 一旦無効化
+      return;
     })();
 
     // F5(リロード)前のビューを復元 (デフォルト: products)
