@@ -1404,6 +1404,31 @@
     .dt-table td.dt-col-ss {
       min-width: 280px;
     }
+    .dt-table th.dt-col-disc,
+    .dt-table td.dt-col-disc {
+      width: 96px;
+      white-space: nowrap;
+      text-align: center;
+    }
+    .dt-disc-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+      border: 1.5px solid transparent;
+    }
+    .dt-disc-badge.dt-disc-10 { background: #e8f0fa; color: #1c4b8a; border-color: #1c4b8a; }
+    .dt-disc-badge.dt-disc-20 { background: #fcefe2; color: #a14d0a; border-color: #a14d0a; }
+    .dt-disc-badge.dt-disc-30 { background: #e8f4ec; color: #165d28; border-color: #165d28; }
+    .dt-disc-badge.dt-disc-50 { background: #faeaea; color: #a81f1f; border-color: #a81f1f; }
+    .dt-disc-badge.dt-disc-none {
+      background: #f3f3f5;
+      color: #888;
+      border-color: #d8d8de;
+      font-weight: 600;
+    }
     .dt-mgr-badge {
       display: inline-block;
       background: #fff;
@@ -1778,7 +1803,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.45.3</span>
+      <span class="version">v0.46.0</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2114,7 +2139,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.45.3 &nbsp;•&nbsp;
+    SALE一括 v0.46.0 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
@@ -3959,13 +3984,15 @@
         }
       }
       const editedCells = (data.editedCells && typeof data.editedCells === 'object') ? data.editedCells : {};
+      const discounts = (data.discounts && typeof data.discounts === 'object') ? data.discounts : {};
       const groups = order.map(mgr => {
         const sku = firstSku[mgr] || '';
         const ed = editedCells[sku] || {};
         const baseName = firstName[mgr] || '';
         const dispName = (ed.name !== undefined && ed.name !== null && ed.name !== '') ? ed.name : baseName;
         const dispSs = (ed.ssTitle !== undefined && ed.ssTitle !== null) ? ed.ssTitle : '';
-        return { mgr, sku, name: dispName, ssTitle: dispSs };
+        const disc = discounts[sku] ?? null;
+        return { mgr, sku, name: dispName, ssTitle: dispSs, discount: disc };
       });
       return { groups, reason: null };
     }
@@ -3999,8 +4026,12 @@
       }
       // 表本体
       const rowsHtml = groups.map(g => {
+        const disc = g.discount;
+        const discClass = (disc === 10 || disc === 20 || disc === 30 || disc === 50) ? ` dt-disc-${disc}` : ' dt-disc-none';
+        const discLabel = (disc === 10 || disc === 20 || disc === 30 || disc === 50) ? `${disc}%OFF` : '未選択';
         return `<tr data-mgr="${escapeHtml(g.mgr)}">
           <td class="dt-col-mgr"><span class="dt-mgr-badge" title="商品管理番号">${escapeHtml(g.mgr)}</span></td>
+          <td class="dt-col-disc"><span class="dt-disc-badge${discClass}">${discLabel}</span></td>
           <td class="dt-col-name editable" contenteditable="true" data-sku="${escapeHtml(g.sku)}" data-field="name" data-mgr="${escapeHtml(g.mgr)}">${escapeHtml(g.name)}</td>
           <td class="dt-col-ss editable" contenteditable="true" data-sku="${escapeHtml(g.sku)}" data-field="ssTitle" data-mgr="${escapeHtml(g.mgr)}">${escapeHtml(g.ssTitle)}</td>
         </tr>`;
@@ -4011,6 +4042,7 @@
             <thead>
               <tr>
                 <th class="dt-col-mgr">商品管理番号</th>
+                <th class="dt-col-disc">割引率</th>
                 <th class="dt-col-name">商品名</th>
                 <th class="dt-col-ss">セール用タイトル</th>
               </tr>
