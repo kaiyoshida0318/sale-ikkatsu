@@ -980,7 +980,7 @@
     .product-table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 13px;
+      font-size: 14px;
     }
     .product-table th,
     .product-table td {
@@ -1214,8 +1214,8 @@
       color: #555;
       border: 1px solid #d8d8de;
       border-radius: 5px 5px 0 0;
-      padding: 5px 11px;
-      font-size: 11px;
+      padding: 6px 13px;
+      font-size: 13px;
       font-weight: 700;
       cursor: pointer;
       font-family: inherit;
@@ -1227,7 +1227,7 @@
       margin-left: 4px;
       font-weight: 500;
       opacity: 0.75;
-      font-size: 10px;
+      font-size: 11px;
     }
     .mgr-tab:hover:not(.is-active):not(:disabled) {
       background: #e6e7ed;
@@ -1312,7 +1312,7 @@
       overscroll-behavior: contain;
     }
     .product-table.decide-table {
-      font-size: 12px;
+      font-size: 13px;
       border-collapse: collapse;
       width: 100%;
     }
@@ -1371,62 +1371,12 @@
       border-bottom: 2px solid #b5b5c0;
       text-align: left;
     }
-    .group-header-stack {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
     .group-header-row1 {
       display: flex;
       align-items: center;
       gap: 10px;
     }
     .group-header-row1 .group-name { flex: 1; }
-    .group-header-row2 {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      flex-wrap: wrap;
-    }
-    .group-ss-wrap {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      flex: 1;
-      min-width: 300px;
-    }
-    .group-ss-wrap .ss-label {
-      font-size: 11px;
-      font-weight: 700;
-      color: #666;
-      white-space: nowrap;
-    }
-    .ss-edit {
-      flex: 1;
-      background: #fff;
-      border: 1.5px solid #d8d8de;
-      padding: 5px 9px;
-      border-radius: 4px;
-      font-size: 12px;
-      color: #222;
-      min-height: 28px;
-      cursor: text;
-    }
-    .ss-edit:hover {
-      border-color: #98a4b8;
-    }
-    .ss-edit:focus {
-      outline: none;
-      border-color: var(--brand);
-      box-shadow: 0 0 0 2px rgba(30,58,95,0.15);
-      background: #fffef0;
-    }
-    .ss-edit:empty::before {
-      content: "（クリックして入力）";
-      color: #aaa;
-      font-style: italic;
-      pointer-events: none;
-    }
     .group-disc-wrap {
       display: flex;
       align-items: center;
@@ -1655,7 +1605,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.41.0</span>
+      <span class="version">v0.42.0</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1929,7 +1879,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.41.0 &nbsp;•&nbsp;
+    SALE一括 v0.42.0 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
@@ -3755,7 +3705,6 @@
         const itemCode = row.itemCode || mgr; // フォールバック: itemCode無ければ管理番号
         const name = row.name || '';
         const sku = row.setCode || '';
-        const ssTitle = row.ssTitle || '';
         const cur = row.discount ?? null;
         const btns = [10,20,30,50].map(v =>
           `<button type="button" class="disc-btn ${cur===v ? 'is-selected disc-'+v : ''}" data-discount="${v}">${v}%</button>`
@@ -3765,23 +3714,15 @@
           : cur === 30 ? '#e8f4ec'
           : cur === 50 ? '#faeaea'
           : '#f7f8fc';
-        // ※ セール用タイトルは「商品管理番号単位」で1つ。保存は代表SKU (=最初のSKU=row.setCode) に紐付け。
         // バッジは商品コード (システム連携用SKU番号の共通プレフィクス) を表示
+        // 右端に割引率2x2ボタンを配置 (旧row2のセール用タイトルは撤去)
         return `<div class="product-group-header" style="background:${bgColor};">
-          <div class="group-header-stack">
-            <div class="group-header-row1">
-              <span class="group-mgr" title="商品コード">${escapeHtml(itemCode)}</span>
-              <span class="group-name">${escapeHtml(name)}</span>
-            </div>
-            <div class="group-header-row2">
-              <div class="group-ss-wrap">
-                <span class="ss-label">セール用タイトル</span>
-                <div class="ss-edit editable" contenteditable="true" data-sku="${escapeHtml(sku)}" data-field="ssTitle" data-mgr="${escapeHtml(mgr)}">${escapeHtml(ssTitle)}</div>
-              </div>
-              <div class="group-disc-wrap">
-                <span class="group-disc-label">割引率</span>
-                <div class="discount-grid" data-sku="${escapeHtml(sku)}">${btns}</div>
-              </div>
+          <div class="group-header-row1">
+            <span class="group-mgr" title="商品コード">${escapeHtml(itemCode)}</span>
+            <span class="group-name">${escapeHtml(name)}</span>
+            <div class="group-disc-wrap">
+              <span class="group-disc-label">割引率</span>
+              <div class="discount-grid" data-sku="${escapeHtml(sku)}">${btns}</div>
             </div>
           </div>
         </div>`;
