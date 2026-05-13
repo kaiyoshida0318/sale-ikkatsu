@@ -1060,6 +1060,14 @@
       flex-direction: column !important;
       overflow: hidden !important;
     }
+    /* main → #app → #tool-decide-price の flex chain を通す */
+    body[data-view="decide-price"] main > #app {
+      flex: 1 1 auto !important;
+      display: flex !important;
+      flex-direction: column !important;
+      min-height: 0 !important;
+      overflow: hidden !important;
+    }
     /* tool-panel自体を flex chain に組み込む */
     body[data-view="decide-price"] #tool-decide-price.tool-panel.active {
       display: flex !important;
@@ -1496,7 +1504,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.37.3</span>
+      <span class="version">v0.37.4</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1753,7 +1761,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.37.3 &nbsp;•&nbsp;
+    SALE一括 v0.37.4 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
@@ -4157,21 +4165,17 @@
     if (typeof renderWorkflow === "function") renderWorkflow();
 
     // ⑤画面: ホイール振り分け
-    //   - .product-group-table-wrap 上 かつ そのテーブルが内部スクロール可能 (scrollHeight > clientHeight) → ネイティブ任せ
-    //   - それ以外 (タイトル/ツールバー/グループヘッダー/グループ間/空白/スクロール不要なテーブル上): .groups-scroll を動かす
+    //   - .product-group-table-wrap 上: ネイティブ任せ (テーブル内スクロール、端でcontain止め)
+    //   - それ以外 (タイトル/ツールバー/グループヘッダー/グループ間/空白): 必ず .groups-scroll を動かす
     (function bindDecideWheelForward() {
       const panel = document.getElementById('tool-decide-price');
       if (!panel) return;
       panel.addEventListener('wheel', (e) => {
         if (document.body.getAttribute('data-view') !== 'decide-price') return;
-        // 各商品テーブル上での判定
+        // 各商品テーブル上でのホイールはネイティブ動作 (テーブル内スクロール)
         const tableWrap = e.target.closest && e.target.closest('.product-group-table-wrap');
-        if (tableWrap) {
-          // テーブルが画面に収まりきっていて内部スクロール不要なら、groups-scroll を動かす
-          const canScroll = tableWrap.scrollHeight > tableWrap.clientHeight + 1;
-          if (canScroll) return; // ネイティブ任せ (テーブル内スクロール)
-          // 内部スクロール不要 → groups-scroll に転送
-        }
+        if (tableWrap) return;
+        // それ以外は全部 groups-scroll を動かす
         const scrollEl = document.querySelector('.groups-scroll');
         if (!scrollEl) return;
         e.preventDefault();
