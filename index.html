@@ -1800,7 +1800,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.46.2</span>
+      <span class="version">v0.46.3</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2136,7 +2136,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.46.2 &nbsp;•&nbsp;
+    SALE一括 v0.46.3 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
@@ -3982,15 +3982,23 @@
       }
       const editedCells = (data.editedCells && typeof data.editedCells === 'object') ? data.editedCells : {};
       const discounts = (data.discounts && typeof data.discounts === 'object') ? data.discounts : {};
-      const groups = order.map(mgr => {
+      const groups = order.map((mgr, idx) => {
         const sku = firstSku[mgr] || '';
         const ed = editedCells[sku] || {};
         const baseName = firstName[mgr] || '';
         const dispName = (ed.name !== undefined && ed.name !== null && ed.name !== '') ? ed.name : baseName;
         const dispSs = (ed.ssTitle !== undefined && ed.ssTitle !== null) ? ed.ssTitle : '';
         const disc = discounts[sku] ?? null;
-        return { mgr, sku, name: dispName, ssTitle: dispSs, discount: disc };
+        return { mgr, sku, name: dispName, ssTitle: dispSs, discount: disc, _origIdx: idx };
       });
+      // 割引率の昇順ソート (10 → 20 → 30 → 50)、未選択(null)は末尾、同じ割引率は元の出現順
+      const discRank = (d) => (d === 10 || d === 20 || d === 30 || d === 50) ? d : Infinity;
+      groups.sort((a, b) => {
+        const r = discRank(a.discount) - discRank(b.discount);
+        return r !== 0 ? r : (a._origIdx - b._origIdx);
+      });
+      // 内部用フィールドを削除
+      groups.forEach(g => { delete g._origIdx; });
       return { groups, reason: null };
     }
 
