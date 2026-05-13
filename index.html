@@ -288,6 +288,12 @@
       border-left: 4px solid var(--brand);
       padding-left: 10px;
     }
+    .card-lead {
+      margin: 0 0 14px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
     .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -1217,6 +1223,12 @@
       position: relative;
       bottom: -1px;
     }
+    .mgr-tab .mgr-tab-count {
+      margin-left: 4px;
+      font-weight: 500;
+      opacity: 0.75;
+      font-size: 10px;
+    }
     .mgr-tab:hover:not(.is-active):not(:disabled) {
       background: #e6e7ed;
       color: #333;
@@ -1637,7 +1649,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.40.0</span>
+      <span class="version">v0.40.1</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1725,7 +1737,7 @@
                 <li class="auto">商品管理番号<span class="howto-note">（必須-自動でDLされる）</span></li>
                 <li class="auto">SKU管理番号<span class="howto-note">（必須-自動でDLされる）</span></li>
                 <li class="check">システム連携用SKU番号</li>
-                <li class="check">通常購入販売価格<span class="howto-note"> → セール価格を記入</span></li>
+                <li class="check">通常購入販売価格</li>
                 <li class="check">商品名</li>
                 <li class="check">バリエーション項目名・選択肢</li>
               </ul>
@@ -1736,6 +1748,7 @@
 
         <div class="card">
           <h2>CSVをアップロード</h2>
+          <p class="card-lead">上記「RMSデータのダウンロード」で取得したCSVファイルをここでアップロードしてください。</p>
           <form id="add-products-form">
             <div class="grid">
               <div class="file-input" data-target="rms-products" style="grid-column: 1 / -1;">
@@ -1910,7 +1923,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.40.0 &nbsp;•&nbsp;
+    SALE一括 v0.40.1 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
@@ -3848,7 +3861,8 @@
         const disc = g.headerRow.discount;
         const discClass = (disc === 10 || disc === 20 || disc === 30 || disc === 50) ? ` disc-${disc}` : '';
         const activeClass = (mgr === _decideActiveTab) ? ' is-active' : '';
-        return `<button type="button" class="mgr-tab${discClass}${activeClass}" data-mgr="${escapeHtml(mgr)}">${escapeHtml(mgr)}</button>`;
+        const count = g.skuRows.length;
+        return `<button type="button" class="mgr-tab${discClass}${activeClass}" data-mgr="${escapeHtml(mgr)}">${escapeHtml(mgr)}<span class="mgr-tab-count">(${count})</span></button>`;
       }).join('');
 
       const toggleLabel = _decideShowFee ? '◀ バリエ・手数料 ▶' : '＋ バリエ・手数料';
