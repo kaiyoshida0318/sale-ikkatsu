@@ -598,6 +598,42 @@
       flex-shrink: 0;
     }
 
+    /* ヘッダー折りたたみトグルボタン (main-tabs-bar 右端) */
+    .header-toggle-btn {
+      margin-left: auto;
+      align-self: center;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #f5f6fa;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      font-family: inherit;
+      transition: background .12s, color .12s, border-color .12s;
+    }
+    .header-toggle-btn:hover {
+      background: #eef0f4;
+      color: var(--text);
+      border-color: #c8ccd5;
+    }
+    .header-toggle-btn .icon-chev {
+      width: 14px;
+      height: 14px;
+      transition: transform .15s;
+    }
+    /* ヘッダー折りたたみ中: ヘッダー本体を隠す + ボタンのシェブロンを反転 */
+    body[data-header-collapsed="true"] > header {
+      display: none !important;
+    }
+    body[data-header-collapsed="true"] .header-toggle-btn .icon-chev {
+      transform: rotate(180deg);
+    }
+
     /* サブアクション行(メインタブの下、右端に小ボタン) */
     .sub-action-bar {
       display: flex;
@@ -1159,12 +1195,11 @@
       border: 1px solid #d8d8de;
       border-bottom: 2px solid #b5b5c0;
     }
-    /* 各商品のSKU表ラッパー: テーブル内でのみスクロール、スクロール伝搬は止める */
+    /* 各商品のSKU表ラッパー: 縦スクロールは廃止、横のみスクロール可
+       全行まるごと表示し、画面全体は .groups-scroll でスクロールする */
     .product-group-table-wrap {
       overflow-x: auto;
-      overflow-y: auto;
-      max-height: 50vh;
-      overscroll-behavior: contain;
+      overflow-y: visible;
     }
     .product-table.decide-table {
       font-size: 12px;
@@ -1504,7 +1539,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.37.4</span>
+      <span class="version">v0.38.0</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1528,6 +1563,12 @@
         <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
       </svg>
       セール作業手順
+    </button>
+    <button type="button" id="btn-toggle-header" class="header-toggle-btn" title="ヘッダーを隠す / 表示" aria-label="ヘッダーを隠す / 表示">
+      <svg class="icon-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="6 15 12 9 18 15"></polyline>
+      </svg>
+      <span class="header-toggle-label">ヘッダー</span>
     </button>
   </nav>
 
@@ -1761,7 +1802,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.37.4 &nbsp;•&nbsp;
+    SALE一括 v0.38.0 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
@@ -1851,8 +1892,36 @@
         const tabs2 = document.querySelector('.main-tabs-bar');
         if (tabs2) new ResizeObserver(update).observe(tabs2);
       }
+      // 段重ね: メインタブの下にアーカイブセレクタ、その下にサブタブ、その下に表ヘッダー
       // showView 後にも更新する必要があるため、グローバルに公開
       window._syncStickyTabs = update;
+    })();
+
+    // ヘッダー折りたたみトグル
+    (function headerToggleSetup() {
+      const KEY = 'sale-ikkatsu-header-collapsed';
+      const btn = document.getElementById('btn-toggle-header');
+      const label = btn ? btn.querySelector('.header-toggle-label') : null;
+      if (!btn) return;
+      function applyState(collapsed) {
+        document.body.setAttribute('data-header-collapsed', collapsed ? 'true' : 'false');
+        if (label) label.textContent = collapsed ? 'ヘッダー表示' : 'ヘッダー隠す';
+        btn.setAttribute('title', collapsed ? 'ヘッダーを表示' : 'ヘッダーを隠す');
+        // sticky top と --top-bar-h を再計算
+        if (typeof window._syncStickyTabs === 'function') {
+          // レイアウト確定を待ってから再計算
+          requestAnimationFrame(() => window._syncStickyTabs());
+        }
+      }
+      // 初期状態復元
+      let initial = false;
+      try { initial = localStorage.getItem(KEY) === '1'; } catch (e) {}
+      applyState(initial);
+      btn.addEventListener('click', () => {
+        const next = document.body.getAttribute('data-header-collapsed') !== 'true';
+        try { localStorage.setItem(KEY, next ? '1' : '0'); } catch (e) {}
+        applyState(next);
+      });
     })();
 
     // ---- UI制御 ----
@@ -4165,19 +4234,20 @@
     if (typeof renderWorkflow === "function") renderWorkflow();
 
     // ⑤画面: ホイール振り分け
-    //   - .product-group-table-wrap 上: ネイティブ任せ (テーブル内スクロール、端でcontain止め)
-    //   - それ以外 (タイトル/ツールバー/グループヘッダー/グループ間/空白): 必ず .groups-scroll を動かす
+    //   - テーブル内縦スクロールは廃止したので、全領域で .groups-scroll を動かす
+    //   - ただし横スクロール (deltaX) は .product-group-table-wrap 上ではネイティブ任せ
     (function bindDecideWheelForward() {
       const panel = document.getElementById('tool-decide-price');
       if (!panel) return;
       panel.addEventListener('wheel', (e) => {
         if (document.body.getAttribute('data-view') !== 'decide-price') return;
-        // 各商品テーブル上でのホイールはネイティブ動作 (テーブル内スクロール)
-        const tableWrap = e.target.closest && e.target.closest('.product-group-table-wrap');
-        if (tableWrap) return;
-        // それ以外は全部 groups-scroll を動かす
         const scrollEl = document.querySelector('.groups-scroll');
         if (!scrollEl) return;
+        // 横方向ホイール (shift+ホイール等) は table-wrap 上ならネイティブ (横スクロール)
+        if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+          const tableWrap = e.target.closest && e.target.closest('.product-group-table-wrap');
+          if (tableWrap) return;
+        }
         e.preventDefault();
         scrollEl.scrollTop += e.deltaY;
       }, { passive: false });
