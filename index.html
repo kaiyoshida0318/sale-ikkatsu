@@ -1331,7 +1331,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.32.0</span>
+      <span class="version">v0.33.0</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1588,7 +1588,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.32.0 &nbsp;•&nbsp;
+    SALE一括 v0.33.0 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
@@ -3156,6 +3156,13 @@
       // 割引率を取得 (SKU別)
       // 構造: discounts = { [sku]: 10|20|30|50 }
       const discounts = (data.discounts && typeof data.discounts === 'object') ? data.discounts : {};
+      // 商品管理番号 → 商品名 のマップ (① で取り込み時に算出した代表名)
+      const mgrNameMap = {};
+      if (Array.isArray(data.rows)) {
+        for (const r of data.rows) {
+          if (r && r.mgr) mgrNameMap[r.mgr] = r.name || '';
+        }
+      }
 
       for (let i = 1; i < rmsRows.length; i++) {
         const r = rmsRows[i];
@@ -3196,8 +3203,12 @@
         }
 
         // 編集セル: 商品名(初期は元データ)/SS用タイトル/送料
+        // 商品名は元データのフォールバックを優先 (空文字保存があっても元データを表示)
+        // RMSデータでは同一管理番号の最初の行にだけ商品名が入っているケースが多いため、
+        // mgrNameMap (① 取り込み時に算出した代表名) もフォールバックとして使う
         const ed = editedCells[sku] || {};
-        const dispName = (ed.name !== undefined && ed.name !== null) ? ed.name : name;
+        const rowName = name || (isFirstInMgr ? (mgrNameMap[mgr] || '') : '');
+        const dispName = (ed.name !== undefined && ed.name !== null && ed.name !== '') ? ed.name : rowName;
         const dispSs = (ed.ssTitle !== undefined && ed.ssTitle !== null) ? ed.ssTitle : '';
         const dispShip = (ed.ship !== undefined && ed.ship !== null) ? ed.ship : '';
         // 送料を数値化 (空・非数値は0)
@@ -3438,16 +3449,22 @@
           const v = parseInt(btn.getAttribute('data-discount'), 10);
           // 既に選択中のものを再クリック → 解除
           const alreadySelected = btn.classList.contains('is-selected');
+          // undo記録用に旧値を取得
+          const oldVal = _readDiscountRaw(sku);
           // 同じグリッド内の他ボタンの選択を外す
           grid.querySelectorAll('.disc-btn').forEach(b => {
             b.classList.remove('is-selected','disc-10','disc-20','disc-30','disc-50');
           });
+          let newVal;
           if (!alreadySelected) {
             btn.classList.add('is-selected', 'disc-' + v);
             saveDiscount(sku, v);
+            newVal = v;
           } else {
             saveDiscount(sku, null);
+            newVal = undefined;
           }
+          recordDiscountChange(sku, oldVal, newVal);
         });
       });
     }
@@ -3535,6 +3552,8 @@
           const original = cell.dataset.original ?? '';
           if (newVal === original) return; // 変化なし
           saveEditedCell(sku, field, newVal);
+          // undo記録 (original→newVal)
+          recordEditedCellChange(sku, field, original, newVal);
           // 送料変更 → 利益が変わるので再描画
           if (field === 'ship') {
             renderDecidePriceTable();
@@ -3680,20 +3699,28 @@
       const archive = loadArchive();
       if (!archive[ym]) archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
       if (!archive[ym].editedCells) archive[ym].editedCells = {};
+      const changes = []; // undo用 [{sku, oldVal, newVal}]
       for (const cell of cells) {
         const sku = cell.getAttribute('data-sku');
         if (!sku) continue;
+        const oldVal = (archive[ym].editedCells[sku] && archive[ym].editedCells[sku].ship !== undefined)
+          ? archive[ym].editedCells[sku].ship : undefined;
+        const newVal = (value === '' || value === null || value === undefined) ? undefined : value;
+        if (oldVal === newVal) continue;
         if (!archive[ym].editedCells[sku]) archive[ym].editedCells[sku] = {};
-        if (value === '' || value === null || value === undefined) {
+        if (newVal === undefined) {
           delete archive[ym].editedCells[sku].ship;
           if (Object.keys(archive[ym].editedCells[sku]).length === 0) {
             delete archive[ym].editedCells[sku];
           }
         } else {
-          archive[ym].editedCells[sku].ship = value;
+          archive[ym].editedCells[sku].ship = newVal;
         }
+        changes.push({ sku, oldVal, newVal });
       }
       saveArchive(archive);
+      // undo記録
+      recordShipBulkChange(changes);
       // 送料が変わったので利益再計算 (再描画)
       renderDecidePriceTable();
     }
@@ -3706,6 +3733,8 @@
           const th = handle.parentElement;
           const startX = e.clientX;
           const startWidth = th.getBoundingClientRect().width;
+          // undo用に開始時点の保存値を取得
+          const oldSaved = (loadColWidths())[colKey];
           handle.classList.add('is-dragging');
           document.body.style.cursor = 'col-resize';
           document.body.style.userSelect = 'none';
@@ -3738,6 +3767,8 @@
             // 最終幅を保存
             const finalW = th.getBoundingClientRect().width;
             saveColWidth(colKey, finalW);
+            // undo記録 (旧保存値 → 新保存値)
+            recordColWidthChange(colKey, oldSaved, finalW);
           }
           document.addEventListener('mousemove', onMove);
           document.addEventListener('mouseup', onUp);
@@ -3764,7 +3795,180 @@
       saveArchive(archive);
     }
 
-    // ---- 起動時: アーカイブセレクタ初期化 ----
+    // ---- Undo/Redo (⑤画面の編集操作) ----
+    // 各操作を「適用関数」と「逆操作のデータ」のセットで管理。スタック深さ20。
+    const UNDO_STACK_MAX = 20;
+    const _undoStack = [];
+    const _redoStack = [];
+    let _suppressUndoRecord = false; // undo/redo実行中の二重記録防止
+
+    // op: { undo: ()=>void, redo: ()=>void, label?: string }
+    function pushUndoOp(op) {
+      if (_suppressUndoRecord) return;
+      _undoStack.push(op);
+      if (_undoStack.length > UNDO_STACK_MAX) _undoStack.shift();
+      // 新規操作で redo は無効化
+      _redoStack.length = 0;
+    }
+
+    function doUndo() {
+      if (_undoStack.length === 0) return;
+      const op = _undoStack.pop();
+      _suppressUndoRecord = true;
+      try { op.undo(); } finally { _suppressUndoRecord = false; }
+      _redoStack.push(op);
+    }
+    function doRedo() {
+      if (_redoStack.length === 0) return;
+      const op = _redoStack.pop();
+      _suppressUndoRecord = true;
+      try { op.redo(); } finally { _suppressUndoRecord = false; }
+      _undoStack.push(op);
+    }
+
+    // --- 各操作向けのヘルパー: アーカイブの editedCells / discounts を上書き保存 ---
+    function _writeEditedCellRaw(sku, field, value) {
+      const ym = currentYM || getCurrentYM();
+      if (!ym) return;
+      const archive = loadArchive();
+      if (!archive[ym]) archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
+      if (!archive[ym].editedCells) archive[ym].editedCells = {};
+      if (value === '' || value === null || value === undefined) {
+        if (archive[ym].editedCells[sku]) {
+          delete archive[ym].editedCells[sku][field];
+          if (Object.keys(archive[ym].editedCells[sku]).length === 0) {
+            delete archive[ym].editedCells[sku];
+          }
+        }
+      } else {
+        if (!archive[ym].editedCells[sku]) archive[ym].editedCells[sku] = {};
+        archive[ym].editedCells[sku][field] = value;
+      }
+      saveArchive(archive);
+    }
+    function _readEditedCellRaw(sku, field) {
+      const ym = currentYM || getCurrentYM();
+      if (!ym) return undefined;
+      const archive = loadArchive();
+      const ed = archive[ym] && archive[ym].editedCells && archive[ym].editedCells[sku];
+      if (!ed) return undefined;
+      return ed[field];
+    }
+    function _writeDiscountRaw(sku, value) {
+      const ym = currentYM || getCurrentYM();
+      if (!ym) return;
+      const archive = loadArchive();
+      if (!archive[ym]) archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
+      if (!archive[ym].discounts) archive[ym].discounts = {};
+      if (value === null || value === undefined) {
+        delete archive[ym].discounts[sku];
+      } else {
+        archive[ym].discounts[sku] = value;
+      }
+      saveArchive(archive);
+    }
+    function _readDiscountRaw(sku) {
+      const ym = currentYM || getCurrentYM();
+      if (!ym) return undefined;
+      const archive = loadArchive();
+      return archive[ym] && archive[ym].discounts && archive[ym].discounts[sku];
+    }
+
+    // 単一セルの編集 (商品名/SS用タイトル/送料) を記録
+    function recordEditedCellChange(sku, field, oldVal, newVal) {
+      if (oldVal === newVal) return;
+      pushUndoOp({
+        label: `${field} ${sku}`,
+        undo: () => {
+          _writeEditedCellRaw(sku, field, oldVal);
+          renderDecidePriceTable();
+        },
+        redo: () => {
+          _writeEditedCellRaw(sku, field, newVal);
+          renderDecidePriceTable();
+        },
+      });
+    }
+    // 送料の一括変更 (フィルハンドルのダブルクリック/ドラッグ) を記録
+    // changes: [{sku, oldVal, newVal}, ...]
+    function recordShipBulkChange(changes) {
+      if (!changes || changes.length === 0) return;
+      pushUndoOp({
+        label: `ship bulk ${changes.length}`,
+        undo: () => {
+          for (const c of changes) _writeEditedCellRaw(c.sku, 'ship', c.oldVal);
+          renderDecidePriceTable();
+        },
+        redo: () => {
+          for (const c of changes) _writeEditedCellRaw(c.sku, 'ship', c.newVal);
+          renderDecidePriceTable();
+        },
+      });
+    }
+    // 割引率変更を記録
+    function recordDiscountChange(sku, oldVal, newVal) {
+      if (oldVal === newVal) return;
+      pushUndoOp({
+        label: `discount ${sku}`,
+        undo: () => {
+          _writeDiscountRaw(sku, oldVal);
+          renderDecidePriceTable();
+        },
+        redo: () => {
+          _writeDiscountRaw(sku, newVal);
+          renderDecidePriceTable();
+        },
+      });
+    }
+    // 列幅変更を記録
+    function recordColWidthChange(key, oldWidth, newWidth) {
+      if (oldWidth === newWidth) return;
+      pushUndoOp({
+        label: `col-width ${key}`,
+        undo: () => {
+          const cw = loadColWidths();
+          if (oldWidth && oldWidth > 0) cw[key] = Math.round(oldWidth);
+          else delete cw[key];
+          try { localStorage.setItem(COL_WIDTHS_KEY, JSON.stringify(cw)); } catch (e) {}
+          renderDecidePriceTable();
+        },
+        redo: () => {
+          const cw = loadColWidths();
+          if (newWidth && newWidth > 0) cw[key] = Math.round(newWidth);
+          else delete cw[key];
+          try { localStorage.setItem(COL_WIDTHS_KEY, JSON.stringify(cw)); } catch (e) {}
+          renderDecidePriceTable();
+        },
+      });
+    }
+
+    // Ctrl+Z / Cmd+Z: undo, Ctrl+Shift+Z / Cmd+Shift+Z: redo
+    // セル内編集中 (contenteditable=true) のキー入力時はネイティブのテキスト編集を尊重して何もしない
+    document.addEventListener('keydown', (e) => {
+      const isMod = e.ctrlKey || e.metaKey;
+      if (!isMod) return;
+      const key = e.key.toLowerCase();
+      if (key !== 'z' && key !== 'y') return;
+
+      // セル内編集中はネイティブ任せ
+      const ae = document.activeElement;
+      if (ae && ae.getAttribute && ae.getAttribute('contenteditable') === 'true') return;
+      if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT')) return;
+
+      // ⑤画面でのみ動かす
+      if (document.body.getAttribute('data-view') !== 'decide-price') return;
+
+      // Ctrl+Shift+Z または Ctrl+Y → redo, Ctrl+Z → undo
+      if (key === 'y' || (key === 'z' && e.shiftKey)) {
+        e.preventDefault();
+        doRedo();
+      } else if (key === 'z') {
+        e.preventDefault();
+        doUndo();
+      }
+    });
+
+
     refreshArchiveSelect();
     renderProductTable();
     if (typeof renderWorkflow === "function") renderWorkflow();
