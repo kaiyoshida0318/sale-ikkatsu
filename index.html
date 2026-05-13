@@ -426,6 +426,46 @@
       font-weight: 700;
       color: var(--brand);
     }
+    /* チェックボックス風リスト (取り込み手順内の "✔項目") */
+    .howto-checklist {
+      list-style: none;
+      margin: 6px 0 2px;
+      padding: 8px 12px;
+      background: #fafbfd;
+      border: 1px solid #e2e4ec;
+      border-radius: 6px;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+    .howto-checklist li {
+      padding-left: 26px;
+      position: relative;
+    }
+    .howto-checklist li.check::before {
+      content: "☑";
+      position: absolute;
+      left: 4px;
+      top: 0;
+      color: #1a7c38;
+      font-weight: 700;
+      font-size: 15px;
+    }
+    .howto-checklist li.auto::before {
+      content: "▣";
+      position: absolute;
+      left: 4px;
+      top: 0;
+      color: #888;
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .howto-checklist li.auto {
+      color: var(--muted);
+    }
+    .howto-note {
+      color: var(--muted);
+      font-size: 12px;
+    }
     .progress {
       margin-top: 12px;
       padding: 14px 18px;
@@ -1597,7 +1637,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.39.2</span>
+      <span class="version">v0.40.0</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1676,21 +1716,31 @@
         </div>
 
         <div class="card">
-          <div class="hint">
-            楽天RMSからダウンロードした商品データCSV（Shift_JIS）をアップロードすると、<br>
-            「セール参加商品」の <b>全体タブ</b> に商品一覧が反映されます。<br>
-            ・商品管理番号が同じ行は1つにまとめます<br>
-            ・システム連携用SKU番号の <b>共通プレフィクス</b>（ハイフン区切り）を商品コードにします
-          </div>
+          <h2>RMSデータのダウンロード</h2>
+          <ol class="howto-list">
+            <li>RMS - 店舗設定 - <b>1 商品管理</b> - <b>2 CSV一括編集</b> - <b>CSVダウンロード</b></li>
+            <li>「<b>商品管理番号で絞り込む</b>」でセール参加商品の商品管理番号を一括貼り付け</li>
+            <li>以下の項目にチェックを入れてダウンロード
+              <ul class="howto-checklist">
+                <li class="auto">商品管理番号<span class="howto-note">（必須-自動でDLされる）</span></li>
+                <li class="auto">SKU管理番号<span class="howto-note">（必須-自動でDLされる）</span></li>
+                <li class="check">システム連携用SKU番号</li>
+                <li class="check">通常購入販売価格<span class="howto-note"> → セール価格を記入</span></li>
+                <li class="check">商品名</li>
+                <li class="check">バリエーション項目名・選択肢</li>
+              </ul>
+              <div class="howto-note" style="margin-top:6px;">※ チェックを入れるのは <b>4箇所</b></div>
+            </li>
+          </ol>
         </div>
 
         <div class="card">
-          <h2>RMSデータCSVをアップロード</h2>
+          <h2>CSVをアップロード</h2>
           <form id="add-products-form">
             <div class="grid">
               <div class="file-input" data-target="rms-products" style="grid-column: 1 / -1;">
                 <label>RMSデータCSV</label>
-                <div class="desc">楽天RMSから一括ダウンロードした商品情報CSV</div>
+                <div class="desc">楽天RMSから一括ダウンロードした商品情報CSV（Shift_JIS）</div>
                 <input type="file" name="rms_products" accept=".csv" required />
                 <div class="filename"></div>
               </div>
@@ -1860,7 +1910,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.39.2 &nbsp;•&nbsp;
+    SALE一括 v0.40.0 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
