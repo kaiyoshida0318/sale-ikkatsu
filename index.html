@@ -1281,6 +1281,143 @@
       background: var(--brand);
       color: #fff;
     }
+
+    /* ⑥ セール用タイトル決定 */
+    .title-progress {
+      margin-left: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 16px;
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+      transition: background .2s, color .2s, box-shadow .2s, transform .2s;
+    }
+    .title-progress.is-pending {
+      background: #fff3e0;
+      color: #a14d0a;
+      border: 1.5px solid #f0b878;
+    }
+    .title-progress.is-pending .title-progress-icon {
+      color: #d97706;
+      font-size: 10px;
+    }
+    .title-progress.is-pending b {
+      font-size: 15px;
+      font-weight: 800;
+    }
+    .title-progress.is-complete {
+      background: #d8f3df;
+      color: #0f6b27;
+      border: 1.5px solid #5cba74;
+      box-shadow: 0 0 0 4px rgba(34,168,87,0.18), 0 0 12px rgba(34,168,87,0.55);
+      animation: title-progress-pulse 1.6s ease-in-out infinite;
+    }
+    .title-progress.is-complete .title-progress-icon {
+      color: #1a7c38;
+      font-weight: 800;
+      font-size: 15px;
+    }
+    @keyframes title-progress-pulse {
+      0%, 100% { box-shadow: 0 0 0 4px rgba(34,168,87,0.18), 0 0 12px rgba(34,168,87,0.55); }
+      50%      { box-shadow: 0 0 0 6px rgba(34,168,87,0.10), 0 0 22px rgba(34,168,87,0.85); }
+    }
+    /* tool-panel-header の進捗バッジを右に押し出すために、ヘッダーを flex に */
+    body[data-view="decide-title"] .tool-panel-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    /* テーブル本体 */
+    .dt-table-wrap {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+      overflow: hidden;
+      transition: box-shadow .3s;
+    }
+    .dt-table-wrap.is-complete-glow {
+      box-shadow: 0 0 0 3px rgba(34,168,87,0.35), 0 0 24px rgba(34,168,87,0.45);
+      animation: dt-wrap-glow 2.2s ease-in-out infinite;
+    }
+    @keyframes dt-wrap-glow {
+      0%, 100% { box-shadow: 0 0 0 3px rgba(34,168,87,0.35), 0 0 24px rgba(34,168,87,0.45); }
+      50%      { box-shadow: 0 0 0 5px rgba(34,168,87,0.22), 0 0 40px rgba(34,168,87,0.75); }
+    }
+    .dt-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    .dt-table th,
+    .dt-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid #e6e6ec;
+      vertical-align: top;
+      text-align: left;
+    }
+    .dt-table thead th {
+      background: #f4f5f8;
+      font-weight: 700;
+      color: var(--text);
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      border-bottom: 2px solid #d8d8de;
+    }
+    .dt-table th.dt-col-mgr,
+    .dt-table td.dt-col-mgr {
+      width: 130px;
+      white-space: nowrap;
+    }
+    .dt-table th.dt-col-name,
+    .dt-table td.dt-col-name {
+      width: 40%;
+      min-width: 240px;
+    }
+    .dt-table th.dt-col-ss,
+    .dt-table td.dt-col-ss {
+      min-width: 280px;
+    }
+    .dt-mgr-badge {
+      display: inline-block;
+      background: #fff;
+      border: 2px solid #ee4d3d;
+      color: #ee4d3d;
+      padding: 3px 10px;
+      border-radius: 4px;
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .dt-table td.editable {
+      cursor: text;
+      background-color: #fff;
+      transition: background-color .12s, box-shadow .12s;
+      box-shadow: inset 0 0 0 1px rgba(30,58,95,0.06);
+      line-height: 1.5;
+      word-break: break-word;
+    }
+    .dt-table td.editable:hover {
+      background-color: #fffef0;
+      box-shadow: inset 0 0 0 1px rgba(30,58,95,0.25);
+    }
+    .dt-table td.editable:focus {
+      outline: none;
+      background-color: #fffef0;
+      box-shadow: inset 0 0 0 2px var(--brand);
+    }
+    /* セール用タイトル列が空のときヒント表示 */
+    .dt-table td.dt-col-ss:empty::before {
+      content: "（クリックして入力）";
+      color: #aaa;
+      font-style: italic;
+      pointer-events: none;
+    }
+
     /* ⑤画面: タイトル+ツールバー固定、グループコンテナがスクロール */
     .groups-scroll {
       overflow-y: auto;
@@ -1605,7 +1742,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.42.0</span>
+      <span class="version">v0.43.0</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1736,6 +1873,24 @@
             <div class="empty-state">
               まだデータがありません。<br>
               「セール作業手順」の <b>①〜④</b> をすべて取り込んでください。
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- サブビュー: ⑥ セール用タイトル決定 -->
+      <div id="tool-decide-title" class="tool-panel">
+        <div class="tool-panel-header">
+          <button type="button" class="back-btn" data-back>← 戻る</button>
+          <h2>⑥ セール用タイトル決定</h2>
+          <div id="decide-title-progress" class="title-progress" aria-live="polite"></div>
+        </div>
+
+        <div id="decide-title-table-wrap" class="product-table-wrap">
+          <div id="decide-title-table-container">
+            <div class="empty-state">
+              まだデータがありません。<br>
+              「セール作業手順」の <b>①</b> で商品を取り込んでください。
             </div>
           </div>
         </div>
@@ -1879,7 +2034,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.42.0 &nbsp;•&nbsp;
+    SALE一括 v0.43.0 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
@@ -2006,7 +2161,7 @@
     // ブラウザ/マウスの「戻る」でサブビューから戻れるよう、サブビュー遷移時は history.pushState する
     let _suppressPushState = false; // popstate由来の呼び出しでは積まない
     const MAIN_TABS = ['products', 'workflow'];
-    const VALID_VIEWS = ['products','workflow','add-products','decide-price','cost-set-item','cost-set-component','cost-non-set'];
+    const VALID_VIEWS = ['products','workflow','add-products','decide-price','decide-title','cost-set-item','cost-set-component','cost-non-set'];
     const LAST_VIEW_KEY = 'sale-ikkatsu-last-view';
     // 直近のメインタブ(サブビューから戻る時の戻り先)
     let _lastMainTab = 'products';
@@ -2040,6 +2195,10 @@
       // decide-price サブビューを開くときは表を再描画
       if (viewId === 'decide-price') {
         if (typeof renderDecidePriceTable === 'function') renderDecidePriceTable();
+      }
+      // decide-title サブビューを開くときも再描画
+      if (viewId === 'decide-title') {
+        if (typeof renderDecideTitleTable === 'function') renderDecideTitleTable();
       }
       // 検索用DLボタンの活性/非活性更新
       if (viewId === 'cost-set-component' || viewId === 'cost-non-set') {
@@ -2644,7 +2803,7 @@
           { id: 'prep-cost-set-component', label: '原価特定-NE-セット構成物コード', action: 'open-cost-set-component' },
           { id: 'prep-cost-non-set', label: '原価特定-NE-セット無しコード', action: 'open-cost-non-set' },
           { id: 'prep-decide-price', label: '割引率決定', action: 'open-decide-price' },
-          { id: 'prep-decide-title', label: 'セール用タイトル決定' },
+          { id: 'prep-decide-title', label: 'セール用タイトル決定', action: 'open-decide-title' },
           { id: 'prep-dl-rms-csv', label: 'RMSアップ素材CSVダウンロード' },
           { id: 'prep-make-rms-csv', label: 'RMSアップ用CSV作成' },
           { id: 'prep-upload-rms', label: 'RMSにアップロード' },
@@ -2783,6 +2942,8 @@
             showView('cost-set-component');
           } else if (action === 'open-cost-non-set') {
             showView('cost-non-set');
+          } else if (action === 'open-decide-title') {
+            showView('decide-title');
           }
         });
       });
@@ -3656,6 +3817,140 @@
 
     let _decideShowFee = true; // バリエ・手数料グループの表示/非表示
     let _decideActiveTab = null; // ⑤画面 現在アクティブな商品管理番号タブ (null=未設定 → 一番左)
+
+    // ⑥ セール用タイトル決定: 商品管理番号ごとに 商品名 + セール用タイトル を編集する
+    // データソース: archive[ym].rmsCsvB64 (① で取り込み済みRMSデータ) から
+    //   商品管理番号ごとに「最初に登場するSKU(=代表SKU)」と「最初に登場する商品名(=代表商品名)」を抽出
+    //   編集値の保存先: archive[ym].editedCells[代表SKU].name / .ssTitle (⑤と整合)
+    function buildDecideTitleGroups() {
+      const ym = currentYM || getCurrentYM();
+      if (!ym) return { groups: [], reason: 'セール期間（開始日時）が未設定です' };
+      const archive = loadArchive();
+      const data = archive[ym];
+      if (!data) return { groups: [], reason: 'セール期間のデータがありません' };
+      if (!data.rmsCsvB64) return { groups: [], reason: '① の RMSデータCSVが未取り込みです' };
+      const rmsText = decodeShiftJIS(b642u8(data.rmsCsvB64));
+      const rmsRows = parseCsvText(rmsText);
+      if (rmsRows.length < 2) return { groups: [], reason: 'RMSデータCSVが空です' };
+      const rh = rmsRows[0];
+      const iMgr = rh.findIndex(x => x && x.indexOf('商品管理番号') >= 0);
+      const iName = rh.findIndex(x => x && x.trim() === '商品名');
+      const iSku = rh.findIndex(x => x && x.indexOf('システム連携用SKU番号') >= 0);
+      if (iMgr < 0 || iName < 0 || iSku < 0) {
+        return { groups: [], reason: 'RMSデータCSVに必要な列が見つかりません' };
+      }
+      // 商品管理番号ごとの代表SKU・代表商品名
+      const order = []; // mgr 出現順
+      const seen = new Set();
+      const firstSku = {}; // mgr → 最初のSKU
+      const firstName = {}; // mgr → 最初の (非空) 商品名
+      for (let i = 1; i < rmsRows.length; i++) {
+        const r = rmsRows[i];
+        if (!r) continue;
+        const mgr = (r[iMgr]||'').trim();
+        const sku = (r[iSku]||'').trim();
+        const name = (r[iName]||'').trim();
+        if (!mgr) continue;
+        if (!seen.has(mgr)) {
+          seen.add(mgr);
+          order.push(mgr);
+          firstSku[mgr] = sku;
+          firstName[mgr] = name;
+        } else {
+          // 代表SKUがまだ無い場合のフォールバック
+          if (!firstSku[mgr] && sku) firstSku[mgr] = sku;
+          if (!firstName[mgr] && name) firstName[mgr] = name;
+        }
+      }
+      const editedCells = (data.editedCells && typeof data.editedCells === 'object') ? data.editedCells : {};
+      const groups = order.map(mgr => {
+        const sku = firstSku[mgr] || '';
+        const ed = editedCells[sku] || {};
+        const baseName = firstName[mgr] || '';
+        const dispName = (ed.name !== undefined && ed.name !== null && ed.name !== '') ? ed.name : baseName;
+        const dispSs = (ed.ssTitle !== undefined && ed.ssTitle !== null) ? ed.ssTitle : '';
+        return { mgr, sku, name: dispName, ssTitle: dispSs };
+      });
+      return { groups, reason: null };
+    }
+
+    function renderDecideTitleTable() {
+      const container = document.getElementById('decide-title-table-container');
+      const progress = document.getElementById('decide-title-progress');
+      if (!container) return;
+      const { groups, reason } = buildDecideTitleGroups();
+      if (!groups || groups.length === 0) {
+        container.innerHTML = `<div class="empty-state">${escapeHtml(reason || '対象データがありません')}</div>`;
+        if (progress) { progress.textContent = ''; progress.className = 'title-progress'; }
+        return;
+      }
+      const totalCount = groups.length;
+      const missingCount = groups.filter(g => !g.ssTitle || g.ssTitle.trim() === '').length;
+      const allFilled = (missingCount === 0);
+      // 進捗表示
+      if (progress) {
+        progress.classList.remove('is-complete','is-pending');
+        if (allFilled) {
+          progress.classList.add('is-complete');
+          progress.innerHTML = `<span class="title-progress-icon">✓</span><span>全 ${totalCount} 件 完了</span>`;
+        } else {
+          progress.classList.add('is-pending');
+          progress.innerHTML = `<span class="title-progress-icon">●</span><span>未入力 <b>${missingCount}</b> 件 / 全 ${totalCount} 件</span>`;
+        }
+      }
+      // 表本体
+      const rowsHtml = groups.map(g => {
+        return `<tr data-mgr="${escapeHtml(g.mgr)}">
+          <td class="dt-col-mgr"><span class="dt-mgr-badge" title="商品管理番号">${escapeHtml(g.mgr)}</span></td>
+          <td class="dt-col-name editable" contenteditable="true" data-sku="${escapeHtml(g.sku)}" data-field="name" data-mgr="${escapeHtml(g.mgr)}">${escapeHtml(g.name)}</td>
+          <td class="dt-col-ss editable" contenteditable="true" data-sku="${escapeHtml(g.sku)}" data-field="ssTitle" data-mgr="${escapeHtml(g.mgr)}">${escapeHtml(g.ssTitle)}</td>
+        </tr>`;
+      }).join('');
+      container.innerHTML = `
+        <div class="dt-table-wrap${allFilled ? ' is-complete-glow' : ''}">
+          <table class="dt-table">
+            <thead>
+              <tr>
+                <th class="dt-col-mgr">商品管理番号</th>
+                <th class="dt-col-name">商品名</th>
+                <th class="dt-col-ss">セール用タイトル</th>
+              </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+        </div>
+      `;
+      // 編集ハンドラを付ける
+      attachDecideTitleHandlers(container);
+    }
+
+    function attachDecideTitleHandlers(container) {
+      container.querySelectorAll('td.editable').forEach(cell => {
+        cell.addEventListener('focus', () => {
+          cell.dataset.original = cell.textContent;
+        });
+        cell.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            cell.blur();
+          } else if (e.key === 'Escape') {
+            cell.textContent = cell.dataset.original || '';
+            cell.blur();
+          }
+        });
+        cell.addEventListener('blur', () => {
+          const sku = cell.getAttribute('data-sku');
+          const field = cell.getAttribute('data-field');
+          const newVal = cell.textContent;
+          const original = cell.dataset.original ?? '';
+          if (newVal === original) return;
+          saveEditedCell(sku, field, newVal);
+          recordEditedCellChange(sku, field, original, newVal);
+          // 再描画 (進捗バッジ・全件完了のグロー更新のため)
+          renderDecideTitleTable();
+        });
+      });
+    }
 
     function renderDecidePriceTable() {
       const container = document.getElementById('decide-price-table-container');
