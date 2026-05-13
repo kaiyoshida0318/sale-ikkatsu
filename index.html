@@ -1543,6 +1543,12 @@
       box-shadow: inset 0 0 0 1px var(--brand) !important;
       background: #e8effa !important;
     }
+    /* 範囲選択: 選択中の送料セル (Excel風、Deleteで一括削除可能) */
+    .product-table.decide-table td.col-green.is-range-selected {
+      background: #d6e4f7 !important;
+      box-shadow: inset 0 0 0 2px #2e6bc3 !important;
+      user-select: none;
+    }
     /* 商品画像セル */
     .product-table.decide-table td .img-placeholder {
       display: inline-flex;
@@ -1649,7 +1655,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.40.1</span>
+      <span class="version">v0.41.0</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1923,7 +1929,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.40.1 &nbsp;•&nbsp;
+    SALE一括 v0.41.0 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
@@ -3911,6 +3917,9 @@
       // 送料セルのフィルハンドル (Excel風オートフィル)
       attachFillHandleHandlers(container);
 
+      // 送料セルの範囲選択 (Excel風: ドラッグで範囲指定、Delete一括削除)
+      attachShipRangeSelection(container);
+
       // 列幅リサイズハンドル (商品名・SS用タイトル)
       attachColumnResizeHandlers(container);
 
@@ -4040,6 +4049,28 @@
       });
     }
 
+    // セルの「現在の表示値」を archive にコミットする (blur処理の保存部分相当、再描画はしない)
+    // フィルハンドル操作前など、編集中で未保存の状態を先に保存したい場面で使う
+    function commitEditingCell(cell) {
+      if (!cell) return;
+      const sku = cell.getAttribute('data-sku');
+      const field = cell.getAttribute('data-field');
+      if (!sku || !field) return;
+      const newVal = readEditableCellValue(cell);
+      const original = cell.dataset.original;
+      // フォーカスを得て original が記録されている場合のみ、変化チェックして保存+undo記録
+      if (original !== undefined) {
+        if (newVal === original) return; // 変化なし
+        saveEditedCell(sku, field, newVal);
+        recordEditedCellChange(sku, field, original, newVal);
+        // 以後の blur で重複保存されないよう、original を最新値に更新
+        cell.dataset.original = newVal;
+      } else {
+        // focus せず直接値が書き換わったケース (通常は無いが念のため)
+        saveEditedCell(sku, field, newVal);
+      }
+    }
+
     // ⑤の列幅をlocalStorageから読み書き (列キー: name, ssTitle)
     const COL_WIDTHS_KEY = 'sale-ikkatsu-col-widths';
     function loadColWidths() {
@@ -4076,6 +4107,118 @@
       });
     }
 
+    // 送料セルの範囲選択 (Excel風)
+    //   ・セルの本体 (フィルハンドル以外) を mousedown → 別行までドラッグで「選択モード」に突入
+    //   ・選択中のセルは .is-range-selected で強調表示
+    //   ・Delete/Backspace で選択セルの値を一括削除
+    //   ・他の場所クリック / ESC で選択解除
+    let _shipRangeSelected = []; // 現在選択中のセル配列 (DOM要素)
+    function attachShipRangeSelection(container) {
+      const DRAG_THRESHOLD = 4; // px: これ以上動いたらドラッグ判定
+      container.querySelectorAll('td.col-green.editable[data-field="ship"]').forEach(cell => {
+        cell.addEventListener('mousedown', (ev) => {
+          // フィルハンドル上は既存処理 (フィル) に任せる
+          if (ev.target && ev.target.classList && ev.target.classList.contains('fill-handle')) return;
+          // 右クリックなどは無視
+          if (ev.button !== 0) return;
+          const startX = ev.clientX;
+          const startY = ev.clientY;
+          const anchorCell = cell;
+          let dragMode = false; // 距離が閾値を超えたら true
+          let lastTarget = anchorCell;
+
+          function getCellAt(clientX, clientY) {
+            const elem = document.elementFromPoint(clientX, clientY);
+            if (!elem) return null;
+            const td = elem.closest('td.col-green.editable[data-field="ship"]');
+            if (!td) return null;
+            // 同一テーブル (同一商品グループ) 内に限定
+            if (td.closest('table') !== anchorCell.closest('table')) return null;
+            return td;
+          }
+
+          function getCellsInRange(fromCell, toCell) {
+            // 同一テーブル内で fromCell〜toCell の間にある送料セルを上から順に集める
+            const table = fromCell.closest('table');
+            if (!table) return [];
+            const all = Array.from(table.querySelectorAll('td.col-green.editable[data-field="ship"]'));
+            const a = all.indexOf(fromCell);
+            const b = all.indexOf(toCell);
+            if (a < 0 || b < 0) return [];
+            const lo = Math.min(a, b), hi = Math.max(a, b);
+            return all.slice(lo, hi + 1);
+          }
+
+          function applySelection(cells) {
+            // 一旦すべての送料セルから選択クラスを外して、cells に再付与
+            clearShipRangeSelection();
+            for (const c of cells) c.classList.add('is-range-selected');
+            _shipRangeSelected = cells.slice();
+          }
+
+          function onMove(mev) {
+            const dx = mev.clientX - startX;
+            const dy = mev.clientY - startY;
+            if (!dragMode && Math.hypot(dx, dy) >= DRAG_THRESHOLD) {
+              dragMode = true;
+              // ドラッグ判定したらブラウザのテキスト選択を解除
+              try { window.getSelection().removeAllRanges(); } catch (e) {}
+              // contenteditable のフォーカスは外す (キー入力は document keydown で受ける)
+              if (document.activeElement && typeof document.activeElement.blur === 'function') {
+                document.activeElement.blur();
+              }
+            }
+            if (!dragMode) return;
+            mev.preventDefault();
+            const cur = getCellAt(mev.clientX, mev.clientY);
+            if (!cur) return;
+            lastTarget = cur;
+            const cells = getCellsInRange(anchorCell, cur);
+            applySelection(cells);
+          }
+          function onUp() {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            // ドラッグしなかった場合 (=クリック) は選択せずデフォルト挙動 (編集モード) のまま
+            // ドラッグした場合は _shipRangeSelected に範囲が残る
+          }
+          document.addEventListener('mousemove', onMove);
+          document.addEventListener('mouseup', onUp);
+        });
+      });
+    }
+
+    function clearShipRangeSelection() {
+      _shipRangeSelected.forEach(c => c.classList.remove('is-range-selected'));
+      _shipRangeSelected = [];
+    }
+
+    // 範囲選択中に Delete/Backspace → 選択セルの値を一括削除
+    // ESC → 選択解除
+    // 他の場所クリック → 選択解除
+    document.addEventListener('keydown', (e) => {
+      if (_shipRangeSelected.length === 0) return;
+      // セル内編集中 (contenteditable=true にフォーカス) のキー入力は無視
+      const ae = document.activeElement;
+      if (ae && ae.getAttribute && ae.getAttribute('contenteditable') === 'true') return;
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        const cells = _shipRangeSelected.slice();
+        clearShipRangeSelection();
+        applyFillToCells(cells, '');
+      } else if (e.key === 'Escape') {
+        clearShipRangeSelection();
+      }
+    });
+    document.addEventListener('mousedown', (e) => {
+      if (_shipRangeSelected.length === 0) return;
+      // 選択中のセル自身、またはフィルハンドル上のクリックは選択維持
+      const td = e.target.closest && e.target.closest('td.col-green.editable[data-field="ship"]');
+      if (td && _shipRangeSelected.includes(td)) return;
+      if (e.target.classList && e.target.classList.contains('fill-handle')) return;
+      clearShipRangeSelection();
+    }, true);
+
     // ship セルの行リスト (tbody順、blank-rowもセルは無いがtr.blank-rowが入る)
     // フィルハンドルの伝搬範囲は「同一商品グループ (=同一<table>)」に限定
     function getShipCellsInOrder(container, sourceCell) {
@@ -4100,6 +4243,9 @@
     function fillAutoDown(sourceCell) {
       const container = document.getElementById('decide-price-table-container');
       if (!container) return;
+      // sourceCell が編集中で archive に未保存の場合に備え、先に現在値を保存しておく
+      // (これをしないと、下伝播後の再描画で sourceCell の入力値が消える)
+      commitEditingCell(sourceCell);
       const value = readEditableCellValue(sourceCell);
       if (value === '') return; // 元セルが空なら何もしない
       const list = getShipCellsInOrder(container, sourceCell);
@@ -4124,6 +4270,8 @@
     function startFillDrag(startEv, sourceCell) {
       const container = document.getElementById('decide-price-table-container');
       if (!container) return;
+      // ドラッグ開始時にも sourceCell の現在値を archive に保存しておく
+      commitEditingCell(sourceCell);
       const value = readEditableCellValue(sourceCell);
       const list = getShipCellsInOrder(container, sourceCell);
       const sourceIdx = list.findIndex(x => x.cell === sourceCell);
