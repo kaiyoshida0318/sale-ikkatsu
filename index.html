@@ -1417,6 +1417,19 @@
       font-style: italic;
       pointer-events: none;
     }
+    /* 範囲選択中の見た目 (Excel風) */
+    .dt-table td.editable.is-range-selected {
+      background-color: #d6e4f7 !important;
+      box-shadow: inset 0 0 0 1px #2e6bc3 !important;
+      user-select: none;
+    }
+    .dt-table td.editable.is-range-selected.is-range-anchor {
+      box-shadow: inset 0 0 0 2px #2e6bc3 !important;
+    }
+    /* 選択中はヒントを出さない */
+    .dt-table td.editable.is-range-selected:empty::before {
+      content: "";
+    }
 
     /* ⑤画面: タイトル+ツールバー固定、グループコンテナがスクロール */
     .groups-scroll {
@@ -1742,7 +1755,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.44.0</span>
+      <span class="version">v0.45.0</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1918,7 +1931,25 @@
 
         <div class="card">
           <h2>RMSデータのダウンロード</h2>
-          <p class="card-lead">（手順を後で追加）</p>
+          <ol class="howto-list">
+            <li>RMS - 店舗設定 - <b>1 商品管理</b> - <b>2 CSV一括編集</b> - <b>CSVダウンロード</b></li>
+            <li>「<b>商品管理番号で絞り込む</b>」で、先程ダウンロードしたCSVの<b>商品管理番号列全体</b>をコピーして一括貼り付け</li>
+            <li>以下の項目にチェックを入れてダウンロード
+              <ul class="howto-checklist">
+                <li class="auto">商品管理番号<span class="howto-note">（必須-自動でDLされる）</span></li>
+                <li class="auto">SKU管理番号<span class="howto-note">（必須-自動でDLされる）</span></li>
+                <li class="check">システム連携用SKU番号</li>
+                <li class="check">通常購入販売価格</li>
+                <li class="check">表示価格</li>
+                <li class="check">二重価格文言管理番号</li>
+                <li class="check">販売期間指定日時</li>
+                <li class="check">商品名</li>
+              </ul>
+              <div class="howto-note" style="margin-top:6px;">※ チェックを入れるのは <b>6箇所</b></div>
+            </li>
+            <li>ダウンロードした<b>元ファイル</b>はSS終了後にアップするため手元に保管しておく。<br>
+              その際「<code>dl-normal-item…</code>」というタイトルの「<b>dl-</b>」を外して「<code>normal-item…</code>」とする。</li>
+          </ol>
         </div>
       </div>
 
@@ -2060,7 +2091,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.44.0 &nbsp;•&nbsp;
+    SALE一括 v0.45.0 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
@@ -3906,6 +3937,9 @@
       const container = document.getElementById('decide-title-table-container');
       const progress = document.getElementById('decide-title-progress');
       if (!container) return;
+      // DOM再生成のため、保持していた範囲選択参照はクリア
+      _dtRangeSelected = [];
+      _dtRangeAnchor = null;
       const { groups, reason } = buildDecideTitleGroups();
       if (!groups || groups.length === 0) {
         container.innerHTML = `<div class="empty-state">${escapeHtml(reason || '対象データがありません')}</div>`;
@@ -3956,6 +3990,8 @@
       container.querySelectorAll('td.editable').forEach(cell => {
         cell.addEventListener('focus', () => {
           cell.dataset.original = cell.textContent;
+          // フォーカスが入ったら範囲選択は解除 (編集モードに移行)
+          if (_dtRangeSelected.length > 0) clearDtRangeSelection();
         });
         cell.addEventListener('keydown', (e) => {
           if (e.key === 'Enter') {
@@ -3978,7 +4014,301 @@
           renderDecideTitleTable();
         });
       });
+      // Excel風 範囲選択 + コピー/ペースト/削除
+      attachDecideTitleRangeSelection(container);
     }
+
+    // ⑥ Excel風セル範囲選択 + コピー&ペースト
+    //   ・セル本体で mousedown → 4px超ドラッグで範囲選択モード
+    //   ・選択中: Ctrl/Cmd+C で TSV にしてクリップボード、Ctrl/Cmd+V で矩形貼り付け
+    //   ・Delete/Backspace: 範囲を空に、ESC: 選択解除
+    //   ・対象セル: td.editable (商品名・セール用タイトル列)
+    let _dtRangeSelected = []; // [{cell, row, col}, ...]
+    let _dtRangeAnchor = null; // {row, col} - 貼り付け基準位置
+    function attachDecideTitleRangeSelection(container) {
+      const DRAG_THRESHOLD = 4;
+      // 表の全 editable セルを 2D で取得 (rows[i][j])
+      function buildGrid() {
+        const tbody = container.querySelector('.dt-table tbody');
+        if (!tbody) return [];
+        const trs = Array.from(tbody.querySelectorAll('tr'));
+        return trs.map(tr => Array.from(tr.querySelectorAll('td.editable')));
+      }
+      function cellPos(grid, cell) {
+        for (let i = 0; i < grid.length; i++) {
+          const j = grid[i].indexOf(cell);
+          if (j >= 0) return { row: i, col: j };
+        }
+        return null;
+      }
+      function getCellsInRect(grid, a, b) {
+        const r0 = Math.min(a.row, b.row), r1 = Math.max(a.row, b.row);
+        const c0 = Math.min(a.col, b.col), c1 = Math.max(a.col, b.col);
+        const out = [];
+        for (let i = r0; i <= r1; i++) {
+          for (let j = c0; j <= c1; j++) {
+            if (grid[i] && grid[i][j]) out.push({ cell: grid[i][j], row: i, col: j });
+          }
+        }
+        return out;
+      }
+      function applySelection(items, anchorPos) {
+        clearDtRangeSelection();
+        for (const it of items) {
+          it.cell.classList.add('is-range-selected');
+          if (anchorPos && it.row === anchorPos.row && it.col === anchorPos.col) {
+            it.cell.classList.add('is-range-anchor');
+          }
+        }
+        _dtRangeSelected = items.slice();
+        _dtRangeAnchor = anchorPos || null;
+      }
+
+      container.querySelectorAll('td.editable').forEach(cell => {
+        cell.addEventListener('mousedown', (ev) => {
+          if (ev.button !== 0) return;
+          const grid = buildGrid();
+          const anchorPos = cellPos(grid, cell);
+          if (!anchorPos) return;
+          const startX = ev.clientX;
+          const startY = ev.clientY;
+          let dragMode = false;
+          let lastEndPos = anchorPos;
+
+          function getCellPosAt(clientX, clientY) {
+            const elem = document.elementFromPoint(clientX, clientY);
+            if (!elem) return null;
+            const td = elem.closest && elem.closest('td.editable');
+            if (!td) return null;
+            // 同じ table の中か
+            if (td.closest('table') !== cell.closest('table')) return null;
+            return cellPos(grid, td);
+          }
+          function onMove(mev) {
+            const dx = mev.clientX - startX;
+            const dy = mev.clientY - startY;
+            if (!dragMode && Math.hypot(dx, dy) >= DRAG_THRESHOLD) {
+              dragMode = true;
+              try { window.getSelection().removeAllRanges(); } catch (e) {}
+              if (document.activeElement && typeof document.activeElement.blur === 'function') {
+                document.activeElement.blur();
+              }
+            }
+            if (!dragMode) return;
+            mev.preventDefault();
+            const pos = getCellPosAt(mev.clientX, mev.clientY);
+            if (!pos) return;
+            lastEndPos = pos;
+            const items = getCellsInRect(grid, anchorPos, pos);
+            applySelection(items, anchorPos);
+          }
+          function onUp() {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            // ドラッグしなかった場合はデフォルト挙動 (フォーカスして編集モード)
+            // ドラッグした場合は _dtRangeSelected に範囲が残る
+          }
+          document.addEventListener('mousemove', onMove);
+          document.addEventListener('mouseup', onUp);
+        });
+      });
+    }
+
+    function clearDtRangeSelection() {
+      _dtRangeSelected.forEach(it => {
+        it.cell.classList.remove('is-range-selected','is-range-anchor');
+      });
+      _dtRangeSelected = [];
+      _dtRangeAnchor = null;
+    }
+
+    // 範囲を TSV にしてクリップボードへ
+    async function copyDtRangeToClipboard() {
+      if (_dtRangeSelected.length === 0) return false;
+      // 行・列の範囲を求めて 2D 配列を作る
+      let r0 = Infinity, r1 = -1, c0 = Infinity, c1 = -1;
+      for (const it of _dtRangeSelected) {
+        if (it.row < r0) r0 = it.row; if (it.row > r1) r1 = it.row;
+        if (it.col < c0) c0 = it.col; if (it.col > c1) c1 = it.col;
+      }
+      // 2Dマップ化
+      const map = new Map(); // `${row},${col}` → cell
+      for (const it of _dtRangeSelected) map.set(it.row + ',' + it.col, it.cell);
+      const lines = [];
+      for (let i = r0; i <= r1; i++) {
+        const cells = [];
+        for (let j = c0; j <= c1; j++) {
+          const c = map.get(i + ',' + j);
+          cells.push(c ? c.textContent : '');
+        }
+        lines.push(cells.join('\t'));
+      }
+      const text = lines.join('\n');
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          // フォールバック
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+        }
+        return true;
+      } catch (e) {
+        console.error('copy failed:', e);
+        return false;
+      }
+    }
+
+    // クリップボードから矩形貼り付け (アンカーを左上にして)
+    async function pasteDtRangeFromClipboard() {
+      if (_dtRangeSelected.length === 0 || !_dtRangeAnchor) return false;
+      let text = '';
+      try {
+        if (navigator.clipboard && navigator.clipboard.readText) {
+          text = await navigator.clipboard.readText();
+        } else {
+          return false;
+        }
+      } catch (e) {
+        console.error('paste failed:', e);
+        return false;
+      }
+      // 末尾の余分な改行を除去
+      text = text.replace(/\r\n/g, '\n').replace(/\n+$/, '');
+      const rows2d = text.split('\n').map(l => l.split('\t'));
+      // 現在の選択範囲を再構築 (grid)
+      const container = document.getElementById('decide-title-table-container');
+      if (!container) return false;
+      const tbody = container.querySelector('.dt-table tbody');
+      if (!tbody) return false;
+      const trs = Array.from(tbody.querySelectorAll('tr'));
+      const grid = trs.map(tr => Array.from(tr.querySelectorAll('td.editable')));
+      // 選択範囲の行・列幅
+      let r0 = Infinity, r1 = -1, c0 = Infinity, c1 = -1;
+      for (const it of _dtRangeSelected) {
+        if (it.row < r0) r0 = it.row; if (it.row > r1) r1 = it.row;
+        if (it.col < c0) c0 = it.col; if (it.col > c1) c1 = it.col;
+      }
+      const selH = r1 - r0 + 1;
+      const selW = c1 - c0 + 1;
+      const srcH = rows2d.length;
+      const srcW = Math.max(...rows2d.map(r => r.length));
+      // 書き込む値の決定:
+      //   ・コピー元が 1x1 → 範囲全体に同じ値
+      //   ・それ以外 → そのサイズ分書き込み、はみ出した範囲セルは空にしない (元のまま)
+      function valueAt(i, j) {
+        if (srcH === 1 && srcW === 1) {
+          return rows2d[0][0] ?? '';
+        }
+        const di = i - r0;
+        const dj = j - c0;
+        if (di >= srcH || dj >= srcW) return null; // 範囲外
+        const r = rows2d[di] || [];
+        return r[dj] ?? '';
+      }
+      // 一括保存
+      const changes = []; // {sku, field, old, new}
+      for (let i = r0; i <= r1; i++) {
+        for (let j = c0; j <= c1; j++) {
+          if (!grid[i] || !grid[i][j]) continue;
+          const v = valueAt(i, j);
+          if (v === null) continue; // 範囲外スキップ
+          const cell = grid[i][j];
+          const sku = cell.getAttribute('data-sku');
+          const field = cell.getAttribute('data-field');
+          const oldVal = cell.textContent;
+          if (oldVal === v) continue;
+          cell.textContent = v;
+          saveEditedCell(sku, field, v);
+          changes.push({ sku, field, oldVal, newVal: v });
+        }
+      }
+      // Undo記録 (各セルを個別ステップにすると煩雑なのでまとめて1ステップ)
+      if (changes.length > 0) {
+        pushUndoOp({
+          label: `dt-paste(${changes.length})`,
+          undo: () => {
+            for (const c of changes) _writeEditedCellRaw(c.sku, c.field, c.oldVal);
+            renderDecideTitleTable();
+          },
+          redo: () => {
+            for (const c of changes) _writeEditedCellRaw(c.sku, c.field, c.newVal);
+            renderDecideTitleTable();
+          },
+        });
+        // 再描画 → 選択は失われるがUX的にはOK
+        renderDecideTitleTable();
+      }
+      return true;
+    }
+
+    // 範囲を空に
+    function deleteDtRange() {
+      if (_dtRangeSelected.length === 0) return;
+      const changes = [];
+      for (const it of _dtRangeSelected) {
+        const cell = it.cell;
+        const sku = cell.getAttribute('data-sku');
+        const field = cell.getAttribute('data-field');
+        const oldVal = cell.textContent;
+        if (oldVal === '') continue;
+        cell.textContent = '';
+        saveEditedCell(sku, field, '');
+        changes.push({ sku, field, oldVal, newVal: '' });
+      }
+      if (changes.length > 0) {
+        pushUndoOp({
+          label: `dt-delete(${changes.length})`,
+          undo: () => {
+            for (const c of changes) _writeEditedCellRaw(c.sku, c.field, c.oldVal);
+            renderDecideTitleTable();
+          },
+          redo: () => {
+            for (const c of changes) _writeEditedCellRaw(c.sku, c.field, c.newVal);
+            renderDecideTitleTable();
+          },
+        });
+        renderDecideTitleTable();
+      }
+    }
+
+    // グローバル keydown: ⑥画面で選択中なら Ctrl+C/V/Delete/ESC を処理
+    document.addEventListener('keydown', (e) => {
+      // ⑥画面で範囲選択中のみ動作
+      if (document.body.getAttribute('data-view') !== 'decide-title') return;
+      if (_dtRangeSelected.length === 0) return;
+      // セル編集中 (contenteditable=true にフォーカス) のキーは編集側に任せる
+      const ae = document.activeElement;
+      if (ae && ae.getAttribute && ae.getAttribute('contenteditable') === 'true') return;
+      const isMod = e.ctrlKey || e.metaKey;
+      if (isMod && (e.key === 'c' || e.key === 'C')) {
+        e.preventDefault();
+        copyDtRangeToClipboard();
+      } else if (isMod && (e.key === 'v' || e.key === 'V')) {
+        e.preventDefault();
+        pasteDtRangeFromClipboard();
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        deleteDtRange();
+      } else if (e.key === 'Escape') {
+        clearDtRangeSelection();
+      }
+    });
+    // 範囲外クリックで選択解除
+    document.addEventListener('mousedown', (e) => {
+      if (document.body.getAttribute('data-view') !== 'decide-title') return;
+      if (_dtRangeSelected.length === 0) return;
+      const td = e.target.closest && e.target.closest('td.editable');
+      if (td && _dtRangeSelected.some(it => it.cell === td)) return;
+      clearDtRangeSelection();
+    }, true);
+
 
     // ⑦ RMSアップ用素材ダウンロード: CSV生成
     //   列: 商品管理番号 / 表示価格 / 通常購入販売価格 / セール用タイトル
