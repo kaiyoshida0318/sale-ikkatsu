@@ -1159,17 +1159,17 @@
     .mgr-tabs {
       display: flex;
       flex-wrap: wrap;
-      gap: 4px;
-      padding: 4px 2px 8px;
+      gap: 3px;
+      padding: 3px 2px 6px;
       flex-shrink: 0;
     }
     .mgr-tab {
       background: #f0f1f5;
       color: #555;
       border: 1px solid #d8d8de;
-      border-radius: 6px 6px 0 0;
-      padding: 6px 14px;
-      font-size: 13px;
+      border-radius: 5px 5px 0 0;
+      padding: 5px 11px;
+      font-size: 11px;
       font-weight: 700;
       cursor: pointer;
       font-family: inherit;
@@ -1252,6 +1252,12 @@
     .product-group-table-wrap {
       overflow-x: auto;
       overflow-y: visible;
+    }
+    /* SKU行数 > 10 のラッパー: 内部縦スクロール (サブヘッダーは sticky で固定) */
+    .product-group-table-wrap.is-scrollable {
+      overflow-y: auto;
+      max-height: 60vh;
+      overscroll-behavior: contain;
     }
     .product-table.decide-table {
       font-size: 12px;
@@ -1591,7 +1597,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.39.0</span>
+      <span class="version">v0.39.2</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1854,7 +1860,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.39.0 &nbsp;•&nbsp;
+    SALE一括 v0.39.2 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
@@ -2861,19 +2867,42 @@
 
     // SKUの配列から、ハイフン区切りの共通プレフィクスを抽出
     // 例: ["ep-anker-25-01-q10-no-no", "ep-anker-25-01-q20-no-black"] → "ep-anker-25-01"
+    // SKUの共通プレフィクスを算出
+    //   1. ハイフン区切りで完全一致するブロックを取る
+    //   2. 次のブロック(完全一致しなかった先頭ブロック)について、頭から共通している文字を追加
+    //   3. 一切共通ブロックが無い場合も、先頭ブロックの頭共通文字を取り出す
+    // 例: ['tb-23-03-hx664-p','tb-23-03-hx924-p'] → 'tb-23-03-hx'
+    //     ['abc-1','abc-2'] → 'abc'
+    //     ['xyz','xyw']     → 'xy'
     function commonPrefixByHyphen(skus) {
       const list = skus.filter(s => s && s.length > 0);
       if (list.length === 0) return '';
       if (list.length === 1) return list[0];
       const parts = list.map(s => s.split('-'));
-      const common = [];
-      const maxLen = Math.min(...parts.map(p => p.length));
-      for (let i = 0; i < maxLen; i++) {
+      const minBlocks = Math.min(...parts.map(p => p.length));
+      // step1: 完全一致ブロック
+      let fullMatched = 0;
+      for (let i = 0; i < minBlocks; i++) {
         const v = parts[0][i];
-        if (parts.every(p => p[i] === v)) common.push(v);
+        if (parts.every(p => p[i] === v)) fullMatched++;
         else break;
       }
-      return common.join('-');
+      const commonBlocks = parts[0].slice(0, fullMatched);
+      // step2: 次のブロック (=fullMatched 番目) について頭から共通する文字
+      let partialBlock = '';
+      if (fullMatched < minBlocks) {
+        const candidates = parts.map(p => p[fullMatched] || '');
+        const minLen = Math.min(...candidates.map(s => s.length));
+        let n = 0;
+        while (n < minLen && candidates.every(s => s[n] === candidates[0][n])) n++;
+        partialBlock = candidates[0].slice(0, n);
+      }
+      // 組み立て: 完全一致ブロックの後ろに、もし partialBlock があればハイフン区切りで追加
+      let result = commonBlocks.join('-');
+      if (partialBlock) {
+        result = result ? result + '-' + partialBlock : partialBlock;
+      }
+      return result;
     }
 
     // ArrayBuffer (Shift_JIS) → 文字列
@@ -3454,10 +3483,15 @@
       // 構造: discounts = { [sku]: 10|20|30|50 }
       const discounts = (data.discounts && typeof data.discounts === 'object') ? data.discounts : {};
       // 商品管理番号 → 商品名 のマップ (① で取り込み時に算出した代表名)
+      // 商品管理番号 → 商品コード のマップ (① で commonPrefixByHyphen により算出したSKU共通プレフィクス)
       const mgrNameMap = {};
+      const mgrItemCodeMap = {};
       if (Array.isArray(data.rows)) {
         for (const r of data.rows) {
-          if (r && r.mgr) mgrNameMap[r.mgr] = r.name || '';
+          if (r && r.mgr) {
+            mgrNameMap[r.mgr] = r.name || '';
+            mgrItemCodeMap[r.mgr] = r.itemCode || '';
+          }
         }
       }
 
@@ -3535,6 +3569,7 @@
           // 表示用 商品名 (同一管理番号の最初の行のみ出す。renderで分岐)
           isFirstInMgr,
           setCode: sku, mgr, image: '', ssTitle: dispSs,
+          itemCode: mgrItemCodeMap[mgr] || '',
           discount: discounts[sku] ?? null,
           price, priceActual: price,
           cost, ship: dispShip, v1, v2, v3, v4,
@@ -3648,6 +3683,7 @@
       // 既に rows 内の最初のSKUが代表 (isFirstInMgr=true) なのでそれを使う
       function groupHeaderHtml(row) {
         const mgr = row.mgr || '';
+        const itemCode = row.itemCode || mgr; // フォールバック: itemCode無ければ管理番号
         const name = row.name || '';
         const sku = row.setCode || '';
         const ssTitle = row.ssTitle || '';
@@ -3661,10 +3697,11 @@
           : cur === 50 ? '#faeaea'
           : '#f7f8fc';
         // ※ セール用タイトルは「商品管理番号単位」で1つ。保存は代表SKU (=最初のSKU=row.setCode) に紐付け。
+        // バッジは商品コード (システム連携用SKU番号の共通プレフィクス) を表示
         return `<div class="product-group-header" style="background:${bgColor};">
           <div class="group-header-stack">
             <div class="group-header-row1">
-              <span class="group-mgr">${escapeHtml(mgr)}</span>
+              <span class="group-mgr" title="商品コード">${escapeHtml(itemCode)}</span>
               <span class="group-name">${escapeHtml(name)}</span>
             </div>
             <div class="group-header-row2">
@@ -3737,9 +3774,11 @@
         const subHeader = subHeaderRowHtml();
         const bodyRows = g.skuRows.map(skuRowHtml).join('');
         const mgrAttr = escapeHtml(g.mgr || '');
+        // SKU行数が10を超えるテーブルは内部縦スクロール (is-scrollable)、それ以下は全行表示
+        const wrapCls = 'product-group-table-wrap' + (g.skuRows.length > 10 ? ' is-scrollable' : '');
         return `<div class="product-group" data-mgr="${mgrAttr}">
           ${groupHeaderHtml(g.headerRow)}
-          <div class="product-group-table-wrap">
+          <div class="${wrapCls}">
             <table class="product-table decide-table">
               <thead>${subHeader}</thead>
               <tbody>${bodyRows}</tbody>
@@ -4354,8 +4393,8 @@
     if (typeof renderWorkflow === "function") renderWorkflow();
 
     // ⑤画面: ホイール振り分け
-    //   - テーブル内縦スクロールは廃止したので、全領域で .groups-scroll を動かす
-    //   - ただし横スクロール (deltaX) は .product-group-table-wrap 上ではネイティブ任せ
+    //   - .product-group-table-wrap.is-scrollable 上 (=10行超のテーブル): ネイティブ任せ (内部縦スクロール)
+    //   - それ以外 (タブ/タイトル/ツールバー/グループヘッダー/短い表/グループ間): .groups-scroll を動かす
     (function bindDecideWheelForward() {
       const panel = document.getElementById('tool-decide-price');
       if (!panel) return;
@@ -4363,6 +4402,9 @@
         if (document.body.getAttribute('data-view') !== 'decide-price') return;
         const scrollEl = document.querySelector('.groups-scroll');
         if (!scrollEl) return;
+        // 内部スクロール可能なテーブル上ならネイティブ任せ
+        const scrollableWrap = e.target.closest && e.target.closest('.product-group-table-wrap.is-scrollable');
+        if (scrollableWrap) return;
         // 横方向ホイール (shift+ホイール等) は table-wrap 上ならネイティブ (横スクロール)
         if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
           const tableWrap = e.target.closest && e.target.closest('.product-group-table-wrap');
