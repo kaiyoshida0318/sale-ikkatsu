@@ -1305,7 +1305,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.30.2</span>
+      <span class="version">v0.31.1</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1370,56 +1370,6 @@
         <div class="workflow" id="workflow"></div>
       </div>
 
-      <!-- サブビュー: セール価格決定用 (ボタンクリックで切替) -->
-      <div id="tool-sale-price" class="tool-panel">
-        <div class="tool-panel-header">
-          <button type="button" class="back-btn" data-back>← 戻る</button>
-          <h2>⑬ セール価格決定表作成</h2>
-        </div>
-
-        <div class="card">
-          <div class="hint">
-            ネクストエンジンの3つのCSVをアップロードして「表を作成」を押してください。<br>
-            ・RMSデータは「参加商品追加」で取り込んだものを自動で使います<br>
-            ・CSVはブラウザ内で処理されます（外部サーバーに送信されません）
-          </div>
-        </div>
-
-        <div class="card">
-          <h2>CSVをアップロード</h2>
-          <form id="upload-form">
-            <div class="grid">
-              <div class="file-input" data-target="set_item">
-                <label>① NE-セット商品コード</label>
-                <div class="desc">ネクストエンジンのセット商品検索結果</div>
-                <input type="file" name="set_item" accept=".csv" required />
-                <div class="filename"></div>
-              </div>
-              <div class="file-input" data-target="set_component">
-                <label>② NE-セット構成物コード</label>
-                <div class="desc">セット構成商品の原価情報</div>
-                <input type="file" name="set_component" accept=".csv" required />
-                <div class="filename"></div>
-              </div>
-              <div class="file-input" data-target="non_set">
-                <label>③ NE-セット無しコード</label>
-                <div class="desc">単品商品の原価情報</div>
-                <input type="file" name="non_set" accept=".csv" required />
-                <div class="filename"></div>
-              </div>
-            </div>
-
-            <div class="actions">
-              <button type="submit" id="btn-generate">表を作成</button>
-            </div>
-            <div id="status" class="status"></div>
-          </form>
-
-          <div id="stats" class="stats" hidden></div>
-          <div id="warnings" class="warnings" hidden></div>
-        </div>
-      </div>
-
       <!-- サブビュー: 参加商品追加 (RMSデータCSV → 商品一覧) -->
       <div id="tool-add-products" class="tool-panel">
         <div class="tool-panel-header">
@@ -1467,8 +1417,8 @@
         <div id="decide-price-table-wrap" class="product-table-wrap">
           <div id="decide-price-table-container">
             <div class="empty-state">
-              まだ計算結果がありません。<br>
-              「セール価格決定表作成」から3つのCSVをアップロードしてください。
+              まだデータがありません。<br>
+              「セール作業手順」の <b>①〜④</b> をすべて取り込んでください。
             </div>
           </div>
         </div>
@@ -1612,22 +1562,14 @@
   </main>
 
   <footer>
-    SALE一括 v0.30.2 &nbsp;•&nbsp;
-    <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
-    Powered by ExcelJS
+    SALE一括 v0.31.1 &nbsp;•&nbsp;
+    <a href="https://github.com/">GitHub</a>
   </footer>
 
-  <!-- ExcelJS (CDN) と 自前のロジック -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
-  <script src="./app/merger.js"></script>
-  <script src="./app/builder.js"></script>
+  <!-- 自前のロジック (ExcelJS/merger/builder は ⑬ 撤去に伴い不要に) -->
   <script>
     // ---- 状態管理 ----
-    // JS版は即座に使える（Pyodideのような重い準備なし）。
-    // ExcelJSのロードを軽く確認するだけ。
-    let appReady = false;
-    let appReadyPromise = null;
-
+    // 起動準備のステータス表示のみ
     function setPyStatus(text, state) {
       const el = document.getElementById('py-status');
       if (!el) return;
@@ -1635,30 +1577,7 @@
       if (state) el.classList.add(state);
       el.querySelector('.py-status-text').textContent = text;
     }
-
-    async function bootApp() {
-      try {
-        setPyStatus('ライブラリ確認中...', null);
-        // ExcelJSが読み込まれるまで少し待つ(<script>なので基本は同期読み込み済みだが保険)
-        let retries = 0;
-        while (typeof ExcelJS === 'undefined' && retries < 50) {
-          await new Promise(r => setTimeout(r, 100));
-          retries++;
-        }
-        if (typeof ExcelJS === 'undefined') {
-          throw new Error('ExcelJSの読み込みに失敗しました');
-        }
-        if (typeof SaleIkkatsuMerger === 'undefined' || typeof SaleIkkatsuBuilder === 'undefined') {
-          throw new Error('アプリコードの読み込みに失敗しました');
-        }
-        appReady = true;
-        setPyStatus('準備完了', 'ready');
-      } catch (e) {
-        setPyStatus('起動エラー: ' + e.message, 'error');
-        console.error('Boot error:', e);
-        throw e;
-      }
-    }
+    setPyStatus('準備完了', 'ready');
 
     // Service Worker登録（2回目以降さらに高速化）
     if ('serviceWorker' in navigator) {
@@ -1668,8 +1587,6 @@
         });
       });
     }
-
-    appReadyPromise = bootApp();
 
     // ---- 文字サイズコントロール ----
     const FS_KEY = 'sale-ikkatsu-font-scale';
@@ -1738,11 +1655,11 @@
     })();
 
     // ---- UI制御 ----
-    // メインタブ(products, workflow) ⇄ サブビュー(sale-price, add-products, decide-price) の切替
+    // メインタブ(products, workflow) ⇄ サブビュー(add-products, decide-price, cost-set-item, cost-set-component, cost-non-set) の切替
     // ブラウザ/マウスの「戻る」でサブビューから戻れるよう、サブビュー遷移時は history.pushState する
     let _suppressPushState = false; // popstate由来の呼び出しでは積まない
     const MAIN_TABS = ['products', 'workflow'];
-    const VALID_VIEWS = ['products','workflow','sale-price','add-products','decide-price','cost-set-item','cost-set-component','cost-non-set'];
+    const VALID_VIEWS = ['products','workflow','add-products','decide-price','cost-set-item','cost-set-component','cost-non-set'];
     const LAST_VIEW_KEY = 'sale-ikkatsu-last-view';
     // 直近のメインタブ(サブビューから戻る時の戻り先)
     let _lastMainTab = 'products';
@@ -2253,33 +2170,76 @@
         <th class="col-pname">商品名</th>
       </tr>`;
 
-      // ⑤の merger 結果を試す。①〜④が揃っていれば代表SKU行+割引率で表示
-      let displayRows = null;
-      let usedMerger = false;
+      // ベース: ①取り込み済みの商品 (商品管理番号単位、商品コード=共通プレフィクス、商品名=代表名)
+      const baseRows = getCurrentRows(); // [{ mgr, itemCode, name }, ...]
+
+      // 各商品管理番号の「代表SKU」(=⑤表で同一管理番号の最初の行のSKU) の割引率を取得して
+      // 「全体」「10%」「20%」「30%」「50%」のフィルタ判定に使う
+      // 代表SKUは①のRMS取り込みデータから直接取り出す (mergerと同じ順序)
+      // → archive[ym].rmsCsvB64 をデコードして、各 mgr の最初のSKU を見つける
+      let mgrToFirstSku = {};  // { mgr -> 最初のSKU }
       try {
-        const merged = mergeAllFromArchive();
-        // 代表行(同一商品管理番号の最初のSKU)のみ
-        const reps = merged.rows.filter(r => !r.isBlankRow && r.isFirstInMgr);
-        // 現在のOFF率タブで絞り込み
-        let filtered;
+        const ym = currentYM || getCurrentYM();
+        if (ym) {
+          const archive = loadArchive();
+          const data = archive[ym];
+          if (data && data.rmsCsvB64) {
+            const text = decodeShiftJIS(b642u8(data.rmsCsvB64));
+            const rmsRows = parseCsvText(text);
+            if (rmsRows.length >= 2) {
+              const rh = rmsRows[0];
+              const iMgr = rh.findIndex(x => x && x.indexOf('商品管理番号') >= 0);
+              const iSku = rh.findIndex(x => x && x.indexOf('システム連携用SKU番号') >= 0);
+              const iPrice = rh.findIndex(x => x && x.indexOf('通常購入販売価格') >= 0);
+              if (iMgr >= 0 && iSku >= 0) {
+                for (let i = 1; i < rmsRows.length; i++) {
+                  const r = rmsRows[i];
+                  if (!r) continue;
+                  const mgr = (r[iMgr]||'').trim();
+                  const sku = (r[iSku]||'').trim();
+                  const priceRaw = iPrice >= 0 ? (r[iPrice]||'').trim() : '';
+                  if (!mgr || !sku) continue;
+                  // 通常価格空欄行は⑤でスキップされるので、こちらも合わせて除外
+                  if (iPrice >= 0 && !priceRaw) continue;
+                  if (!(mgr in mgrToFirstSku)) mgrToFirstSku[mgr] = sku;
+                }
+              }
+            }
+          }
+        }
+      } catch (e) { /* RMSデータが無い場合は空のまま */ }
+
+      // 各商品管理番号の割引率 = 代表SKUの割引率
+      let mgrDiscounts = {};
+      try {
+        const ym = currentYM || getCurrentYM();
+        if (ym) {
+          const archive = loadArchive();
+          const discounts = (archive[ym] && archive[ym].discounts) || {};
+          for (const mgr of Object.keys(mgrToFirstSku)) {
+            const firstSku = mgrToFirstSku[mgr];
+            if (firstSku in discounts) mgrDiscounts[mgr] = discounts[firstSku];
+          }
+        }
+      } catch (e) {}
+
+      // フィルタ
+      let displayRows = [];
+      if (baseRows && baseRows.length > 0) {
         if (currentOffRate === 'all') {
-          // 全体: 割引率が設定されているもの
-          filtered = reps.filter(r => r.discount !== null && r.discount !== undefined);
+          // 全体: ①取り込み済みの全商品
+          displayRows = baseRows.map(r => ({
+            mgr: r.mgr, itemCode: r.itemCode, name: r.name,
+            discount: mgrDiscounts[r.mgr] ?? null
+          }));
         } else {
           const target = parseInt(currentOffRate, 10);
-          filtered = reps.filter(r => r.discount === target);
-        }
-        displayRows = filtered.map(r => ({
-          mgr: r.mgr, itemCode: r.setCode, name: r.name, discount: r.discount
-        }));
-        usedMerger = true;
-      } catch (e) {
-        // ①のみ取り込み済み or データ不足 → 従来の add-products の rows でフォールバック (全体のみ表示)
-        if (currentOffRate === 'all') {
-          const rows = getCurrentRows();
-          if (rows && rows.length > 0) {
-            displayRows = rows.map(r => ({ mgr: r.mgr, itemCode: r.itemCode, name: r.name, discount: null }));
-          }
+          displayRows = baseRows
+            .filter(r => mgrDiscounts[r.mgr] === target)
+            .map(r => ({
+              mgr: r.mgr, itemCode: r.itemCode, name: r.name,
+              discount: target
+            }));
         }
       }
 
@@ -2294,19 +2254,15 @@
       }
 
       let hintText;
+      const ymLabel = currentYM ? currentYM.replace('/', '年') + '月 ' : '';
       if (displayRows && displayRows.length > 0) {
-        const ymLabel = currentYM ? currentYM.replace('/', '年') + '月 ' : '';
-        if (usedMerger) {
-          if (currentOffRate === 'all') {
-            hintText = `${ymLabel}のセール参加商品 (割引率が設定済み): ${displayRows.length}件`;
-          } else {
-            hintText = `${ymLabel}${currentOffRate}%OFFの商品: ${displayRows.length}件`;
-          }
+        if (currentOffRate === 'all') {
+          hintText = `${ymLabel}のセール参加商品: ${displayRows.length}件`;
         } else {
-          hintText = `${ymLabel}のセール参加商品: ${displayRows.length}件 (① のみ取り込み・割引率は ⑤ で設定可)`;
+          hintText = `${ymLabel}${currentOffRate}%OFFの商品: ${displayRows.length}件`;
         }
       } else {
-        if (currentOffRate !== 'all' && usedMerger) {
+        if (currentOffRate !== 'all') {
           hintText = `${currentOffRate}%OFF に設定された商品はありません。⑤「セール価格決定」で各商品に割引率を選んでください。`;
         } else if (currentYM) {
           hintText = currentYM.replace('/', '年') + '月 のセール参加商品（「参加商品追加」からRMSデータCSVを取り込んでください）';
@@ -2330,7 +2286,6 @@
 
     // ---- セール作業フロー ----
     // ボタン定義: id, label, [action]
-    // action 'open-sale-price' は「+セール価格決定用」のCSVアップ画面を開く
     const WORKFLOW_BLOCKS = [
       {
         id: 'prep',
@@ -2349,7 +2304,6 @@
           { id: 'prep-sku-record', label: '倉庫入れSKU記録' },
           { id: 'prep-ad-delete', label: '広告削除' },
           { id: 'prep-thumb-change', label: 'トップ画像変更' },
-          { id: 'prep-make-price-table', label: 'セール価格決定表作成', action: 'open-sale-price' },
         ],
       },
       {
@@ -2471,9 +2425,7 @@
           // 進行中(=外枠)に記録
           markWorkflowOpened(id);
           // 画面遷移
-          if (action === 'open-sale-price') {
-            showView('sale-price');
-          } else if (action === 'open-add-products') {
+          if (action === 'open-add-products') {
             showView('add-products');
           } else if (action === 'open-decide-price') {
             showView('decide-price');
@@ -2553,119 +2505,7 @@
       });
     });
 
-    function setStatus(msg, kind) {
-      const el = document.getElementById('status');
-      if (!el) return;
-      el.className = 'status' + (kind ? ' ' + kind : '');
-      el.innerHTML = msg;
-    }
 
-    function setButtonsDisabled(d) {
-      const b = document.getElementById('btn-generate');
-      if (b) b.disabled = d;
-    }
-
-    function renderStats(stats) {
-      const box = document.getElementById('stats');
-      box.hidden = false;
-      box.innerHTML = '';
-      const items = [
-        { label: 'RMS総行数', value: stats.rms_total },
-        { label: '通常価格空欄で除外', value: stats.excluded_no_price },
-        { label: '出力行数', value: stats.output_rows },
-        { label: 'セット構成から原価取得', value: stats.cost_from_component },
-        { label: '単品コードから原価取得', value: stats.cost_from_non_set },
-        { label: '原価が見つからなかった', value: stats.cost_not_found },
-      ];
-      items.forEach(it => {
-        const d = document.createElement('div');
-        d.className = 'item';
-        d.innerHTML = `<div class="label">${it.label}</div><div class="value">${it.value}</div>`;
-        box.appendChild(d);
-      });
-    }
-
-    function renderWarnings(warnings) {
-      const box = document.getElementById('warnings');
-      if (!warnings || warnings.length === 0) {
-        box.hidden = true;
-        return;
-      }
-      box.hidden = false;
-      box.innerHTML = '<strong>⚠️ 警告 (' + warnings.length + '件)</strong><ul>' +
-        warnings.map(w => '<li>' + String(w).replace(/</g, '&lt;') + '</li>').join('') + '</ul>';
-    }
-
-    async function getFileBytes(input) {
-      const file = input.files[0];
-      if (!file) throw new Error(`${input.name} が未選択です`);
-      const buf = await file.arrayBuffer();
-      return new Uint8Array(buf);
-    }
-
-    // RMSバイトはアーカイブから取り出して再利用、NE系3つはフォームから
-    async function collectAllBytes() {
-      const form = document.getElementById('upload-form');
-      const ym = currentYM || getCurrentYM();
-      if (!ym) throw new Error('セール期間（開始日時）を先に入力してください');
-      const archive = loadArchive();
-      const data = archive[ym];
-      if (!data || !data.rmsCsvB64) {
-        throw new Error('RMSデータが未登録です。先に「参加商品追加」でRMSデータCSVを取り込んでください');
-      }
-      return {
-        rms: b642u8(data.rmsCsvB64),
-        set_item: await getFileBytes(form.elements['set_item']),
-        set_component: await getFileBytes(form.elements['set_component']),
-        non_set: await getFileBytes(form.elements['non_set']),
-      };
-    }
-
-    async function ensureAppReady() {
-      if (appReady) return;
-      setStatus('<span class="spinner"></span>ライブラリ読み込み中...', '');
-      await appReadyPromise;
-    }
-
-    document.getElementById('upload-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      setButtonsDisabled(true);
-      try {
-        await ensureAppReady();
-        setStatus('<span class="spinner"></span>表を作成中...', '');
-        const b = await collectAllBytes();
-        const result = SaleIkkatsuMerger.mergeAll({
-          rmsBytes: b.rms,
-          setItemBytes: b.set_item,
-          setComponentBytes: b.set_component,
-          nonSetBytes: b.non_set,
-        });
-
-        // 計算結果(rows)をアーカイブに保存
-        const ym = currentYM || getCurrentYM();
-        if (ym) {
-          const archive = loadArchive();
-          if (!archive[ym]) archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
-          archive[ym].priceRows = result.rows;
-          archive[ym].priceStats = result.stats;
-          saveArchive(archive);
-        }
-
-        renderStats(result.stats);
-        renderWarnings(result.warnings);
-        setStatus(
-          `✅ 表を作成しました（${result.rows.length}件）。「セール価格決定」で確認できます。`,
-          'success'
-        );
-        // 決定タブの再描画(裏で更新)
-        if (typeof renderDecidePriceTable === 'function') renderDecidePriceTable();
-      } catch (e) {
-        setStatus('❌ エラー: ' + e.message, 'error');
-        console.error(e);
-      } finally {
-        setButtonsDisabled(false);
-      }
-    });
 
     // ---- 参加商品追加: RMSデータCSV → 商品一覧 ----
     // CSVを Shift_JIS で読んで、商品管理番号で重複排除、SKUの共通プレフィクスを商品コードに
@@ -2827,7 +2667,7 @@
           throw new Error('CSVから商品データを抽出できませんでした');
         }
         saveProductRowsToArchive(productRows);
-        // RMSバイト列もアーカイブに保存(セール価格決定表作成で再利用)
+        // RMSバイト列もアーカイブに保存(⑤ セール価格決定の表構築や ④ の検索用CSV作成で再利用)
         try {
           const ym = currentYM || getCurrentYM();
           if (ym) {
