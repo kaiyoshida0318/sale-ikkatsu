@@ -1378,8 +1378,13 @@
     .dt-table td {
       padding: 10px 14px;
       border-bottom: 1px solid #e6e6ec;
+      border-right: 1px solid #e6e6ec;
       vertical-align: top;
       text-align: left;
+    }
+    .dt-table th:last-child,
+    .dt-table td:last-child {
+      border-right: 0;
     }
     .dt-table thead th {
       background: #f4f5f8;
@@ -1389,6 +1394,7 @@
       top: 0;
       z-index: 2;
       border-bottom: 2px solid #d8d8de;
+      text-align: center;
     }
     .dt-table th.dt-col-mgr,
     .dt-table td.dt-col-mgr {
@@ -1828,7 +1834,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.47.0</span>
+      <span class="version">v0.47.1</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2163,7 +2169,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.47.0 &nbsp;•&nbsp;
+    SALE一括 v0.47.1 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
