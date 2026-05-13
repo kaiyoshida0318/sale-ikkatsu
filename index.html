@@ -1050,17 +1050,19 @@
     /* ⑤画面: タイトル+ツールバーは固定、groups-scrollだけスクロールエリア */
     body[data-view="decide-price"] main {
       margin-top: 4px;
-      /* 画面高さからヘッダー + メインタブ + margin等を引いた残り */
-      height: calc(100vh - var(--top-bar-h, 130px) - 20px);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
+      margin-bottom: 0;
+      /* 画面高さからヘッダー + メインタブ + margin-top を引く */
+      height: calc(100vh - var(--top-bar-h, 130px) - 4px) !important;
+      display: flex !important;
+      flex-direction: column !important;
+      overflow: hidden !important;
     }
+    /* tool-panel自体を flex chain に組み込む */
     body[data-view="decide-price"] #tool-decide-price.tool-panel.active {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
+      display: flex !important;
+      flex: 1 1 auto !important;
+      flex-direction: column !important;
+      min-height: 0 !important;
     }
     body[data-view="decide-price"] .tool-panel-header {
       margin-bottom: 2px;
@@ -1083,21 +1085,22 @@
       padding: 0;
       border: 0;
       background: transparent;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
+      flex: 1 1 auto !important;
+      display: flex !important;
+      flex-direction: column !important;
+      min-height: 0 !important;
     }
     body[data-view="decide-price"] #decide-price-table-container {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
+      flex: 1 1 auto !important;
+      display: flex !important;
+      flex-direction: column !important;
+      min-height: 0 !important;
     }
     /* groups-scroll が残り全部の縦領域を占有 */
     body[data-view="decide-price"] .groups-scroll {
-      flex: 1;
-      min-height: 0;
+      flex: 1 1 auto !important;
+      min-height: 0 !important;
+      overflow-y: auto !important;
     }
     body[data-view="decide-price"] .decide-toolbar {
       padding: 0 2px 2px;
@@ -1490,7 +1493,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.37.0</span>
+      <span class="version">v0.37.1</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1747,7 +1750,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.37.0 &nbsp;•&nbsp;
+    SALE一括 v0.37.1 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
