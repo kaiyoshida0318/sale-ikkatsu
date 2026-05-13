@@ -1048,6 +1048,9 @@
     }
     .decide-stats { font-size: 12px; color: var(--muted); }
     /* ⑤画面: タイトル+ツールバーは固定、groups-scrollだけスクロールエリア */
+    body[data-view="decide-price"] {
+      overflow: hidden !important;
+    }
     body[data-view="decide-price"] main {
       margin-top: 4px;
       margin-bottom: 0;
@@ -1493,7 +1496,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.37.1</span>
+      <span class="version">v0.37.2</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1750,7 +1753,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.37.1 &nbsp;•&nbsp;
+    SALE一括 v0.37.2 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
@@ -4153,7 +4156,9 @@
     renderProductTable();
     if (typeof renderWorkflow === "function") renderWorkflow();
 
-    // ⑤画面: タイトル+ツールバー部分でホイール操作されたら、groups-scrollに転送
+    // ⑤画面: ホイール振り分け
+    //   - .product-group-table-wrap 上: ネイティブ任せ (テーブル内スクロール、端でcontain止め)
+    //   - それ以外 (タイトル/ツールバー/グループヘッダー/グループ間/空白): 必ず .groups-scroll を動かす
     (function bindDecideWheelForward() {
       const panel = document.getElementById('tool-decide-price');
       if (!panel) return;
@@ -4162,15 +4167,9 @@
         // 各商品テーブル上でのホイールはネイティブ動作 (テーブル内スクロール)
         const tableWrap = e.target.closest && e.target.closest('.product-group-table-wrap');
         if (tableWrap) return;
-        // それ以外 (タイトル/ツールバー/グループ間など) は groups-scroll を動かす
+        // それ以外は全部 groups-scroll を動かす
         const scrollEl = document.querySelector('.groups-scroll');
         if (!scrollEl) return;
-        // groups-scroll の中のターゲットでもスクロール可能ならネイティブ任せ (例: 横スクロール)
-        if (scrollEl.contains(e.target)) {
-          // groups-scroll 自体がスクロールしうるが、ターゲットが.product-group-table-wrap以外なら親が動くべき
-          // → ネイティブ任せでOK (groups-scrollがその子のとき)
-          return;
-        }
         e.preventDefault();
         scrollEl.scrollTop += e.deltaY;
       }, { passive: false });
