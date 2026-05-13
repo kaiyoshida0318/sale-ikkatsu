@@ -1241,7 +1241,7 @@
     }
     .mgr-tab .mgr-tab-itemcode {
       font-family: ui-monospace, "SF Mono", Menlo, monospace;
-      font-size: 10px;
+      font-size: 13px;
       font-weight: 600;
       opacity: 0.78;
       white-space: nowrap;
@@ -1772,7 +1772,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.45.1</span>
+      <span class="version">v0.45.2</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2108,7 +2108,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.45.1 &nbsp;•&nbsp;
+    SALE一括 v0.45.2 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
@@ -4034,9 +4034,80 @@
           // 再描画 (進捗バッジ・全件完了のグロー更新のため)
           renderDecideTitleTable();
         });
+        // 編集中のセルに「複数行」テキストが貼り付けられたら、矩形ペーストに切り替える
+        // (改行を含むテキスト → 1セル目に1行目、下のセルに2行目、…)
+        cell.addEventListener('paste', (e) => {
+          const text = e.clipboardData && e.clipboardData.getData('text/plain');
+          if (!text) return; // ネイティブ任せ
+          // 改行で割って、空末尾を除く
+          const lines = text.replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n');
+          // 1行のみ → ネイティブのテキスト挿入に任せる
+          if (lines.length <= 1) return;
+          // 複数行 → 矩形ペースト
+          e.preventDefault();
+          performDecideTitleMultiLinePaste(cell, lines);
+        });
       });
       // Excel風 範囲選択 + コピー/ペースト/削除
       attachDecideTitleRangeSelection(container);
+    }
+
+    // フォーカスセルに複数行をクリップボードから貼る (タブも考慮して TSV 矩形貼り付け)
+    function performDecideTitleMultiLinePaste(anchorCell, lines) {
+      const container = document.getElementById('decide-title-table-container');
+      if (!container) return;
+      const tbody = container.querySelector('.dt-table tbody');
+      if (!tbody) return;
+      const trs = Array.from(tbody.querySelectorAll('tr'));
+      const grid = trs.map(tr => Array.from(tr.querySelectorAll('td.editable')));
+      // アンカー位置
+      let anchorRow = -1, anchorCol = -1;
+      for (let i = 0; i < grid.length; i++) {
+        const j = grid[i].indexOf(anchorCell);
+        if (j >= 0) { anchorRow = i; anchorCol = j; break; }
+      }
+      if (anchorRow < 0) return;
+      // 各行をタブで分割 → 2D 配列
+      const rows2d = lines.map(l => l.split('\t'));
+      // 編集中セルから抜けて、blur時の差分保存が割り込まないようにする
+      // (anchorCell.blur() でも良いが、blur ハンドラ内の renderDecideTitleTable で DOM が再生成され
+      //  grid 参照が無効になるため、ここでは dataset.original を最新化して差分検出を無効化する)
+      const _activeBeforePaste = document.activeElement;
+      if (_activeBeforePaste && _activeBeforePaste.dataset) {
+        _activeBeforePaste.dataset.original = _activeBeforePaste.textContent;
+      }
+      const changes = []; // {sku, field, old, new}
+      for (let di = 0; di < rows2d.length; di++) {
+        const r = rows2d[di];
+        for (let dj = 0; dj < r.length; dj++) {
+          const i = anchorRow + di;
+          const j = anchorCol + dj;
+          if (!grid[i] || !grid[i][j]) continue;
+          const v = r[dj] ?? '';
+          const c = grid[i][j];
+          const sku = c.getAttribute('data-sku');
+          const field = c.getAttribute('data-field');
+          const oldVal = c.textContent;
+          if (oldVal === v) continue;
+          c.textContent = v;
+          saveEditedCell(sku, field, v);
+          changes.push({ sku, field, oldVal, newVal: v });
+        }
+      }
+      if (changes.length > 0) {
+        pushUndoOp({
+          label: `dt-multipaste(${changes.length})`,
+          undo: () => {
+            for (const c of changes) _writeEditedCellRaw(c.sku, c.field, c.oldVal);
+            renderDecideTitleTable();
+          },
+          redo: () => {
+            for (const c of changes) _writeEditedCellRaw(c.sku, c.field, c.newVal);
+            renderDecideTitleTable();
+          },
+        });
+        renderDecideTitleTable();
+      }
     }
 
     // ⑥ Excel風セル範囲選択 + コピー&ペースト
@@ -4088,27 +4159,28 @@
       container.querySelectorAll('td.editable').forEach(cell => {
         cell.addEventListener('mousedown', (ev) => {
           if (ev.button !== 0) return;
+          // 既に編集中(=フォーカス済み)のセル内では、テキスト選択をネイティブに任せる
+          if (document.activeElement === cell) return;
           const grid = buildGrid();
           const anchorPos = cellPos(grid, cell);
           if (!anchorPos) return;
-          const startX = ev.clientX;
-          const startY = ev.clientY;
           let dragMode = false;
-          let lastEndPos = anchorPos;
 
           function getCellPosAt(clientX, clientY) {
             const elem = document.elementFromPoint(clientX, clientY);
             if (!elem) return null;
             const td = elem.closest && elem.closest('td.editable');
             if (!td) return null;
-            // 同じ table の中か
             if (td.closest('table') !== cell.closest('table')) return null;
             return cellPos(grid, td);
           }
           function onMove(mev) {
-            const dx = mev.clientX - startX;
-            const dy = mev.clientY - startY;
-            if (!dragMode && Math.hypot(dx, dy) >= DRAG_THRESHOLD) {
+            // 別セルに入ったときだけ範囲選択モードに突入
+            // (同一セル内の動きはネイティブのテキスト選択を尊重)
+            const pos = getCellPosAt(mev.clientX, mev.clientY);
+            if (!pos) return;
+            const enteredOtherCell = (pos.row !== anchorPos.row || pos.col !== anchorPos.col);
+            if (!dragMode && enteredOtherCell) {
               dragMode = true;
               try { window.getSelection().removeAllRanges(); } catch (e) {}
               if (document.activeElement && typeof document.activeElement.blur === 'function') {
@@ -4117,16 +4189,13 @@
             }
             if (!dragMode) return;
             mev.preventDefault();
-            const pos = getCellPosAt(mev.clientX, mev.clientY);
-            if (!pos) return;
-            lastEndPos = pos;
             const items = getCellsInRect(grid, anchorPos, pos);
             applySelection(items, anchorPos);
           }
           function onUp() {
             document.removeEventListener('mousemove', onMove);
             document.removeEventListener('mouseup', onUp);
-            // ドラッグしなかった場合はデフォルト挙動 (フォーカスして編集モード)
+            // ドラッグしなかった場合はネイティブ任せ (フォーカス→編集モード→セル内テキスト選択可能)
             // ドラッグした場合は _dtRangeSelected に範囲が残る
           }
           document.addEventListener('mousemove', onMove);
