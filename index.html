@@ -1438,6 +1438,34 @@
       font-weight: 500;
       font-size: 12px;
     }
+    /* 文字数カウンター列 */
+    .dt-table th.dt-col-count,
+    .dt-table td.dt-col-count {
+      width: 90px;
+      text-align: right;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .dt-table td.dt-col-count .dt-count-num {
+      font-weight: 700;
+      color: var(--text);
+    }
+    .dt-table td.dt-col-count .dt-count-sep {
+      margin: 0 2px;
+      color: #aaa;
+    }
+    .dt-table td.dt-col-count .dt-count-max {
+      color: var(--muted);
+    }
+    /* 上限超過 */
+    .dt-table td.dt-col-count.is-over .dt-count-num {
+      color: #c0392b;
+    }
+    .dt-table td.dt-col-count.is-over {
+      background: #fff0ee;
+    }
     .dt-table td.editable {
       cursor: text;
       background-color: #fff;
@@ -1800,7 +1828,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.46.3</span>
+      <span class="version">v0.47.0</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1941,7 +1969,6 @@
         <div class="tool-panel-header">
           <button type="button" class="back-btn" data-back>← 戻る</button>
           <h2>⑥ セール用タイトル決定</h2>
-          <div id="decide-title-progress" class="title-progress" aria-live="polite"></div>
         </div>
 
         <div id="decide-title-table-wrap" class="product-table-wrap">
@@ -2136,7 +2163,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.46.3 &nbsp;•&nbsp;
+    SALE一括 v0.47.0 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
@@ -4002,9 +4029,25 @@
       return { groups, reason: null };
     }
 
+    // 文字数カウント (半角スペースは0.5、それ以外は1)
+    function countSsTitleChars(s) {
+      if (!s) return 0;
+      let n = 0;
+      for (const ch of String(s)) {
+        if (ch === ' ') n += 0.5;
+        else n += 1;
+      }
+      return n;
+    }
+    // 表示用フォーマット: 整数なら "12"、0.5刻みなら "12.5"
+    function fmtSsTitleCount(n) {
+      if (Number.isInteger(n)) return String(n);
+      return n.toFixed(1);
+    }
+    const SS_TITLE_LIMIT = 127;
+
     function renderDecideTitleTable() {
       const container = document.getElementById('decide-title-table-container');
-      const progress = document.getElementById('decide-title-progress');
       if (!container) return;
       // DOM再生成のため、保持していた範囲選択参照はクリア
       _dtRangeSelected = [];
@@ -4012,38 +4055,27 @@
       const { groups, reason } = buildDecideTitleGroups();
       if (!groups || groups.length === 0) {
         container.innerHTML = `<div class="empty-state">${escapeHtml(reason || '対象データがありません')}</div>`;
-        if (progress) { progress.textContent = ''; progress.className = 'title-progress'; }
         return;
-      }
-      const totalCount = groups.length;
-      const missingCount = groups.filter(g => !g.ssTitle || g.ssTitle.trim() === '').length;
-      const allFilled = (missingCount === 0);
-      // 進捗表示
-      if (progress) {
-        progress.classList.remove('is-complete','is-pending');
-        if (allFilled) {
-          progress.classList.add('is-complete');
-          progress.innerHTML = `<span class="title-progress-icon">✓</span><span>全 ${totalCount} 件 完了</span>`;
-        } else {
-          progress.classList.add('is-pending');
-          progress.innerHTML = `<span class="title-progress-icon">●</span><span>未入力 <b>${missingCount}</b> 件 / 全 ${totalCount} 件</span>`;
-        }
       }
       // 表本体
       const rowsHtml = groups.map(g => {
         const disc = g.discount;
         const discClass = (disc === 10 || disc === 20 || disc === 30 || disc === 50) ? ` dt-disc-${disc}` : ' dt-disc-none';
         const discLabel = (disc === 10 || disc === 20 || disc === 30 || disc === 50) ? `${disc}%OFF` : '未選択';
+        const cnt = countSsTitleChars(g.ssTitle);
+        const cntOver = cnt > SS_TITLE_LIMIT;
+        const cntClass = cntOver ? ' is-over' : '';
         return `<tr data-mgr="${escapeHtml(g.mgr)}">
           <td class="dt-col-mgr">${escapeHtml(g.mgr)}</td>
           <td class="dt-col-img"><div class="img-placeholder">未取得</div></td>
           <td class="dt-col-disc${discClass}">${discLabel}</td>
           <td class="dt-col-name editable" contenteditable="true" data-sku="${escapeHtml(g.sku)}" data-field="name" data-mgr="${escapeHtml(g.mgr)}">${escapeHtml(g.name)}</td>
           <td class="dt-col-ss editable" contenteditable="true" data-sku="${escapeHtml(g.sku)}" data-field="ssTitle" data-mgr="${escapeHtml(g.mgr)}">${escapeHtml(g.ssTitle)}</td>
+          <td class="dt-col-count${cntClass}" data-count-for-sku="${escapeHtml(g.sku)}"><span class="dt-count-num">${fmtSsTitleCount(cnt)}</span><span class="dt-count-sep">/</span><span class="dt-count-max">${SS_TITLE_LIMIT}</span></td>
         </tr>`;
       }).join('');
       container.innerHTML = `
-        <div class="dt-table-wrap${allFilled ? ' is-complete-glow' : ''}">
+        <div class="dt-table-wrap">
           <table class="dt-table">
             <thead>
               <tr>
@@ -4052,6 +4084,7 @@
                 <th class="dt-col-disc">割引率</th>
                 <th class="dt-col-name">商品名</th>
                 <th class="dt-col-ss">セール用タイトル</th>
+                <th class="dt-col-count">文字数</th>
               </tr>
             </thead>
             <tbody>${rowsHtml}</tbody>
@@ -4089,6 +4122,18 @@
           // 再描画 (進捗バッジ・全件完了のグロー更新のため)
           renderDecideTitleTable();
         });
+        // セール用タイトル列: 入力中にリアルタイムで文字数を更新
+        if (cell.getAttribute('data-field') === 'ssTitle') {
+          cell.addEventListener('input', () => {
+            const sku = cell.getAttribute('data-sku');
+            const countCell = container.querySelector(`td.dt-col-count[data-count-for-sku="${cssEscape(sku)}"]`);
+            if (!countCell) return;
+            const n = countSsTitleChars(cell.textContent);
+            const numEl = countCell.querySelector('.dt-count-num');
+            if (numEl) numEl.textContent = fmtSsTitleCount(n);
+            countCell.classList.toggle('is-over', n > SS_TITLE_LIMIT);
+          });
+        }
         // 編集中のセルに「複数行」テキストが貼り付けられたら、矩形ペーストに切り替える
         // (改行を含むテキスト → 1セル目に1行目、下のセルに2行目、…)
         cell.addEventListener('paste', (e) => {
