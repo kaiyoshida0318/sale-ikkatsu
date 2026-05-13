@@ -1049,21 +1049,42 @@
     .decide-stats { font-size: 12px; color: var(--muted); }
     /* ⑤画面を全体的に詰める */
     body[data-view="decide-price"] main {
-      margin-top: 8px;
+      margin-top: 4px;
     }
     body[data-view="decide-price"] .tool-panel-header {
-      margin-bottom: 4px;
+      margin-bottom: 2px;
     }
     body[data-view="decide-price"] .tool-panel-header h2 {
       font-size: 16px;
     }
-    /* バリエ・手数料トグルボタン: th上に小さく絶対配置 */
+    /* statusが空の時は場所を取らない */
+    body[data-view="decide-price"] #decide-price-status:empty {
+      display: none;
+      margin: 0;
+      min-height: 0;
+    }
+    body[data-view="decide-price"] #decide-price-status {
+      margin-top: 0;
+      min-height: 0;
+    }
+    /* テーブルラップの余白を詰める */
+    body[data-view="decide-price"] .product-table-wrap {
+      padding: 0;
+      border: 0;
+      background: transparent;
+    }
+    /* 統計行(decide-toolbar)を限界まで詰める */
+    body[data-view="decide-price"] .decide-toolbar {
+      padding: 0 2px 2px;
+    }
+    /* バリエ・手数料トグルボタン: 表上端の外側に配置(表ヘッダーに被らない) */
     .decide-table-area {
       position: relative;
+      margin-top: 22px; /* トグルボタン分の余白 */
     }
     #btn-toggle-fee.fee-toggle-overlay {
       position: absolute;
-      top: -10px;
+      top: -22px;
       transform: translateX(-50%);
       z-index: 5;
       font-size: 10px;
@@ -1284,7 +1305,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.30.1</span>
+      <span class="version">v0.30.2</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1443,7 +1464,7 @@
         </div>
 
         <div id="decide-price-status" class="status"></div>
-        <div id="decide-price-table-wrap" class="product-table-wrap" style="margin-top: 12px;">
+        <div id="decide-price-table-wrap" class="product-table-wrap">
           <div id="decide-price-table-container">
             <div class="empty-state">
               まだ計算結果がありません。<br>
@@ -1591,7 +1612,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.30.1 &nbsp;•&nbsp;
+    SALE一括 v0.30.2 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a> &nbsp;•&nbsp;
     Powered by ExcelJS
   </footer>
@@ -3377,7 +3398,6 @@
     // 列定義 (28列、Excel仕様準拠)
     // class: th/td に付けるクラス(色分け用)
     const DECIDE_COLS = [
-      { key: 'name',         label: '商品名',         cls: 'col-name', group: 'main' },
       { key: 'name',         label: '商品名',         cls: 'col-name', group: 'main', resizable: true, defaultWidth: 280 },
       { key: 'setCode',      label: 'セット商品コード', cls: 'col-red',  group: 'main' },
       { key: 'mgr',          label: '商品管理番号',   cls: 'col-red',  group: 'main' },
@@ -3562,8 +3582,8 @@
     }
 
     // バリエ・手数料トグルボタンの位置を th 実測で決める
-    // 表示時: バリエ4と楽天手数料の境界に置く
-    // 非表示時: 前回の位置を維持 (CSSのデフォルト left:50% を使う)
+    // 表示時: バリエ1の真上 (列の中央) に置く
+    // 非表示時: 中央寄せに戻す (左側に出すと不自然なので)
     function positionFeeToggleButton() {
       const btn = document.getElementById('btn-toggle-fee');
       const area = document.querySelector('.decide-table-area');
@@ -3577,18 +3597,17 @@
         return;
       }
       const ths = table.querySelectorAll('thead th');
-      let v4Th = null, feeLTh = null;
+      let v1Th = null;
       ths.forEach(th => {
         const lab = th.textContent.trim();
-        if (lab === 'バリエ4') v4Th = th;
-        if (lab === '楽天手数料') feeLTh = th;
+        if (lab === 'バリエ1') v1Th = th;
       });
-      if (!v4Th || !feeLTh) return;
-      const v4Rect = v4Th.getBoundingClientRect();
-      const lRect = feeLTh.getBoundingClientRect();
+      if (!v1Th) return;
+      const v1Rect = v1Th.getBoundingClientRect();
       const areaRect = area.getBoundingClientRect();
-      const borderX = (v4Rect.right + lRect.left) / 2;
-      const targetX = borderX - areaRect.left;
+      // バリエ1列の中央
+      const centerX = (v1Rect.left + v1Rect.right) / 2;
+      const targetX = centerX - areaRect.left;
       if (targetX > 0) {
         btn.style.left = targetX + 'px';
       }
