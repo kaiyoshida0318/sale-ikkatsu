@@ -1199,6 +1199,32 @@
       background: rgba(255,255,255,0.5);
       box-shadow: 0 0 0 1px rgba(255,255,255,0.8);
     }
+    /* 送料セルのフィルハンドル (Excel風オートフィル) */
+    .product-table.decide-table td.col-green.editable {
+      position: relative;
+    }
+    .product-table.decide-table td.col-green.editable .fill-handle {
+      position: absolute;
+      right: -4px;
+      bottom: -4px;
+      width: 8px;
+      height: 8px;
+      background: var(--brand);
+      border: 1px solid #fff;
+      cursor: crosshair;
+      z-index: 4;
+      box-shadow: 0 0 0 1px rgba(30,58,95,0.3);
+      display: none;
+    }
+    .product-table.decide-table td.col-green.editable:hover .fill-handle,
+    .product-table.decide-table td.col-green.editable:focus .fill-handle {
+      display: block;
+    }
+    /* ドラッグ中: 範囲の行ハイライト */
+    .product-table.decide-table tr.fill-preview td.col-green {
+      box-shadow: inset 0 0 0 1px var(--brand) !important;
+      background: #e8effa !important;
+    }
     /* 商品画像セル */
     .product-table.decide-table td .img-placeholder {
       display: inline-flex;
@@ -1305,7 +1331,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.31.1</span>
+      <span class="version">v0.32.0</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1562,7 +1588,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.31.1 &nbsp;•&nbsp;
+    SALE一括 v0.32.0 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
@@ -3339,7 +3365,9 @@
           if (c.editable) {
             const w = c.resizable ? (colWidths[c.key] || c.defaultWidth) : null;
             const style = w ? ` style="max-width:${w}px;"` : '';
-            return `<td class="${c.cls} editable"${style} data-sku="${escapeHtml(r.setCode)}" data-field="${c.key}" contenteditable="true">${cellInner}</td>`;
+            // 送料セルはフィルハンドル付き
+            const fillHandle = (c.key === 'ship') ? '<span class="fill-handle" data-fill-handle contenteditable="false"></span>' : '';
+            return `<td class="${c.cls} editable"${style} data-sku="${escapeHtml(r.setCode)}" data-field="${c.key}" data-mgr="${escapeHtml(r.mgr || '')}" contenteditable="true">${cellInner}${fillHandle}</td>`;
           }
           if (c.resizable) {
             const w = colWidths[c.key] || c.defaultWidth;
@@ -3393,6 +3421,9 @@
 
       // 編集可能セルのイベント
       attachEditableCellHandlers(container);
+
+      // 送料セルのフィルハンドル (Excel風オートフィル)
+      attachFillHandleHandlers(container);
 
       // 列幅リサイズハンドル (商品名・SS用タイトル)
       attachColumnResizeHandlers(container);
@@ -3468,25 +3499,39 @@
       saveArchive(archive);
     }
 
+    // セルの本文 (フィルハンドルなどの contenteditable=false 子要素を除いた textContent)
+    function readEditableCellValue(cell) {
+      // 子ノードを巡回し、テキストノードと contenteditable!=false な要素のみ集める
+      let s = '';
+      cell.childNodes.forEach(n => {
+        if (n.nodeType === Node.TEXT_NODE) s += n.textContent;
+        else if (n.nodeType === Node.ELEMENT_NODE && n.getAttribute('contenteditable') !== 'false') s += n.textContent;
+      });
+      return s.trim();
+    }
+
     // 編集セル: blur(離脱)時に保存・送料変更なら再描画して利益再計算
     function attachEditableCellHandlers(container) {
       container.querySelectorAll('td.editable').forEach(cell => {
         cell.addEventListener('focus', () => {
-          cell.dataset.original = cell.textContent.trim();
+          cell.dataset.original = readEditableCellValue(cell);
         });
         cell.addEventListener('keydown', (e) => {
           if (e.key === 'Enter') {
             e.preventDefault();
             cell.blur();
           } else if (e.key === 'Escape') {
+            // テキストノードだけ初期に戻す (フィルハンドルspanは残す)
+            const handle = cell.querySelector('.fill-handle');
             cell.textContent = cell.dataset.original || '';
+            if (handle) cell.appendChild(handle);
             cell.blur();
           }
         });
         cell.addEventListener('blur', () => {
           const sku = cell.getAttribute('data-sku');
           const field = cell.getAttribute('data-field');
-          const newVal = cell.textContent.trim();
+          const newVal = readEditableCellValue(cell);
           const original = cell.dataset.original ?? '';
           if (newVal === original) return; // 変化なし
           saveEditedCell(sku, field, newVal);
@@ -3513,6 +3558,146 @@
     }
 
     // 列幅リサイズ: ハンドルをドラッグして th + td の幅を変える
+    // 送料セルのフィルハンドル: Excel風オートフィル
+    // ・ダブルクリック: 下方向に自動伝播 (空行 or 既に値がある送料セルで停止)
+    // ・ドラッグ: ドラッグした位置まで一括上書き (停止条件なし)
+    function attachFillHandleHandlers(container) {
+      container.querySelectorAll('td.col-green.editable[data-field="ship"] .fill-handle').forEach(handle => {
+        const sourceCell = handle.parentElement;
+
+        // ハンドルクリック時にセル編集モードに入らないよう抑制
+        handle.addEventListener('mousedown', (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          startFillDrag(ev, sourceCell);
+        });
+        handle.addEventListener('dblclick', (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          fillAutoDown(sourceCell);
+        });
+      });
+    }
+
+    // ship セルの行リスト (tbody順、blank-rowもセルは無いがtr.blank-rowが入る)
+    function getShipCellsInOrder(container) {
+      const all = container.querySelectorAll('table.decide-table tbody tr');
+      const result = [];
+      all.forEach(tr => {
+        if (tr.classList.contains('blank-row')) {
+          result.push({ tr, cell: null, isBlank: true });
+        } else {
+          const cell = tr.querySelector('td.col-green.editable[data-field="ship"]');
+          result.push({ tr, cell, isBlank: false });
+        }
+      });
+      return result;
+    }
+
+    // ダブルクリック: 自動下方向伝播
+    function fillAutoDown(sourceCell) {
+      const container = document.getElementById('decide-price-table-container');
+      if (!container) return;
+      const value = readEditableCellValue(sourceCell);
+      if (value === '') return; // 元セルが空なら何もしない
+      const list = getShipCellsInOrder(container);
+      const sourceIdx = list.findIndex(x => x.cell === sourceCell);
+      if (sourceIdx < 0) return;
+
+      // sourceの次の行から下に向かって、空行 or 既に値がある送料セルで停止
+      const targets = [];
+      for (let i = sourceIdx + 1; i < list.length; i++) {
+        const it = list[i];
+        if (it.isBlank) break; // 商品管理番号の境目
+        if (!it.cell) break;
+        const v = readEditableCellValue(it.cell);
+        if (v !== '') break; // すでに値ありで停止
+        targets.push(it.cell);
+      }
+      if (targets.length === 0) return;
+      applyFillToCells(targets, value);
+    }
+
+    // ドラッグ: マウスを離した位置まで一括上書き
+    function startFillDrag(startEv, sourceCell) {
+      const container = document.getElementById('decide-price-table-container');
+      if (!container) return;
+      const value = readEditableCellValue(sourceCell);
+      const list = getShipCellsInOrder(container);
+      const sourceIdx = list.findIndex(x => x.cell === sourceCell);
+      if (sourceIdx < 0) return;
+
+      let lastEndIdx = sourceIdx; // 何もドラッグせず離したら適用しない
+
+      function clearPreview() {
+        container.querySelectorAll('tr.fill-preview').forEach(tr => tr.classList.remove('fill-preview'));
+      }
+      function applyPreview(endIdx) {
+        clearPreview();
+        if (endIdx <= sourceIdx) return;
+        for (let i = sourceIdx + 1; i <= endIdx; i++) {
+          if (list[i] && list[i].tr) list[i].tr.classList.add('fill-preview');
+        }
+      }
+
+      function onMove(ev) {
+        // マウスy座標から、tbodyの何番目のtrかを特定
+        const elem = document.elementFromPoint(ev.clientX, ev.clientY);
+        if (!elem) return;
+        const tr = elem.closest('tr');
+        if (!tr) return;
+        const idx = list.findIndex(x => x.tr === tr);
+        if (idx < 0) return;
+        lastEndIdx = idx;
+        applyPreview(idx);
+      }
+      function onUp() {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        clearPreview();
+        if (lastEndIdx > sourceIdx) {
+          // ドラッグ範囲を一括上書き (空行は元々送料セルが無いのでスキップ)
+          const targets = [];
+          for (let i = sourceIdx + 1; i <= lastEndIdx; i++) {
+            if (list[i] && list[i].cell) targets.push(list[i].cell);
+          }
+          if (value === '') {
+            // 元セルが空の場合は対象セルもクリア
+            applyFillToCells(targets, '');
+          } else {
+            applyFillToCells(targets, value);
+          }
+        }
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    }
+
+    // セル群に値を保存+表示反映 (利益再計算のために再描画する)
+    function applyFillToCells(cells, value) {
+      const ym = currentYM || getCurrentYM();
+      if (!ym) return;
+      const archive = loadArchive();
+      if (!archive[ym]) archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
+      if (!archive[ym].editedCells) archive[ym].editedCells = {};
+      for (const cell of cells) {
+        const sku = cell.getAttribute('data-sku');
+        if (!sku) continue;
+        if (!archive[ym].editedCells[sku]) archive[ym].editedCells[sku] = {};
+        if (value === '' || value === null || value === undefined) {
+          delete archive[ym].editedCells[sku].ship;
+          if (Object.keys(archive[ym].editedCells[sku]).length === 0) {
+            delete archive[ym].editedCells[sku];
+          }
+        } else {
+          archive[ym].editedCells[sku].ship = value;
+        }
+      }
+      saveArchive(archive);
+      // 送料が変わったので利益再計算 (再描画)
+      renderDecidePriceTable();
+    }
+
     function attachColumnResizeHandlers(container) {
       container.querySelectorAll('.col-resize-handle').forEach(handle => {
         handle.addEventListener('mousedown', (e) => {
