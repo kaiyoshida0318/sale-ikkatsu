@@ -1443,7 +1443,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.36.1</span>
+      <span class="version">v0.36.2</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1548,7 +1548,7 @@
       <div id="tool-decide-price" class="tool-panel">
         <div class="tool-panel-header">
           <button type="button" class="back-btn" data-back>← 戻る</button>
-          <h2>⑤ セール価格決定</h2>
+          <h2>⑤ 割引率決定</h2>
         </div>
 
         <div id="decide-price-status" class="status"></div>
@@ -1700,7 +1700,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.36.1 &nbsp;•&nbsp;
+    SALE一括 v0.36.2 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
@@ -2403,7 +2403,7 @@
         }
       } else {
         if (currentOffRate !== 'all') {
-          hintText = `${currentOffRate}%OFF に設定された商品はありません。⑤「セール価格決定」で各商品に割引率を選んでください。`;
+          hintText = `${currentOffRate}%OFF に設定された商品はありません。⑤「割引率決定」で各商品に割引率を選んでください。`;
         } else if (currentYM) {
           hintText = currentYM.replace('/', '年') + '月 のセール参加商品（「参加商品追加」からRMSデータCSVを取り込んでください）';
         } else {
@@ -2436,7 +2436,7 @@
           { id: 'prep-cost-set-item', label: '原価特定 NE-セット商品コード', action: 'open-cost-set-item' },
           { id: 'prep-cost-set-component', label: '原価特定 NE-セット構成物コード', action: 'open-cost-set-component' },
           { id: 'prep-cost-non-set', label: '原価特定-NE-セット無しコード', action: 'open-cost-non-set' },
-          { id: 'prep-decide-price', label: 'セール価格決定', action: 'open-decide-price' },
+          { id: 'prep-decide-price', label: '割引率決定', action: 'open-decide-price' },
           { id: 'prep-decide-title', label: 'セール用タイトル決定' },
           { id: 'prep-dl-rms-csv', label: 'RMSアップ素材CSVダウンロード' },
           { id: 'prep-upload-rms', label: 'RMSにアップロード' },
