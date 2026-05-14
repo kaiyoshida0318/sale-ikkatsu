@@ -1364,6 +1364,31 @@
       color: #fff;
     }
 
+    /* ⑧ RMSアップ用CSV作成 - 2ファイルアップスロット */
+    .mk-slots {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    @media (max-width: 720px) {
+      .mk-slots { grid-template-columns: 1fr; }
+    }
+    .mk-slot {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .mk-slot-label {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .mk-slot-sub {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
     /* ⑦ セール後アップ用ファイル保管エリア */
     .archive-file-area {
       margin-top: 18px;
@@ -2001,7 +2026,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.50.2</span>
+      <span class="version">v0.51.0</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2217,6 +2242,55 @@
         </div>
       </div>
 
+      <!-- サブビュー: ⑧ RMSアップ用CSV作成 -->
+      <div id="tool-make-rms-csv" class="tool-panel">
+        <div class="tool-panel-header">
+          <button type="button" class="back-btn" data-back>← 戻る</button>
+          <h2>⑧ RMSアップ用CSV作成</h2>
+        </div>
+        <p class="tool-panel-description">⑦で用意した2つのファイルをアップロードして組み合わせることで、RMSにアップするセールバージョンのCSVファイルを作成する。</p>
+
+        <div class="card">
+          <h2>1. 2つのファイルをアップロード</h2>
+          <p class="card-lead">下の2つのスロットに、⑦で用意したファイルをそれぞれセットしてください。両方セットされるとCSV作成が可能になります。</p>
+
+          <div class="mk-slots">
+            <div class="mk-slot" data-slot="sale">
+              <div class="mk-slot-label">① SALE一括内で生成したCSV</div>
+              <div class="mk-slot-sub">⑦ の「アップ用ファイルのダウンロード」で取得したファイル</div>
+              <div id="mk-slot-sale-zone" class="archive-dropzone" tabindex="0" role="button" aria-label="クリックまたはドラッグでファイルをセット">
+                <div class="archive-dropzone-empty">
+                  <div class="archive-dropzone-icon">📂</div>
+                  <div class="archive-dropzone-text">クリックまたはここにドラッグ</div>
+                </div>
+                <input type="file" id="mk-slot-sale-input" accept=".csv,.txt" hidden />
+              </div>
+            </div>
+
+            <div class="mk-slot" data-slot="rms">
+              <div class="mk-slot-label">② RMSからダウンロードしたCSV</div>
+              <div class="mk-slot-sub">⑦ 手順2でRMSからDLしたファイル (normal-item…)</div>
+              <div id="mk-slot-rms-zone" class="archive-dropzone" tabindex="0" role="button" aria-label="クリックまたはドラッグでファイルをセット">
+                <div class="archive-dropzone-empty">
+                  <div class="archive-dropzone-icon">📂</div>
+                  <div class="archive-dropzone-text">クリックまたはここにドラッグ</div>
+                </div>
+                <input type="file" id="mk-slot-rms-input" accept=".csv,.txt" hidden />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>2. CSVを作成・ダウンロード</h2>
+          <p class="card-lead">2ファイルがセットされ、ヘッダーで開始/終了日時が入力されていることを確認の上、ダウンロードしてください。<br>ファイル名: <code>SALE-RMSアップ用.csv</code> (Shift_JIS)</p>
+          <div class="actions">
+            <button type="button" id="btn-make-rms-csv" class="dl-ready" disabled>CSVをダウンロード</button>
+          </div>
+          <div id="make-rms-csv-status" class="status"></div>
+        </div>
+      </div>
+
       <!-- サブビュー: ② 原価特定 NE-セット商品コード -->
       <div id="tool-cost-set-item" class="tool-panel">
         <div class="tool-panel-header">
@@ -2361,7 +2435,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.50.2 &nbsp;•&nbsp;
+    SALE一括 v0.51.0 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
@@ -2498,7 +2572,7 @@
     // ブラウザ/マウスの「戻る」でサブビューから戻れるよう、サブビュー遷移時は history.pushState する
     let _suppressPushState = false; // popstate由来の呼び出しでは積まない
     const MAIN_TABS = ['products', 'workflow'];
-    const VALID_VIEWS = ['products','workflow','add-products','decide-price','decide-title','dl-rms-csv','cost-set-item','cost-set-component','cost-non-set'];
+    const VALID_VIEWS = ['products','workflow','add-products','decide-price','decide-title','dl-rms-csv','make-rms-csv','cost-set-item','cost-set-component','cost-non-set'];
     const LAST_VIEW_KEY = 'sale-ikkatsu-last-view';
     // 直近のメインタブ(サブビューから戻る時の戻り先)
     let _lastMainTab = 'products';
@@ -2541,6 +2615,7 @@
       if (viewId === 'dl-rms-csv') {
         if (typeof window._renderNormalItemArchive === 'function') window._renderNormalItemArchive();
       }
+      // make-rms-csv サブビュー: 状態はメモリ内のスロットに保持されているので特に再描画不要
       // 検索用DLボタンの活性/非活性更新
       if (viewId === 'cost-set-component' || viewId === 'cost-non-set') {
         if (typeof updateSearchDlButtons === 'function') updateSearchDlButtons();
@@ -3159,7 +3234,7 @@
           { id: 'prep-decide-price', label: '割引率決定', action: 'open-decide-price' },
           { id: 'prep-decide-title', label: 'セール用タイトル決定', action: 'open-decide-title' },
           { id: 'prep-dl-rms-csv', label: 'RMSアップ用素材ダウンロード', action: 'open-dl-rms-csv' },
-          { id: 'prep-make-rms-csv', label: 'RMSアップ用CSV作成' },
+          { id: 'prep-make-rms-csv', label: 'RMSアップ用CSV作成', action: 'open-make-rms-csv' },
           { id: 'prep-upload-rms', label: 'RMSにアップロード' },
           { id: 'prep-rms-event', label: 'RMSイベント申請' },
           { id: 'prep-sku-record', label: '倉庫入れSKU記録' },
@@ -3300,6 +3375,8 @@
             showView('decide-title');
           } else if (action === 'open-dl-rms-csv') {
             showView('dl-rms-csv');
+          } else if (action === 'open-make-rms-csv') {
+            showView('make-rms-csv');
           }
         });
       });
@@ -5029,6 +5106,344 @@
       // 初回描画
       render();
     })();
+
+    // ⑧ RMSアップ用CSV作成
+    //   入力: SALE一括生成CSV (UTF-8) + RMSダウンロードCSV (Shift_JIS)
+    //   出力: SALE-RMSアップ用.csv (Shift_JIS, 参考ファイルと同じレイアウト)
+    (function bindMakeRmsCsv() {
+      const slotSaleZone = document.getElementById('mk-slot-sale-zone');
+      const slotRmsZone = document.getElementById('mk-slot-rms-zone');
+      const slotSaleInput = document.getElementById('mk-slot-sale-input');
+      const slotRmsInput = document.getElementById('mk-slot-rms-input');
+      const btnMake = document.getElementById('btn-make-rms-csv');
+      const statusEl = document.getElementById('make-rms-csv-status');
+      if (!slotSaleZone || !slotRmsZone || !btnMake) return;
+
+      // 一時保存 (メモリのみ、ページ離脱でリセット)
+      const slots = { sale: null, rms: null }; // {name, text} を保持
+
+      function setStatus(msg, type) {
+        if (!statusEl) return;
+        statusEl.innerHTML = msg;
+        statusEl.className = 'status' + (type ? ' ' + type : '');
+      }
+      function updateButton() {
+        btnMake.disabled = !(slots.sale && slots.rms);
+      }
+      function formatSize(b) {
+        if (b < 1024) return b + ' B';
+        if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+        return (b / 1024 / 1024).toFixed(2) + ' MB';
+      }
+      function renderZone(zone, slotKey) {
+        const data = slots[slotKey];
+        if (data) {
+          zone.innerHTML = `
+            <div class="archive-file-saved">
+              <div class="archive-file-saved-icon">📄</div>
+              <div class="archive-file-saved-info">
+                <div class="archive-file-saved-name">${escapeHtml(data.name)}</div>
+                <div class="archive-file-saved-meta">${escapeHtml(formatSize(data.size))}</div>
+              </div>
+              <div class="archive-file-saved-actions">
+                <button type="button" class="archive-file-btn" data-action="replace">差し替え</button>
+                <button type="button" class="archive-file-btn danger" data-action="clear">クリア</button>
+              </div>
+            </div>
+          `;
+        } else {
+          zone.innerHTML = `
+            <div class="archive-dropzone-empty">
+              <div class="archive-dropzone-icon">📂</div>
+              <div class="archive-dropzone-text">クリックまたはここにドラッグ</div>
+            </div>
+          `;
+        }
+      }
+      async function readAsTextAutoDetect(file) {
+        // まず Shift_JIS で読んでみて、化けてる気配があれば UTF-8 で読み直す
+        const buf = await file.arrayBuffer();
+        const u8 = new Uint8Array(buf);
+        // BOM (EF BB BF) があれば確実に UTF-8
+        if (u8.length >= 3 && u8[0] === 0xEF && u8[1] === 0xBB && u8[2] === 0xBF) {
+          return new TextDecoder('utf-8').decode(u8.subarray(3));
+        }
+        // ヒューリスティック: 行頭バイトに高頻度で 0x82-0x9F が出るなら Shift_JIS
+        let sjisHits = 0;
+        const sampleLen = Math.min(2048, u8.length);
+        for (let i = 0; i < sampleLen; i++) {
+          if (u8[i] >= 0x81 && u8[i] <= 0x9F) sjisHits++;
+        }
+        if (sjisHits > 20) {
+          return decodeShiftJIS(u8);
+        }
+        // それ以外は UTF-8 として
+        return new TextDecoder('utf-8').decode(u8);
+      }
+      async function ingestFile(slotKey, file) {
+        if (!file) return;
+        try {
+          const text = await readAsTextAutoDetect(file);
+          slots[slotKey] = { name: file.name, size: file.size, text };
+          setStatus('', '');
+        } catch (err) {
+          setStatus('❌ 読み込み失敗: ' + (err.message || String(err)), 'error');
+          slots[slotKey] = null;
+        }
+        renderZone(slotKey === 'sale' ? slotSaleZone : slotRmsZone, slotKey);
+        updateButton();
+      }
+
+      function bindZone(zone, input, slotKey) {
+        zone.addEventListener('click', (e) => {
+          if (e.target.closest && e.target.closest('.archive-file-btn')) return;
+          input.click();
+        });
+        zone.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            input.click();
+          }
+        });
+        input.addEventListener('change', (e) => {
+          const f = e.target.files && e.target.files[0];
+          if (f) ingestFile(slotKey, f);
+          e.target.value = '';
+        });
+        ['dragenter', 'dragover'].forEach(ev => zone.addEventListener(ev, (e) => {
+          e.preventDefault(); e.stopPropagation();
+          zone.classList.add('is-dragover');
+        }));
+        ['dragleave', 'drop'].forEach(ev => zone.addEventListener(ev, (e) => {
+          e.preventDefault(); e.stopPropagation();
+          zone.classList.remove('is-dragover');
+        }));
+        zone.addEventListener('drop', (e) => {
+          const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+          if (f) ingestFile(slotKey, f);
+        });
+        zone.addEventListener('click', (e) => {
+          const btn = e.target.closest && e.target.closest('.archive-file-btn');
+          if (!btn) return;
+          e.stopPropagation();
+          const act = btn.getAttribute('data-action');
+          if (act === 'clear') {
+            slots[slotKey] = null;
+            renderZone(zone, slotKey);
+            updateButton();
+            setStatus('', '');
+          } else if (act === 'replace') {
+            input.click();
+          }
+        });
+      }
+      bindZone(slotSaleZone, slotSaleInput, 'sale');
+      bindZone(slotRmsZone, slotRmsInput, 'rms');
+
+      // CSV作成
+      btnMake.addEventListener('click', () => {
+        setStatus('', '');
+        try {
+          // 開始/終了日時
+          const period = getCurrentPeriod();
+          if (!period.startDt || !period.endDt) {
+            throw new Error('ヘッダーで開始日時と終了日時を入力してください');
+          }
+          // SALE一括ファイルをパース: 商品管理番号 → {表示価格, 通常購入販売価格, セール用タイトル}
+          const saleMap = parseSaleIkkatsuCsv(slots.sale.text);
+          if (saleMap.size === 0) throw new Error('SALE一括CSVに有効な行がありません');
+          // RMSファイルをパース: 各SKU行を取得
+          const rmsRows = parseRmsNormalItemCsv(slots.rms.text);
+          if (rmsRows.length === 0) throw new Error('RMSダウンロードCSVに有効な行がありません');
+          // 商品管理番号ごとにグルーピング (RMSの出現順)
+          const mgrOrder = [];
+          const mgrSeen = new Set();
+          const mgrSkus = new Map();
+          for (const r of rmsRows) {
+            if (!r.mgr) continue;
+            if (!mgrSeen.has(r.mgr)) {
+              mgrSeen.add(r.mgr);
+              mgrOrder.push(r.mgr);
+              mgrSkus.set(r.mgr, []);
+            }
+            mgrSkus.get(r.mgr).push(r);
+          }
+          // 出力ヘッダー （参考ファイルと同じ、カッコは全角）
+          const OUT_HEADERS = ['商品管理番号（商品URL）',
+            '商品名',
+            '販売期間指定（開始日時）',
+            '販売期間指定（終了日時）',
+            'SKU管理番号','システム連携用SKU番号','通常購入販売価格','表示価格','二重価格文言管理番号'];
+
+          const outRows = [];
+          let totalSkus = 0;
+          let skippedMgrs = [];
+          for (const mgr of mgrOrder) {
+            const saleInfo = saleMap.get(mgr);
+            if (!saleInfo) {
+              // SALE一括CSVに該当商品が無い → スキップ
+              skippedMgrs.push(mgr);
+              continue;
+            }
+            // タイトル行
+            outRows.push([
+              mgr,
+              saleInfo.ssTitle || '',
+              period.startDt,
+              period.endDt,
+              '', '', '', '', ''
+            ]);
+            // SKU行
+            const skus = mgrSkus.get(mgr) || [];
+            for (const s of skus) {
+              outRows.push([
+                mgr,
+                '',
+                '',
+                '',
+                s.skuMgr || '',
+                s.itemSku || '',
+                (saleInfo.salePrice !== '' && saleInfo.salePrice !== undefined) ? String(saleInfo.salePrice) : '',
+                (saleInfo.dispPrice !== '' && saleInfo.dispPrice !== undefined) ? String(saleInfo.dispPrice) : '',
+                '1'
+              ]);
+              totalSkus++;
+            }
+          }
+          if (outRows.length === 0) {
+            throw new Error('出力行がありません。SALE一括CSVとRMSデータの商品管理番号が一致するか確認してください。');
+          }
+          // CSV化 (CRLFで結ぶ、各セルは必要ならクォート)
+          const csvText = rowsToCsvText(OUT_HEADERS, outRows);
+          // Shift_JIS にエンコード
+          const sjisBytes = encodeShiftJIS(csvText);
+          const blob = new Blob([sjisBytes], { type: 'text/csv' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'SALE-RMSアップ用.csv';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          const skipMsg = skippedMgrs.length > 0 ? `<br><span style="color:var(--muted)">※ SALE一括CSVに無い商品 ${skippedMgrs.length} 件はスキップ: ${skippedMgrs.slice(0, 5).join(', ')}${skippedMgrs.length > 5 ? '…' : ''}</span>` : '';
+          setStatus(`✅ ダウンロードしました (${mgrOrder.length - skippedMgrs.length}商品 / ${totalSkus} SKU)${skipMsg}`, 'success');
+        } catch (err) {
+          setStatus('❌ ' + (err.message || String(err)), 'error');
+          console.error(err);
+        }
+      });
+
+      // 初期描画
+      renderZone(slotSaleZone, 'sale');
+      renderZone(slotRmsZone, 'rms');
+      updateButton();
+    })();
+
+    // SALE一括が生成したCSVをパース: 商品管理番号 → {ssTitle, dispPrice, salePrice}
+    //   列: 商品管理番号, 表示価格, 通常購入販売価格, セール用タイトル
+    //   同一商品管理番号の連続行は最初の行に値、2行目以降は空 (⑦の出力形式)
+    function parseSaleIkkatsuCsv(text) {
+      const rows = parseCsvText(text);
+      if (rows.length < 2) return new Map();
+      const h = rows[0];
+      const iMgr = h.findIndex(x => x && x.trim().indexOf('商品管理番号') >= 0);
+      const iDisp = h.findIndex(x => x && x.trim() === '表示価格');
+      const iSale = h.findIndex(x => x && x.trim() === '通常購入販売価格');
+      const iTitle = h.findIndex(x => x && x.trim().indexOf('セール用タイトル') >= 0);
+      if (iMgr < 0) throw new Error('SALE一括CSVに「商品管理番号」列がありません');
+      const map = new Map();
+      let lastMgr = '';
+      for (let i = 1; i < rows.length; i++) {
+        const r = rows[i]; if (!r) continue;
+        const mgrCell = (r[iMgr] || '').trim();
+        // mgrが空なら直前のmgrを継承 (連続行)
+        const mgr = mgrCell || lastMgr;
+        if (!mgr) continue;
+        lastMgr = mgr;
+        // この行の値を取得、既存マップに値を持っていない項目だけ埋める (=最初の非空が優先)
+        const cur = map.get(mgr) || { ssTitle: '', dispPrice: '', salePrice: '' };
+        const titleVal = (iTitle >= 0 ? (r[iTitle] || '').trim() : '');
+        const dispVal = (iDisp >= 0 ? (r[iDisp] || '').trim() : '');
+        const saleVal = (iSale >= 0 ? (r[iSale] || '').trim() : '');
+        if (titleVal && !cur.ssTitle) cur.ssTitle = titleVal;
+        if (dispVal && !cur.dispPrice) cur.dispPrice = dispVal;
+        if (saleVal && !cur.salePrice) cur.salePrice = saleVal;
+        map.set(mgr, cur);
+      }
+      return map;
+    }
+
+    // RMSの normal-item CSV をパース: SKU行配列を返す
+    //   必要列: 商品管理番号, SKU管理番号, システム連携用SKU番号
+    function parseRmsNormalItemCsv(text) {
+      const rows = parseCsvText(text);
+      if (rows.length < 2) return [];
+      const h = rows[0];
+      const iMgr = h.findIndex(x => x && x.indexOf('商品管理番号') >= 0);
+      const iSkuMgr = h.findIndex(x => x && x.indexOf('SKU管理番号') >= 0);
+      const iItemSku = h.findIndex(x => x && x.indexOf('システム連携用SKU番号') >= 0);
+      if (iMgr < 0) throw new Error('RMSデータCSVに「商品管理番号」列がありません');
+      if (iSkuMgr < 0) throw new Error('RMSデータCSVに「SKU管理番号」列がありません');
+      if (iItemSku < 0) throw new Error('RMSデータCSVに「システム連携用SKU番号」列がありません');
+      const out = [];
+      for (let i = 1; i < rows.length; i++) {
+        const r = rows[i]; if (!r) continue;
+        const mgr = (r[iMgr] || '').trim();
+        const skuMgr = (r[iSkuMgr] || '').trim();
+        const itemSku = (r[iItemSku] || '').trim();
+        if (!mgr) continue; // 商品管理番号なしの行はスキップ
+        // SKU管理番号が空の行 (=商品ヘッダー行) はスキップ
+        if (!skuMgr) continue;
+        out.push({ mgr, skuMgr, itemSku });
+      }
+      return out;
+    }
+
+    // Unicode → Shift_JIS バイト列にエンコード
+    //   ブラウザの TextEncoder は shift-jis 非対応のため、
+    //   TextDecoder('shift_jis') を使って Unicode→SJIS のマップを動的構築する
+    let _sjisEncodeMap = null;
+    function _buildSjisEncodeMap() {
+      const dec = new TextDecoder('shift_jis', { fatal: false });
+      const map = new Map();
+      // ASCII (0x00-0x7F)
+      for (let c = 0; c < 0x80; c++) map.set(String.fromCharCode(c), [c]);
+      // 半角カナ (0xA1-0xDF)
+      for (let c = 0xA1; c <= 0xDF; c++) {
+        const u = dec.decode(new Uint8Array([c]));
+        if (u.length === 1) map.set(u, [c]);
+      }
+      // 2byte (0x81xx-0xFCxx、ただし 0xA0-0xDF の上位バイトは半角カナで使用済み)
+      for (let hi = 0x81; hi <= 0xFC; hi++) {
+        if (hi >= 0xA0 && hi <= 0xDF) continue;
+        for (let lo = 0x40; lo <= 0xFC; lo++) {
+          if (lo === 0x7F) continue;
+          const u = dec.decode(new Uint8Array([hi, lo]));
+          if (u && u !== '\uFFFD' && !u.includes('\uFFFD')) {
+            // 既存マッピングがあるなら最初のものを優先 (重複時)
+            if (!map.has(u)) map.set(u, [hi, lo]);
+          }
+        }
+      }
+      return map;
+    }
+    function encodeShiftJIS(text) {
+      if (!_sjisEncodeMap) _sjisEncodeMap = _buildSjisEncodeMap();
+      const map = _sjisEncodeMap;
+      const out = [];
+      // 文字単位で走査 (サロゲートペアも含めて codePoint で扱う)
+      for (const ch of String(text)) {
+        const bytes = map.get(ch);
+        if (bytes) {
+          for (const b of bytes) out.push(b);
+        } else {
+          // SJISに対応する文字がない場合は '?' で代替
+          out.push(0x3F);
+        }
+      }
+      return new Uint8Array(out);
+    }
 
     function renderDecidePriceTable() {
       const container = document.getElementById('decide-price-table-container');
