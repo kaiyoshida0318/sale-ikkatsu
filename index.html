@@ -608,45 +608,6 @@
       border-left: 4px solid var(--brand);
       padding-left: 10px;
     }
-    /* サブビュー前後ナビゲーション
-       画面に対して固定位置 (absolute) に独立配置。ページごとのヘッダー位置に
-       影響されず、常に同じ位置に表示される。スクロールには追従しない。 */
-    .subview-nav {
-      position: absolute;
-      top: 168px; /* メインタブの少し下、⑥のヘッダー付近 */
-      z-index: 5;
-      pointer-events: none;
-    }
-    .subview-nav.subview-nav-left { left: 18px; }
-    .subview-nav.subview-nav-right { right: 18px; }
-    .subview-nav-btn {
-      pointer-events: auto;
-      background: transparent;
-      border: 0;
-      padding: 6px 10px;
-      font-size: 22px;
-      line-height: 1;
-      color: #8a8f9a;
-      cursor: pointer;
-      font-family: inherit;
-      transition: color .12s, transform .08s, background .12s;
-      user-select: none;
-      border-radius: 4px;
-      /* 〈 〉 を鋭角に見せるため字幅を絞る */
-      font-weight: 600;
-      letter-spacing: -2px;
-    }
-    .subview-nav-btn:hover:not(:disabled) {
-      color: var(--brand);
-      background: #eef4fb;
-    }
-    .subview-nav-btn:active:not(:disabled) {
-      transform: scale(0.94);
-    }
-    .subview-nav-btn:disabled {
-      opacity: 0;
-      pointer-events: none;
-    }
     /* サブビューの説明文 (ヘッダーの直下、cardの前) */
     .tool-panel-description {
       background: #f4f7fc;
@@ -2083,7 +2044,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.4</span>
+      <span class="version">v0.52.5</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2484,7 +2445,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.52.4 &nbsp;•&nbsp;
+    SALE一括 v0.52.5 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
@@ -2684,9 +2645,6 @@
         // 次のフレームで実行 (DOMが反映された後)
         requestAnimationFrame(() => window._syncStickyTabs());
       }
-
-      // サブビュー前後ナビゲーション (同一ブロック内のみ)
-      if (typeof updateSubviewNav === 'function') updateSubviewNav(viewId);
 
       // 履歴管理: メインタブ以外(=サブビュー)に入る時だけ pushState
       if (!_suppressPushState) {
@@ -3318,70 +3276,6 @@
     // 構造: archive[YYYY/MM].workflow = { 'prep-add-products': true, ... }
     // 進行中マーク(外枠) はメモリ変数 _inProgressBtnId で一時管理 (永続化しない)
     let _inProgressBtnId = null;
-
-    // サブビュー前後ナビゲーション
-    //   各サブビュー(actionで開かれるもの)の tool-panel-header に「← 前へ」「次へ →」を表示する。
-    //   同一ブロック内 (セール開始準備 / セール後) でのみ移動可能。ブロックをまたいだ移動はしない。
-    //   セール当日 (1個) は前後ボタンを付けない。
-    function getSubviewNavInfo(viewId) {
-      // viewId に対応する WORKFLOW_BLOCKS の item を逆引き (action: 'open-<viewId>')
-      const targetAction = 'open-' + viewId;
-      for (const block of WORKFLOW_BLOCKS) {
-        const idx = block.buttons.findIndex(b => b.action === targetAction);
-        if (idx < 0) continue;
-        // 同一ブロック内で「action 付き」のボタンだけを並べた配列を作る (未実装ボタンはスキップ)
-        const navItems = block.buttons.filter(b => b.action);
-        // 当ボタンの index in navItems
-        const curBtn = block.buttons[idx];
-        const i = navItems.indexOf(curBtn);
-        if (i < 0) return null;
-        // セール当日のような1個だけのブロック → 前後なし
-        if (navItems.length <= 1) return { block, prev: null, next: null };
-        return {
-          block,
-          prev: i > 0 ? navItems[i - 1] : null,
-          next: i < navItems.length - 1 ? navItems[i + 1] : null,
-        };
-      }
-      return null;
-    }
-    function updateSubviewNav(viewId) {
-      // 既存のナビを全て除去
-      document.querySelectorAll('.subview-nav, .subview-nav-btn').forEach(n => n.remove());
-
-      const info = getSubviewNavInfo(viewId);
-      if (!info) return; // workflow経由でないビュー → ナビなし
-      if (!info.prev && !info.next) return; // 1個ブロック → ナビなし
-
-      function makeContainer(side, item, arrow) {
-        const c = document.createElement('div');
-        c.className = 'subview-nav subview-nav-' + side;
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'subview-nav-btn';
-        btn.textContent = arrow;
-        if (item) {
-          btn.title = (side === 'left' ? '前へ: ' : '次へ: ') + item.label;
-          btn.setAttribute('aria-label', btn.title);
-          btn.addEventListener('click', () => {
-            if (!item.action) return;
-            const v = item.action.replace(/^open-/, '');
-            showView(v);
-          });
-        } else {
-          btn.disabled = true;
-        }
-        c.appendChild(btn);
-        return c;
-      }
-      // body 直下に絶対配置 (ページに対して固定位置、スクロールで上に流れる)
-      document.body.appendChild(makeContainer('left', info.prev, '〈'));
-      document.body.appendChild(makeContainer('right', info.next, '〉'));
-    }
-    // メインタブに戻ったときもナビを消す
-    function clearSubviewNav() {
-      document.querySelectorAll('.subview-nav, .subview-nav-btn').forEach(n => n.remove());
-    }
 
     function getWorkflowState() {
       if (!currentYM) return {};
