@@ -2125,7 +2125,21 @@
       position: sticky;
       top: calc(var(--top-bar-h, 130px) + var(--sub-header-h, 0px));
       z-index: 38;
+      /* sticky要素のmarginはstickyの高さに含まれず、後続要素のtop計算がズレるため
+         marginを0にし、視覚的な余白は padding-bottom + 背景を透過させて吸収する代わりに
+         「descriptionボックスのbottomパディング」で吸収せず、外側に擬似的なスペーサーを置く方式は使えないので
+         margin-bottomを使う代わりに、表ヘッダーのtop計算にこの余白も含めるアプローチを採用 */
       margin: 0 0 18px;
+    }
+    body[data-view="sku-record"] #sku-record-table-container,
+    body[data-view="ad-delete"] #ad-delete-table-container,
+    body[data-view="ad-restore"] #ad-restore-table-container {
+      margin-top: 0;
+    }
+    body[data-view="sku-record"] .sr-table-wrap,
+    body[data-view="ad-delete"] .ad-table-wrap,
+    body[data-view="ad-restore"] .ad-table-wrap {
+      margin-top: 0;
     }
     /* ⑪ 倉庫入れSKU記録 */
     .sr-table-wrap {
@@ -2333,7 +2347,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.30</span>
+      <span class="version">v0.52.31</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2977,8 +2991,10 @@
 
         // ⑪⑫⑬ (sku-record/ad-delete/ad-restore) のサブビュー上部 sticky 段重ね
         // H2見出し + 説明文 をそれぞれ動的計算
-        // - tool-panel-header → --sub-header-h
-        // - tool-panel-description → --sub-desc-h
+        // - tool-panel-header → --sub-header-h (padding込みの実高さ)
+        // - tool-panel-description → --sub-desc-h (高さ + margin-bottom 込み)
+        //   ※ margin-bottom も含めるのは、表ヘッダーの top 計算で
+        //   「sticky description の下端 + マージン」までを覆うため
         // - 表ヘッダーは calc(top-bar-h + sub-header-h + sub-desc-h) で固定
         const activeSubViews = ['sku-record', 'ad-delete', 'ad-restore'];
         const curView = document.body.getAttribute('data-view');
@@ -2988,7 +3004,14 @@
             const headerEl = panel.querySelector('.tool-panel-header');
             const descEl = panel.querySelector('.tool-panel-description');
             const hHsub = headerEl ? headerEl.getBoundingClientRect().height : 0;
-            const dHsub = descEl ? descEl.getBoundingClientRect().height : 0;
+            let dHsub = 0;
+            if (descEl) {
+              dHsub = descEl.getBoundingClientRect().height;
+              // description の margin-bottom も含めることで、stickyヘッダー直下の余白も覆う
+              const cs = window.getComputedStyle(descEl);
+              const mb = parseFloat(cs.marginBottom) || 0;
+              dHsub += mb;
+            }
             document.documentElement.style.setProperty('--sub-header-h', hHsub + 'px');
             document.documentElement.style.setProperty('--sub-desc-h', dHsub + 'px');
           }
