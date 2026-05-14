@@ -2107,7 +2107,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.16</span>
+      <span class="version">v0.52.17</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2713,8 +2713,11 @@
       const panel = document.getElementById('tool-' + viewId);
       if (panel) panel.classList.add('active');
       // メインタブ active 状態
+      // - メインタブ (products / workflow) を開いたとき: そのタブを active
+      // - サブビューを開いたとき: そのサブビューが属するメインタブ (=workflow) を active のまま維持
       document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
-      const mt = document.querySelector(`.main-tab[data-main-tab="${viewId}"]`);
+      const activeMainTab = MAIN_TABS.includes(viewId) ? viewId : 'workflow';
+      const mt = document.querySelector(`.main-tab[data-main-tab="${activeMainTab}"]`);
       if (mt) mt.classList.add('active');
 
       // products タブを開くときは最新の年月に切り替えて再描画
