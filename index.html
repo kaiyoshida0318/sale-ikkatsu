@@ -608,6 +608,39 @@
       border-left: 4px solid var(--brand);
       padding-left: 10px;
     }
+    /* サブビュー前後ナビゲーション (← 前へ / 次へ →) */
+    .subview-nav {
+      margin-left: auto;
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .subview-nav-btn {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      font-family: inherit;
+      transition: background .12s, border-color .12s, color .12s;
+      max-width: 220px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .subview-nav-btn:hover:not(:disabled) {
+      background: #eef4fb;
+      border-color: var(--brand);
+      color: var(--brand);
+    }
+    .subview-nav-btn:disabled {
+      opacity: 0;
+      pointer-events: none;
+      /* レイアウト保持のため transparent ではなく opacity:0 で空白扱い */
+    }
     /* サブビューの説明文 (ヘッダーの直下、cardの前) */
     .tool-panel-description {
       background: #f4f7fc;
@@ -2043,7 +2076,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.51.4</span>
+      <span class="version">v0.52.0</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2300,7 +2333,7 @@
 
         <div class="card">
           <h2>2. CSVを作成・ダウンロード</h2>
-          <p class="card-lead">2ファイルがセットされ、ヘッダーで開始/終了日時が入力されていることを確認の上、ダウンロードしてください。<br>ファイル名: <code>SALE-RMSアップ用.csv</code> (Shift_JIS)</p>
+          <p class="card-lead">2ファイルがセットされ、ヘッダーで開始/終了日時が入力されていることを確認の上、ダウンロードしてください。<br>ファイル名: <code>normal-item-sale.csv</code> (Shift_JIS)</p>
           <div class="actions">
             <button type="button" id="btn-make-rms-csv" class="dl-ready" disabled>CSVをダウンロード</button>
           </div>
@@ -2452,7 +2485,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.51.4 &nbsp;•&nbsp;
+    SALE一括 v0.52.0 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
@@ -2652,6 +2685,9 @@
         // 次のフレームで実行 (DOMが反映された後)
         requestAnimationFrame(() => window._syncStickyTabs());
       }
+
+      // サブビュー前後ナビゲーション (同一ブロック内のみ)
+      if (typeof updateSubviewNav === 'function') updateSubviewNav(viewId);
 
       // 履歴管理: メインタブ以外(=サブビュー)に入る時だけ pushState
       if (!_suppressPushState) {
@@ -3283,6 +3319,75 @@
     // 構造: archive[YYYY/MM].workflow = { 'prep-add-products': true, ... }
     // 進行中マーク(外枠) はメモリ変数 _inProgressBtnId で一時管理 (永続化しない)
     let _inProgressBtnId = null;
+
+    // サブビュー前後ナビゲーション
+    //   各サブビュー(actionで開かれるもの)の tool-panel-header に「← 前へ」「次へ →」を表示する。
+    //   同一ブロック内 (セール開始準備 / セール後) でのみ移動可能。ブロックをまたいだ移動はしない。
+    //   セール当日 (1個) は前後ボタンを付けない。
+    function getSubviewNavInfo(viewId) {
+      // viewId に対応する WORKFLOW_BLOCKS の item を逆引き (action: 'open-<viewId>')
+      const targetAction = 'open-' + viewId;
+      for (const block of WORKFLOW_BLOCKS) {
+        const idx = block.buttons.findIndex(b => b.action === targetAction);
+        if (idx < 0) continue;
+        // 同一ブロック内で「action 付き」のボタンだけを並べた配列を作る (未実装ボタンはスキップ)
+        const navItems = block.buttons.filter(b => b.action);
+        // 当ボタンの index in navItems
+        const curBtn = block.buttons[idx];
+        const i = navItems.indexOf(curBtn);
+        if (i < 0) return null;
+        // セール当日のような1個だけのブロック → 前後なし
+        if (navItems.length <= 1) return { block, prev: null, next: null };
+        return {
+          block,
+          prev: i > 0 ? navItems[i - 1] : null,
+          next: i < navItems.length - 1 ? navItems[i + 1] : null,
+        };
+      }
+      return null;
+    }
+    function updateSubviewNav(viewId) {
+      const panel = document.getElementById('tool-' + viewId);
+      if (!panel) return;
+      const header = panel.querySelector('.tool-panel-header');
+      if (!header) return;
+      // 既存のナビを除去
+      const existing = header.querySelector('.subview-nav');
+      if (existing) existing.remove();
+      const info = getSubviewNavInfo(viewId);
+      if (!info) return; // workflow経由でないビュー (products / decide-price 等) は対象外…
+      // ただし decide-price と decide-title もワークフロー上のサブビューなのでナビを出す
+      // → workflow 上の action 一致で見つかるので info は取得できる。
+      // セール当日のような1個ブロックで prev/next 両方 null の場合はスキップ
+      if (!info.prev && !info.next) return;
+      const nav = document.createElement('div');
+      nav.className = 'subview-nav';
+      const prevBtn = document.createElement('button');
+      prevBtn.type = 'button';
+      prevBtn.className = 'subview-nav-btn';
+      prevBtn.textContent = info.prev ? `← ${info.prev.label}` : '';
+      prevBtn.disabled = !info.prev;
+      prevBtn.title = info.prev ? `前へ: ${info.prev.label}` : '';
+      prevBtn.addEventListener('click', () => {
+        if (!info.prev || !info.prev.action) return;
+        const v = info.prev.action.replace(/^open-/, '');
+        showView(v);
+      });
+      const nextBtn = document.createElement('button');
+      nextBtn.type = 'button';
+      nextBtn.className = 'subview-nav-btn';
+      nextBtn.textContent = info.next ? `${info.next.label} →` : '';
+      nextBtn.disabled = !info.next;
+      nextBtn.title = info.next ? `次へ: ${info.next.label}` : '';
+      nextBtn.addEventListener('click', () => {
+        if (!info.next || !info.next.action) return;
+        const v = info.next.action.replace(/^open-/, '');
+        showView(v);
+      });
+      nav.appendChild(prevBtn);
+      nav.appendChild(nextBtn);
+      header.appendChild(nav);
+    }
 
     function getWorkflowState() {
       if (!currentYM) return {};
@@ -5126,7 +5231,7 @@
 
     // ⑧ RMSアップ用CSV作成
     //   入力: SALE一括生成CSV (UTF-8) + RMSダウンロードCSV (Shift_JIS)
-    //   出力: SALE-RMSアップ用.csv (Shift_JIS, 参考ファイルと同じレイアウト)
+    //   出力: normal-item-sale.csv (Shift_JIS, 参考ファイルと同じレイアウト)
     (function bindMakeRmsCsv() {
       const slotSaleZone = document.getElementById('mk-slot-sale-zone');
       const slotRmsZone = document.getElementById('mk-slot-rms-zone');
@@ -5338,7 +5443,7 @@
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = 'SALE-RMSアップ用.csv';
+          a.download = 'normal-item-sale.csv';
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
