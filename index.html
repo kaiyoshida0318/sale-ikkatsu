@@ -2107,7 +2107,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.15</span>
+      <span class="version">v0.52.16</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2546,8 +2546,25 @@
               20分ほど経つとRMSへの取り込みが完了し、batchからファイルが消える。
               <div style="margin-top:6px;">※ もし batch の並びにある <b>logs</b> にファイルが現れていた場合は、何らかのエラーが発生したということなので、中身を開いてエラー内容をチェックし対応する。</div>
             </li>
-            <li>アップから30分程度経ったら楽天RMSで反映確認。</li>
+            <li>アップから30分程度経ったらRMSで反映確認。</li>
           </ol>
+        </div>
+      </div>
+
+      <!-- サブビュー: ⑩ RMSイベント申請 -->
+      <div id="tool-rms-event" class="tool-panel">
+        <div class="tool-panel-header">
+          <h2>⑩ RMSイベント申請</h2>
+        </div>
+        <p class="tool-panel-description">RMSへの反映が確認できたらセールの申請を行う。</p>
+
+        <div class="card">
+          <h2>申請場所</h2>
+          <div class="howto-list" style="padding-left: 0;">
+            楽天RMS - 店舗設定 - <b>1 商品管理</b> - <b>3 イベント申請</b> - <b>イベント商品申請</b>
+          </div>
+          <div style="margin-top: 12px;">※ 全てのセール参加商品の商品管理番号を<b>一括で貼り付けて申請</b>する。<br>
+          分割するとデータが上書きされて、前に申請していた分の内容が消えてしまうため。</div>
         </div>
       </div>
     </div>
@@ -2686,7 +2703,7 @@
     // ブラウザ/マウスの「戻る」でサブビューから戻れるよう、サブビュー遷移時は history.pushState する
     let _suppressPushState = false; // popstate由来の呼び出しでは積まない
     const MAIN_TABS = ['products', 'workflow'];
-    const VALID_VIEWS = ['products','workflow','add-products','decide-price','decide-title','dl-rms-csv','make-rms-csv','cost-set-item','cost-set-component','cost-non-set','upload-rms'];
+    const VALID_VIEWS = ['products','workflow','add-products','decide-price','decide-title','dl-rms-csv','make-rms-csv','cost-set-item','cost-set-component','cost-non-set','upload-rms','rms-event'];
     const LAST_VIEW_KEY = 'sale-ikkatsu-last-view';
     // 直近のメインタブ(サブビューから戻る時の戻り先)
     let _lastMainTab = 'products';
@@ -3411,7 +3428,7 @@
           { id: 'prep-dl-rms-csv', label: 'RMSアップ用素材ダウンロード', action: 'open-dl-rms-csv' },
           { id: 'prep-make-rms-csv', label: 'RMSアップ用CSV作成', action: 'open-make-rms-csv' },
           { id: 'prep-upload-rms', label: 'RMSにアップロード', action: 'open-upload-rms' },
-          { id: 'prep-rms-event', label: 'RMSイベント申請' },
+          { id: 'prep-rms-event', label: 'RMSイベント申請', action: 'open-rms-event' },
           { id: 'prep-sku-record', label: '倉庫入れSKU記録' },
           { id: 'prep-ad-delete', label: '広告削除' },
           { id: 'prep-thumb-change', label: 'トップ画像変更' },
