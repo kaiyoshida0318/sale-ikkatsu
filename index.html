@@ -2347,7 +2347,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.31</span>
+      <span class="version">v0.52.32</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -3042,6 +3042,16 @@
         new ResizeObserver(update).observe(header);
         const tabs2 = document.querySelector('.main-tabs-bar');
         if (tabs2) new ResizeObserver(update).observe(tabs2);
+        // ⑪⑫⑬ のサブビュー上部要素 (H2+説明文) のサイズ変化も監視
+        // (display切替やフォント読み込みでサイズが変わるため、後追いで update する)
+        ['sku-record', 'ad-delete', 'ad-restore'].forEach(vid => {
+          const panel = document.getElementById('tool-' + vid);
+          if (!panel) return;
+          const headerEl = panel.querySelector('.tool-panel-header');
+          const descEl = panel.querySelector('.tool-panel-description');
+          if (headerEl) new ResizeObserver(update).observe(headerEl);
+          if (descEl) new ResizeObserver(update).observe(descEl);
+        });
       }
       // showView 後にも更新する必要があるため、グローバルに公開
       window._syncStickyTabs = update;
@@ -3157,9 +3167,14 @@
       // body に現在ビューIDをセット (CSS で参照: 決定タブだけ全幅化など)
       document.body.setAttribute('data-view', viewId);
       // sticky の top 値を更新 (data-viewが変わると sticky 対象が変わるため)
+      // 複数タイミングで再計算: display切替/CSSアニメーション/フォント読み込み後など
       if (typeof window._syncStickyTabs === 'function') {
-        // 次のフレームで実行 (DOMが反映された後)
-        requestAnimationFrame(() => window._syncStickyTabs());
+        requestAnimationFrame(() => {
+          window._syncStickyTabs();
+          requestAnimationFrame(() => window._syncStickyTabs());
+        });
+        // フォント/レイアウト確定後の最終確認 (約100ms後)
+        setTimeout(() => window._syncStickyTabs(), 100);
       }
 
       // 履歴管理: メインタブ以外(=サブビュー)に入る時だけ pushState
