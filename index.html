@@ -1292,17 +1292,18 @@
       padding: 3px 2px 6px;
       flex-shrink: 0;
     }
+    /* 非選択時はかなり薄く: 色味とコントラストを抑えて目立たせない */
     .mgr-tab {
-      background: #f0f1f5;
-      color: #555;
-      border: 1px solid #d8d8de;
+      background: #f4f5f8;
+      color: #999;
+      border: 1px solid #e2e4ec;
       border-radius: 5px 5px 0 0;
       padding: 5px 11px;
       font-size: 13px;
-      font-weight: 700;
+      font-weight: 600;
       cursor: pointer;
       font-family: inherit;
-      transition: background .12s, color .12s, border-color .12s, transform .05s;
+      transition: background .12s, color .12s, border-color .12s, transform .05s, box-shadow .12s;
       position: relative;
       bottom: -1px;
       display: inline-flex;
@@ -1311,6 +1312,7 @@
       gap: 1px;
       line-height: 1.2;
       text-align: left;
+      opacity: 0.85;
     }
     .mgr-tab .mgr-tab-line1 {
       display: inline-flex;
@@ -1319,39 +1321,47 @@
     .mgr-tab .mgr-tab-count {
       margin-left: 4px;
       font-weight: 500;
-      opacity: 0.75;
+      opacity: 0.7;
       font-size: 11px;
     }
     .mgr-tab .mgr-tab-itemcode {
       font-family: ui-monospace, "SF Mono", Menlo, monospace;
       font-size: 13px;
       font-weight: 600;
-      opacity: 0.78;
+      opacity: 0.7;
       white-space: nowrap;
     }
     .mgr-tab:hover:not(.is-active):not(:disabled) {
-      background: #e6e7ed;
-      color: #333;
+      background: #e8eaf0;
+      color: #555;
+      opacity: 1;
     }
+    /* 選択中: 濃い縁取り + 影で強調、不透明度100% */
     .mgr-tab.is-active {
       background: #fff;
       color: var(--text);
+      border-color: #2a3550;
       border-bottom-color: #fff;
-      box-shadow: 0 -2px 4px rgba(0,0,0,0.06);
+      border-width: 2px;
+      padding: 4px 10px;
+      box-shadow: 0 -3px 8px rgba(0,0,0,0.12), inset 0 -2px 0 #fff;
+      opacity: 1;
+      font-weight: 700;
+      z-index: 1;
     }
-    /* 割引率の色 (背景・縁) - is-active のときは少し濃く */
-    .mgr-tab.disc-10 { background: #cfe0f3; color: #1c4b8a; border-color: #9bbde0; }
-    .mgr-tab.disc-10:hover:not(.is-active):not(:disabled) { background: #b9d2ed; color: #1c4b8a; }
-    .mgr-tab.disc-10.is-active { background: #1c4b8a; color: #fff; border-color: #1c4b8a; border-bottom-color: #1c4b8a; }
-    .mgr-tab.disc-20 { background: #fbd9b5; color: #a14d0a; border-color: #e8b478; }
-    .mgr-tab.disc-20:hover:not(.is-active):not(:disabled) { background: #f8c89c; color: #a14d0a; }
-    .mgr-tab.disc-20.is-active { background: #a14d0a; color: #fff; border-color: #a14d0a; border-bottom-color: #a14d0a; }
-    .mgr-tab.disc-30 { background: #c7e5cf; color: #165d28; border-color: #91c8a4; }
-    .mgr-tab.disc-30:hover:not(.is-active):not(:disabled) { background: #b3dcbf; color: #165d28; }
-    .mgr-tab.disc-30.is-active { background: #165d28; color: #fff; border-color: #165d28; border-bottom-color: #165d28; }
-    .mgr-tab.disc-50 { background: #f4c8c8; color: #a81f1f; border-color: #e09494; }
-    .mgr-tab.disc-50:hover:not(.is-active):not(:disabled) { background: #efb3b3; color: #a81f1f; }
-    .mgr-tab.disc-50.is-active { background: #a81f1f; color: #fff; border-color: #a81f1f; border-bottom-color: #a81f1f; }
+    /* 割引率タブ - 非選択時は彩度低めで、アクティブとの差を強調 */
+    .mgr-tab.disc-10 { background: #e6eef8; color: #5378a8; border-color: #c7d5e8; }
+    .mgr-tab.disc-10:hover:not(.is-active):not(:disabled) { background: #d5e2f1; color: #1c4b8a; opacity: 1; }
+    .mgr-tab.disc-10.is-active { background: #1c4b8a; color: #fff; border-color: #0f2c52; border-bottom-color: #1c4b8a; box-shadow: 0 -3px 10px rgba(28,75,138,0.45), inset 0 -2px 0 #1c4b8a; }
+    .mgr-tab.disc-20 { background: #fbe7d2; color: #b06622; border-color: #ecc7a0; }
+    .mgr-tab.disc-20:hover:not(.is-active):not(:disabled) { background: #f6d3ad; color: #a14d0a; opacity: 1; }
+    .mgr-tab.disc-20.is-active { background: #a14d0a; color: #fff; border-color: #62300a; border-bottom-color: #a14d0a; box-shadow: 0 -3px 10px rgba(161,77,10,0.45), inset 0 -2px 0 #a14d0a; }
+    .mgr-tab.disc-30 { background: #dceee3; color: #3a7a4f; border-color: #b2d4be; }
+    .mgr-tab.disc-30:hover:not(.is-active):not(:disabled) { background: #c6e2cf; color: #165d28; opacity: 1; }
+    .mgr-tab.disc-30.is-active { background: #165d28; color: #fff; border-color: #0b3517; border-bottom-color: #165d28; box-shadow: 0 -3px 10px rgba(22,93,40,0.45), inset 0 -2px 0 #165d28; }
+    .mgr-tab.disc-50 { background: #f7d8d8; color: #b04848; border-color: #e2b3b3; }
+    .mgr-tab.disc-50:hover:not(.is-active):not(:disabled) { background: #f0bdbd; color: #a81f1f; opacity: 1; }
+    .mgr-tab.disc-50.is-active { background: #a81f1f; color: #fff; border-color: #631212; border-bottom-color: #a81f1f; box-shadow: 0 -3px 10px rgba(168,31,31,0.45), inset 0 -2px 0 #a81f1f; }
 
     /* タブ切替: アクティブ以外の商品グループを隠す */
     .product-group[data-hidden="true"] {
@@ -1839,18 +1849,18 @@
       gap: 6px;
       flex-shrink: 0;
     }
-    .group-mgr {
-      display: inline-block;
-      background: #fff;
-      border: 2px solid #ee4d3d;
-      color: #ee4d3d;
-      padding: 3px 10px;
-      border-radius: 4px;
-      font-family: ui-monospace, "SF Mono", Menlo, monospace;
-      font-size: 12px;
-      font-weight: 700;
+    .group-img {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       flex-shrink: 0;
-      white-space: nowrap;
+      width: 56px;
+      height: 56px;
+    }
+    .group-img .img-placeholder {
+      width: 56px;
+      height: 56px;
+      font-size: 10px;
     }
     .group-name {
       font-size: 13px;
@@ -2259,7 +2269,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.22</span>
+      <span class="version">v0.52.23</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -6049,7 +6059,6 @@
       // 既に rows 内の最初のSKUが代表 (isFirstInMgr=true) なのでそれを使う
       function groupHeaderHtml(row) {
         const mgr = row.mgr || '';
-        const itemCode = row.itemCode || mgr; // フォールバック: itemCode無ければ管理番号
         const name = row.name || '';
         const sku = row.setCode || '';
         const cur = row.discount ?? null;
@@ -6061,11 +6070,11 @@
           : cur === 30 ? '#e8f4ec'
           : cur === 50 ? '#faeaea'
           : '#f7f8fc';
-        // バッジは商品コード (システム連携用SKU番号の共通プレフィクス) を表示
-        // 右端に割引率2x2ボタンを配置 (旧row2のセール用タイトルは撤去)
+        // 旧: 赤枠の商品コードバッジ (group-mgr) → 廃止
+        // 新: 商品画像 (現時点では未取得プレースホルダー)
         return `<div class="product-group-header" style="background:${bgColor};">
           <div class="group-header-row1">
-            <span class="group-mgr" title="商品コード">${escapeHtml(itemCode)}</span>
+            <div class="group-img"><div class="img-placeholder">未取得</div></div>
             <span class="group-name">${escapeHtml(name)}</span>
             <div class="group-disc-wrap">
               <span class="group-disc-label">割引率</span>
