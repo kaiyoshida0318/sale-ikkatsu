@@ -2061,30 +2061,40 @@
     #subview-prevnext.is-active ~ .header-toggle-btn {
       margin-left: 8px;
     }
-    /* ⑪⑫⑬ 共通: 全件完了バッジ (H2の右隣に表示)
-       - 通常時は非表示
+    /* ⑪⑫⑬ 共通: 全件完了バッジ (H2の右隣に常時表示)
+       - 通常時: 薄いグレー系で控えめに
        - 全行のチェックボックスがONになると .is-complete が付与され緑グロー演出 */
     .check-complete-badge {
-      display: none;
+      display: inline-flex;
       align-items: center;
       gap: 6px;
-      background: #d8f3df;
-      color: #0f6b27;
-      border: 1.5px solid #5cba74;
+      background: #f0f1f5;
+      color: #888;
+      border: 1.5px solid #d8d8de;
       border-radius: 999px;
       padding: 5px 14px;
       font-size: 13px;
-      font-weight: 800;
+      font-weight: 700;
       white-space: nowrap;
-      box-shadow: 0 0 0 4px rgba(34,168,87,0.18), 0 0 12px rgba(34,168,87,0.55);
-      animation: check-complete-pulse 1.6s ease-in-out infinite;
+      transition: background .3s, color .3s, border-color .3s, box-shadow .3s;
     }
     .check-complete-badge .check-complete-icon {
       font-size: 14px;
       font-weight: 900;
+      color: #b8b8c0;
+      transition: color .3s;
     }
     .check-complete-badge.is-complete {
-      display: inline-flex;
+      background: #d8f3df;
+      color: #0f6b27;
+      border-color: #5cba74;
+      font-weight: 800;
+      box-shadow: 0 0 0 4px rgba(34,168,87,0.18), 0 0 12px rgba(34,168,87,0.55);
+      animation: check-complete-pulse 1.6s ease-in-out infinite;
+    }
+    .check-complete-badge.is-complete .check-complete-icon {
+      color: #1a7c38;
+      font-size: 15px;
     }
     @keyframes check-complete-pulse {
       0%, 100% { box-shadow: 0 0 0 4px rgba(34,168,87,0.18), 0 0 12px rgba(34,168,87,0.55); }
@@ -2347,7 +2357,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.32</span>
+      <span class="version">v0.52.33</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
