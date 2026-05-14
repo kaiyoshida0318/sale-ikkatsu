@@ -482,13 +482,14 @@
     }
     /* 手順内の説明画像 (⑨など) */
     .howto-image-wrap {
+      display: block;
       margin: 8px 0 12px;
       padding: 8px;
       background: #fafbfd;
       border: 1px solid #e2e4ec;
       border-radius: 6px;
-      display: inline-block;
       max-width: 100%;
+      width: fit-content;
     }
     .howto-image {
       display: block;
@@ -496,6 +497,9 @@
       height: auto;
       border-radius: 4px;
       border: 1px solid #d0d4dc;
+    }
+    .upload-rms-steps {
+      list-style-position: outside;
     }
     .upload-rms-steps li {
       margin-bottom: 10px;
@@ -2103,7 +2107,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.13</span>
+      <span class="version">v0.52.14</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
