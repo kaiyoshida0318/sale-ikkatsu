@@ -2103,7 +2103,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.12</span>
+      <span class="version">v0.52.13</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -3531,23 +3531,13 @@
           if (!action) return; // action 未定義のボタンは何もしない (進行中マークも付けない)
           // 進行中(=外枠)に記録
           markWorkflowOpened(id);
-          // 画面遷移
-          if (action === 'open-add-products') {
-            showView('add-products');
-          } else if (action === 'open-decide-price') {
-            showView('decide-price');
-          } else if (action === 'open-cost-set-item') {
-            showView('cost-set-item');
-          } else if (action === 'open-cost-set-component') {
-            showView('cost-set-component');
-          } else if (action === 'open-cost-non-set') {
-            showView('cost-non-set');
-          } else if (action === 'open-decide-title') {
-            showView('decide-title');
-          } else if (action === 'open-dl-rms-csv') {
-            showView('dl-rms-csv');
-          } else if (action === 'open-make-rms-csv') {
-            showView('make-rms-csv');
+          // 画面遷移: action='open-<viewId>' をそのまま showView に渡す (汎用ディスパッチ)
+          // 将来 ⑩⑪... に action を付けるだけで自動で動く (個別 if 分岐は不要)
+          if (action.startsWith('open-')) {
+            const viewId = action.slice('open-'.length);
+            if (VALID_VIEWS.includes(viewId)) {
+              showView(viewId);
+            }
           }
         });
       });
