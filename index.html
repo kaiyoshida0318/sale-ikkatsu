@@ -608,38 +608,38 @@
       border-left: 4px solid var(--brand);
       padding-left: 10px;
     }
-    /* サブビュー前後ナビゲーション (← 前へ / 次へ →) */
-    .subview-nav {
-      margin-left: auto;
-      display: inline-flex;
-      gap: 8px;
-      align-items: center;
-    }
+    /* サブビュー前後ナビゲーション (ヘッダー内に組み込まれた控えめな〈〉ボタン)
+       スクロールには追従しない (通常の文書フローに乗る) */
     .subview-nav-btn {
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 6px 12px;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text);
+      background: transparent;
+      border: 0;
+      padding: 6px 10px;
+      font-size: 22px;
+      line-height: 1;
+      color: #8a8f9a;
       cursor: pointer;
       font-family: inherit;
-      transition: background .12s, border-color .12s, color .12s;
-      max-width: 220px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      transition: color .12s, transform .08s;
+      user-select: none;
+      border-radius: 4px;
+      /* 〈 〉 を鋭角に見せるため字幅を絞る */
+      font-weight: 600;
+      letter-spacing: -2px;
     }
     .subview-nav-btn:hover:not(:disabled) {
-      background: #eef4fb;
-      border-color: var(--brand);
       color: var(--brand);
+      background: #eef4fb;
+    }
+    .subview-nav-btn:active:not(:disabled) {
+      transform: scale(0.94);
     }
     .subview-nav-btn:disabled {
       opacity: 0;
       pointer-events: none;
-      /* レイアウト保持のため transparent ではなく opacity:0 で空白扱い */
+    }
+    /* 右側のボタンは右端に押し出す */
+    .tool-panel-header > .subview-nav-btn:last-child {
+      margin-left: auto;
     }
     /* サブビューの説明文 (ヘッダーの直下、cardの前) */
     .tool-panel-description {
@@ -2076,7 +2076,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.0</span>
+      <span class="version">v0.52.2</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2150,7 +2150,6 @@
       <!-- サブビュー: 参加商品追加 (RMSデータCSV → 商品一覧) -->
       <div id="tool-add-products" class="tool-panel">
         <div class="tool-panel-header">
-          <button type="button" class="back-btn" data-back>← 戻る</button>
           <h2>① 参加商品追加</h2>
         </div>
         <p class="tool-panel-description">セール参加商品のデータをRMSからダウンロードし、それをSALE一括内に取り込んでいく。</p>
@@ -2198,7 +2197,6 @@
       <!-- サブビュー: セール価格決定 (作成済みの計算結果を表で表示) -->
       <div id="tool-decide-price" class="tool-panel">
         <div class="tool-panel-header">
-          <button type="button" class="back-btn" data-back>← 戻る</button>
           <h2>⑤ 割引率決定</h2>
         </div>
         <p class="tool-panel-description">10～50％OFFの利益額・利益率を見て割引率を決定していく。</p>
@@ -2217,7 +2215,6 @@
       <!-- サブビュー: ⑥ セール用タイトル決定 -->
       <div id="tool-decide-title" class="tool-panel">
         <div class="tool-panel-header">
-          <button type="button" class="back-btn" data-back>← 戻る</button>
           <h2>⑥ セール用タイトル決定</h2>
         </div>
         <p class="tool-panel-description">セール用のタイトルを記入していく。<br>
@@ -2236,7 +2233,6 @@
       <!-- サブビュー: ⑦ RMSアップ用素材ダウンロード -->
       <div id="tool-dl-rms-csv" class="tool-panel">
         <div class="tool-panel-header">
-          <button type="button" class="back-btn" data-back>← 戻る</button>
           <h2>⑦ RMSアップ用素材ダウンロード</h2>
         </div>
         <p class="tool-panel-description">RMSアップ用ファイルの生成材料となる2つのファイルを用意していく。<br>
@@ -2295,7 +2291,6 @@
       <!-- サブビュー: ⑧ RMSアップ用CSV作成 -->
       <div id="tool-make-rms-csv" class="tool-panel">
         <div class="tool-panel-header">
-          <button type="button" class="back-btn" data-back>← 戻る</button>
           <h2>⑧ RMSアップ用CSV作成</h2>
         </div>
         <p class="tool-panel-description">⑦で用意した2つのファイルをアップロードして組み合わせることで、RMSにアップするセールバージョンのCSVファイルを作成する。</p>
@@ -2344,7 +2339,6 @@
       <!-- サブビュー: ② 原価特定 NE-セット商品コード -->
       <div id="tool-cost-set-item" class="tool-panel">
         <div class="tool-panel-header">
-          <button type="button" class="back-btn" data-back>← 戻る</button>
           <h2>② 原価特定-NE-セット商品コード</h2>
         </div>
         <p class="tool-panel-description">割引率を決定するために必要となる原価情報を収集する。<br>
@@ -2383,7 +2377,6 @@
       <!-- サブビュー: ③ 原価特定 NE-セット構成物コード -->
       <div id="tool-cost-set-component" class="tool-panel">
         <div class="tool-panel-header">
-          <button type="button" class="back-btn" data-back>← 戻る</button>
           <h2>③ 原価特定-NE-セット構成物コード</h2>
         </div>
         <p class="tool-panel-description">割引率を決定するために必要となる原価情報を収集する。<br>
@@ -2434,7 +2427,6 @@
       <!-- サブビュー: ④ 原価特定-NE-セット無しコード -->
       <div id="tool-cost-non-set" class="tool-panel">
         <div class="tool-panel-header">
-          <button type="button" class="back-btn" data-back>← 戻る</button>
           <h2>④ 原価特定-NE-セット無しコード</h2>
         </div>
         <p class="tool-panel-description">割引率を決定するために必要となる原価情報を収集する。<br>
@@ -2485,7 +2477,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.52.0 &nbsp;•&nbsp;
+    SALE一括 v0.52.2 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
@@ -3347,46 +3339,46 @@
       return null;
     }
     function updateSubviewNav(viewId) {
+      // 既存のナビボタンを全部除去 (前回のviewのものが残らないように)
+      document.querySelectorAll('.subview-nav-btn').forEach(b => b.remove());
+
       const panel = document.getElementById('tool-' + viewId);
       if (!panel) return;
       const header = panel.querySelector('.tool-panel-header');
       if (!header) return;
-      // 既存のナビを除去
-      const existing = header.querySelector('.subview-nav');
-      if (existing) existing.remove();
       const info = getSubviewNavInfo(viewId);
-      if (!info) return; // workflow経由でないビュー (products / decide-price 等) は対象外…
-      // ただし decide-price と decide-title もワークフロー上のサブビューなのでナビを出す
-      // → workflow 上の action 一致で見つかるので info は取得できる。
-      // セール当日のような1個ブロックで prev/next 両方 null の場合はスキップ
-      if (!info.prev && !info.next) return;
-      const nav = document.createElement('div');
-      nav.className = 'subview-nav';
-      const prevBtn = document.createElement('button');
-      prevBtn.type = 'button';
-      prevBtn.className = 'subview-nav-btn';
-      prevBtn.textContent = info.prev ? `← ${info.prev.label}` : '';
-      prevBtn.disabled = !info.prev;
-      prevBtn.title = info.prev ? `前へ: ${info.prev.label}` : '';
-      prevBtn.addEventListener('click', () => {
-        if (!info.prev || !info.prev.action) return;
-        const v = info.prev.action.replace(/^open-/, '');
-        showView(v);
-      });
-      const nextBtn = document.createElement('button');
-      nextBtn.type = 'button';
-      nextBtn.className = 'subview-nav-btn';
-      nextBtn.textContent = info.next ? `${info.next.label} →` : '';
-      nextBtn.disabled = !info.next;
-      nextBtn.title = info.next ? `次へ: ${info.next.label}` : '';
-      nextBtn.addEventListener('click', () => {
-        if (!info.next || !info.next.action) return;
-        const v = info.next.action.replace(/^open-/, '');
-        showView(v);
-      });
-      nav.appendChild(prevBtn);
-      nav.appendChild(nextBtn);
-      header.appendChild(nav);
+      if (!info) return; // workflow経由でないビュー → ナビなし
+      if (!info.prev && !info.next) return; // 1個ブロック → ナビなし
+
+      // header を「〈   h2 + 余白   〉」のレイアウトに
+      // tool-panel-header はすでに display:flex なので、h2 を中央に伸ばす ml/mr:auto を活かす
+      function makeBtn(item, arrow, isLeft) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'subview-nav-btn';
+        btn.textContent = arrow;
+        if (item) {
+          btn.title = (isLeft ? '前へ: ' : '次へ: ') + item.label;
+          btn.setAttribute('aria-label', btn.title);
+          btn.addEventListener('click', () => {
+            if (!item.action) return;
+            const v = item.action.replace(/^open-/, '');
+            showView(v);
+          });
+        } else {
+          btn.disabled = true;
+        }
+        return btn;
+      }
+      const leftBtn = makeBtn(info.prev, '〈', true);
+      const rightBtn = makeBtn(info.next, '〉', false);
+      // header の先頭に左、末尾に右を挿入
+      header.insertBefore(leftBtn, header.firstChild);
+      header.appendChild(rightBtn);
+    }
+    // メインタブに戻ったときもナビを消す
+    function clearSubviewNav() {
+      document.querySelectorAll('.subview-nav-btn').forEach(b => b.remove());
     }
 
     function getWorkflowState() {
