@@ -1872,7 +1872,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.48.3</span>
+      <span class="version">v0.48.4</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -1951,7 +1951,7 @@
         </div>
 
         <div class="card">
-          <h2>RMSデータのダウンロード</h2>
+          <h2>1. RMSデータのダウンロード</h2>
           <ol class="howto-list">
             <li>RMS - 店舗設定 - <b>1 商品管理</b> - <b>2 CSV一括編集</b> - <b>CSVダウンロード</b></li>
             <li>「<b>商品管理番号で絞り込む</b>」でセール参加商品の商品管理番号を一括貼り付け</li>
@@ -1970,8 +1970,8 @@
         </div>
 
         <div class="card">
-          <h2>CSVをアップロード</h2>
-          <p class="card-lead">上記「RMSデータのダウンロード」で取得したCSVファイルをここでアップロードしてください。</p>
+          <h2>2. RMSデータのアップロード</h2>
+          <p class="card-lead">上記「1. RMSデータのダウンロード」で取得したCSVファイルをここでアップロードしてください。</p>
           <form id="add-products-form">
             <div class="grid">
               <div class="file-input" data-target="rms-products" style="grid-column: 1 / -1;">
@@ -2077,7 +2077,7 @@
         </div>
 
         <div class="card">
-          <h2>ファイルの作成手順</h2>
+          <h2>1. CSVファイルの作成</h2>
           <ol class="howto-list">
             <li>① でアップした<b>RMSデータCSV</b>の「<b>システム連携用SKU番号</b>」列をコピー</li>
             <li>ネクストエンジンの「セット商品検索」を開く</li>
@@ -2087,7 +2087,7 @@
         </div>
 
         <div class="card">
-          <h2>CSVをアップロード</h2>
+          <h2>2. 作成ファイルのアップロード</h2>
           <form id="cost-set-item-form">
             <div class="grid">
               <div class="file-input" data-target="cost-set-item" style="grid-column: 1 / -1;">
@@ -2114,7 +2114,7 @@
         </div>
 
         <div class="card">
-          <h2>1. 検索用ファイルのダウンロード</h2>
+          <h2>1. 検索用ファイルのダウンロード(SALE一括内から)</h2>
           <div class="howto-list" style="padding-left: 0;">
             ② で取り込んだ <b>NE-セット商品コードCSV</b> から、商品コードを抽出した検索用CSVをダウンロードします。<br>
             <span style="color: var(--muted); font-size: 12px;">※「<code>"</code>」は除去・重複は1件にまとめ・ヘッダー「商品コード」付き</span>
@@ -2126,7 +2126,7 @@
         </div>
 
         <div class="card">
-          <h2>2. ファイルの作成手順</h2>
+          <h2>2. CSVファイルの作成</h2>
           <ol class="howto-list">
             <li>上の「検索用CSVをダウンロード」で取得したファイルの<b>商品コード</b>をコピー</li>
             <li>ネクストエンジンの「<b>商品検索</b>」を開く</li>
@@ -2136,7 +2136,7 @@
         </div>
 
         <div class="card">
-          <h2>3. CSVをアップロード</h2>
+          <h2>3. 作成ファイルのアップロード</h2>
           <form id="cost-set-component-form">
             <div class="grid">
               <div class="file-input" data-target="cost-set-component" style="grid-column: 1 / -1;">
@@ -2163,7 +2163,7 @@
         </div>
 
         <div class="card">
-          <h2>1. 検索用ファイルのダウンロード</h2>
+          <h2>1. 検索用ファイルのダウンロード(SALE一括内から)</h2>
           <div class="howto-list" style="padding-left: 0;">
             ① で取り込んだ <b>RMSデータCSV</b> から、「<b>バリエーション項目キー2</b>」以降が空欄の行 (=セット無しの単品候補) の SKU を抽出した検索用CSVをダウンロードします。<br>
             <span style="color: var(--muted); font-size: 12px;">※ヘッダー「商品コード」付き・重複は1件にまとめ</span>
@@ -2175,7 +2175,7 @@
         </div>
 
         <div class="card">
-          <h2>2. ファイルの作成手順</h2>
+          <h2>2. CSVファイルの作成</h2>
           <ol class="howto-list">
             <li>上の「検索用CSVをダウンロード」で取得したファイルの<b>商品コード (システム連携用SKU番号)</b>をコピー</li>
             <li>ネクストエンジンの「<b>商品検索</b>」を開く</li>
@@ -2185,7 +2185,7 @@
         </div>
 
         <div class="card">
-          <h2>3. CSVをアップロード</h2>
+          <h2>3. 作成ファイルのアップロード</h2>
           <form id="cost-non-set-form">
             <div class="grid">
               <div class="file-input" data-target="cost-non-set" style="grid-column: 1 / -1;">
@@ -2207,7 +2207,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.48.3 &nbsp;•&nbsp;
+    SALE一括 v0.48.4 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
