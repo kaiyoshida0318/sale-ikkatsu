@@ -1342,6 +1342,113 @@
       color: #fff;
     }
 
+    /* ⑦ セール後アップ用ファイル保管エリア */
+    .archive-file-area {
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px dashed var(--border);
+    }
+    .archive-file-area-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .archive-dropzone {
+      border: 2px dashed #c0c4cc;
+      border-radius: 8px;
+      background: #fafbfd;
+      padding: 22px 18px;
+      text-align: center;
+      cursor: pointer;
+      transition: background .15s, border-color .15s;
+      outline: none;
+    }
+    .archive-dropzone:hover,
+    .archive-dropzone:focus {
+      background: #f3f6fb;
+      border-color: var(--brand);
+    }
+    .archive-dropzone.is-dragover {
+      background: #eef4fc;
+      border-color: var(--brand);
+    }
+    .archive-dropzone-icon {
+      font-size: 28px;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .archive-dropzone-text {
+      font-size: 14px;
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .archive-dropzone-sub {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    /* 保管済みファイル表示 */
+    .archive-file-saved {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 16px;
+      background: #f0f6e8;
+      border: 1.5px solid #98c97a;
+      border-radius: 8px;
+    }
+    .archive-file-saved-icon {
+      font-size: 26px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .archive-file-saved-info {
+      flex: 1;
+      min-width: 0;
+      line-height: 1.5;
+    }
+    .archive-file-saved-name {
+      font-weight: 700;
+      font-size: 14px;
+      color: #1a5520;
+      word-break: break-all;
+    }
+    .archive-file-saved-meta {
+      font-size: 12px;
+      color: #4a6850;
+      margin-top: 2px;
+    }
+    .archive-file-saved-actions {
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .archive-file-btn {
+      background: #fff;
+      border: 1px solid #b5bbc4;
+      border-radius: 5px;
+      padding: 5px 11px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      font-family: inherit;
+      transition: background .12s, border-color .12s, color .12s;
+    }
+    .archive-file-btn:hover:not(:disabled) {
+      background: #f0f0f2;
+      border-color: #8a929d;
+    }
+    .archive-file-btn.danger {
+      color: #b94a4a;
+      border-color: #d8a9a9;
+    }
+    .archive-file-btn.danger:hover:not(:disabled) {
+      background: #faeaea;
+      border-color: #b94a4a;
+      color: #8b2c2c;
+    }
+
     /* ⑥ セール用タイトル決定 */
     .title-progress {
       margin-left: auto;
@@ -1395,7 +1502,7 @@
       border: 1px solid var(--border);
       border-radius: 8px;
       background: #fff;
-      overflow: hidden;
+      overflow-x: auto;
       transition: box-shadow .3s;
     }
     .dt-table-wrap.is-complete-glow {
@@ -1872,7 +1979,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.48.4</span>
+      <span class="version">v0.49.0</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2033,7 +2140,7 @@
         </div>
 
         <div class="card">
-          <h2>CSVファイルのダウンロード</h2>
+          <h2>1. アップ用ファイルのダウンロード(SALE一括内から)</h2>
           <p class="card-lead">
             すでに取り込み済みのデータと、⑤で選んだ割引率・⑥で入力したセール用タイトルから、
             RMSアップ用のCSVを生成してダウンロードします。<br>
@@ -2046,7 +2153,7 @@
         </div>
 
         <div class="card">
-          <h2>RMSデータのダウンロード</h2>
+          <h2>2. RMSデータのダウンロード</h2>
           <ol class="howto-list">
             <li>RMS - 店舗設定 - <b>1 商品管理</b> - <b>2 CSV一括編集</b> - <b>CSVダウンロード</b></li>
             <li>「<b>商品管理番号で絞り込む</b>」で、先程ダウンロードしたCSVの<b>商品管理番号列全体</b>をコピーして一括貼り付け</li>
@@ -2063,9 +2170,22 @@
               </ul>
               <div class="howto-note" style="margin-top:6px;">※ チェックを入れるのは <b>6箇所</b></div>
             </li>
-            <li>ダウンロードした<b>元ファイル</b>はセール終了後にアップするため手元に保管しておく。<br>
+            <li>ダウンロードした<b>元ファイル</b>はセール終了後にアップするためここに保管しておく。<br>
               その際「<code>dl-normal-item…</code>」というタイトルの「<b>dl-</b>」を外して「<code>normal-item…</code>」とする。</li>
           </ol>
+
+          <!-- 元ファイル保管エリア -->
+          <div class="archive-file-area" id="normal-item-archive-area">
+            <div class="archive-file-area-label">セール後アップ用ファイル保管</div>
+            <div id="normal-item-dropzone" class="archive-dropzone" tabindex="0" role="button" aria-label="ファイルをドロップまたはクリックして保管">
+              <div class="archive-dropzone-empty">
+                <div class="archive-dropzone-icon">📂</div>
+                <div class="archive-dropzone-text">クリックまたはここにドラッグして保管<br><span class="archive-dropzone-sub">セール期間ごとに1ファイル / 推奨ファイル名: normal-item…</span></div>
+              </div>
+              <input type="file" id="normal-item-file-input" accept=".csv,.txt" hidden />
+            </div>
+            <div id="normal-item-status" class="status"></div>
+          </div>
         </div>
       </div>
 
@@ -2207,7 +2327,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.48.4 &nbsp;•&nbsp;
+    SALE一括 v0.49.0 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
@@ -2382,6 +2502,10 @@
       // decide-title サブビューを開くときも再描画
       if (viewId === 'decide-title') {
         if (typeof renderDecideTitleTable === 'function') renderDecideTitleTable();
+      }
+      // dl-rms-csv サブビューを開くときは保管エリアを再描画
+      if (viewId === 'dl-rms-csv') {
+        if (typeof window._renderNormalItemArchive === 'function') window._renderNormalItemArchive();
       }
       // 検索用DLボタンの活性/非活性更新
       if (viewId === 'cost-set-component' || viewId === 'cost-non-set') {
@@ -2845,6 +2969,8 @@
       updateArchivePeriodLabel();
       renderProductTable();
       if (typeof renderWorkflow === "function") renderWorkflow();
+      if (typeof window._renderNormalItemArchive === "function") window._renderNormalItemArchive();
+      if (typeof renderDecideTitleTable === "function") renderDecideTitleTable();
     });
 
     function renderProductTable() {
@@ -4676,6 +4802,198 @@
           console.error(err);
         }
       });
+    })();
+
+    // ⑦ セール後アップ用ファイル保管エリア (RMSからDLした元ファイル "normal-item…" を保管)
+    //   保存先: archive[ym].normalItemCsv = { name, size, uploadedAt, dataB64 }
+    //   セール期間 (年月) ごとに1ファイル。アーカイブと連動。
+    (function bindNormalItemArchive() {
+      const dropzone = document.getElementById('normal-item-dropzone');
+      const fileInput = document.getElementById('normal-item-file-input');
+      const statusEl = document.getElementById('normal-item-status');
+      if (!dropzone || !fileInput) return;
+
+      function setStatus(msg, type) {
+        if (!statusEl) return;
+        statusEl.textContent = msg;
+        statusEl.className = 'status' + (type ? ' ' + type : '');
+      }
+      function formatSize(bytes) {
+        if (!bytes && bytes !== 0) return '';
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / 1024 / 1024).toFixed(2) + ' MB';
+      }
+      function formatDateTime(iso) {
+        if (!iso) return '';
+        try {
+          const d = new Date(iso);
+          const y = d.getFullYear();
+          const m = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          const hh = String(d.getHours()).padStart(2, '0');
+          const mm = String(d.getMinutes()).padStart(2, '0');
+          return `${y}/${m}/${day} ${hh}:${mm}`;
+        } catch (e) { return iso; }
+      }
+
+      function loadEntry() {
+        const ym = currentYM || getCurrentYM();
+        if (!ym) return { ym: null, entry: null };
+        const archive = loadArchive();
+        const data = archive[ym];
+        const entry = (data && data.normalItemCsv) ? data.normalItemCsv : null;
+        return { ym, entry };
+      }
+      function saveEntry(entry) {
+        const ym = currentYM || getCurrentYM();
+        if (!ym) {
+          setStatus('❌ セール期間（開始日時）を先に入力してください', 'error');
+          return false;
+        }
+        const archive = loadArchive();
+        if (!archive[ym]) {
+          archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
+        }
+        if (entry === null) {
+          delete archive[ym].normalItemCsv;
+        } else {
+          archive[ym].normalItemCsv = entry;
+        }
+        saveArchive(archive);
+        return true;
+      }
+
+      function render() {
+        const { ym, entry } = loadEntry();
+        if (!ym) {
+          // セール期間未確定 → 入力不可ヒントを出す
+          dropzone.innerHTML = `
+            <div class="archive-dropzone-empty">
+              <div class="archive-dropzone-icon">⚠️</div>
+              <div class="archive-dropzone-text">セール期間が未設定です<br><span class="archive-dropzone-sub">先に開始日時を入力してください</span></div>
+            </div>
+          `;
+          dropzone.style.opacity = '0.55';
+          dropzone.style.pointerEvents = 'none';
+          return;
+        }
+        dropzone.style.opacity = '';
+        dropzone.style.pointerEvents = '';
+        if (entry && entry.dataB64) {
+          dropzone.innerHTML = `
+            <div class="archive-file-saved">
+              <div class="archive-file-saved-icon">📄</div>
+              <div class="archive-file-saved-info">
+                <div class="archive-file-saved-name">${escapeHtml(entry.name || '(名前なし)')}</div>
+                <div class="archive-file-saved-meta">${escapeHtml(formatSize(entry.size))} ・ アップ: ${escapeHtml(formatDateTime(entry.uploadedAt))}</div>
+              </div>
+              <div class="archive-file-saved-actions">
+                <button type="button" class="archive-file-btn" data-action="download">ダウンロード</button>
+                <button type="button" class="archive-file-btn" data-action="replace">差し替え</button>
+                <button type="button" class="archive-file-btn danger" data-action="delete">削除</button>
+              </div>
+            </div>
+          `;
+        } else {
+          dropzone.innerHTML = `
+            <div class="archive-dropzone-empty">
+              <div class="archive-dropzone-icon">📂</div>
+              <div class="archive-dropzone-text">クリックまたはここにドラッグして保管<br><span class="archive-dropzone-sub">セール期間ごとに1ファイル / 推奨ファイル名: normal-item…</span></div>
+            </div>
+          `;
+        }
+      }
+
+      async function ingestFile(file) {
+        if (!file) return;
+        try {
+          const buf = await file.arrayBuffer();
+          const dataB64 = ab2b64(buf);
+          const entry = {
+            name: file.name || 'unnamed.csv',
+            size: file.size || (buf && buf.byteLength) || 0,
+            uploadedAt: new Date().toISOString(),
+            dataB64,
+          };
+          if (!saveEntry(entry)) return;
+          setStatus(`✅ 保管しました: ${entry.name}`, 'success');
+          render();
+        } catch (err) {
+          setStatus('❌ 保管失敗: ' + (err.message || String(err)), 'error');
+          console.error(err);
+        }
+      }
+
+      function downloadCurrent() {
+        const { entry } = loadEntry();
+        if (!entry || !entry.dataB64) return;
+        const u8 = b642u8(entry.dataB64);
+        const blob = new Blob([u8], { type: 'application/octet-stream' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = entry.name || 'normal-item.csv';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+      function deleteCurrent() {
+        if (!confirm('保管中のファイルを削除します。よろしいですか?')) return;
+        if (!saveEntry(null)) return;
+        setStatus('🗑️ 削除しました', '');
+        render();
+      }
+
+      // ドロップゾーンのクリック → file input
+      dropzone.addEventListener('click', (e) => {
+        // 内部の各種ボタン (削除/DL/差し替え) はバブリングを止めるが、空白部分のクリックはここで input を開く
+        if (e.target.closest && e.target.closest('.archive-file-btn')) return;
+        fileInput.click();
+      });
+      dropzone.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          fileInput.click();
+        }
+      });
+      fileInput.addEventListener('change', (e) => {
+        const f = e.target.files && e.target.files[0];
+        if (f) ingestFile(f);
+        e.target.value = '';
+      });
+      // ドラッグ&ドロップ
+      ['dragenter', 'dragover'].forEach(ev => dropzone.addEventListener(ev, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.add('is-dragover');
+      }));
+      ['dragleave', 'drop'].forEach(ev => dropzone.addEventListener(ev, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.remove('is-dragover');
+      }));
+      dropzone.addEventListener('drop', (e) => {
+        const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+        if (f) ingestFile(f);
+      });
+      // 内部アクションボタン (event delegation)
+      dropzone.addEventListener('click', (e) => {
+        const btn = e.target.closest && e.target.closest('.archive-file-btn');
+        if (!btn) return;
+        e.stopPropagation();
+        const act = btn.getAttribute('data-action');
+        if (act === 'download') downloadCurrent();
+        else if (act === 'delete') deleteCurrent();
+        else if (act === 'replace') fileInput.click();
+      });
+
+      // 公開: showView / アーカイブ切替時に呼べるよう window に
+      window._renderNormalItemArchive = render;
+
+      // 初回描画
+      render();
     })();
 
     function renderDecidePriceTable() {
