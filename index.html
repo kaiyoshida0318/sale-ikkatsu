@@ -287,20 +287,20 @@
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: 10px;
-      padding: 24px;
+      padding: 22px;
       margin-bottom: 20px;
     }
     .card h2 {
-      margin: 0 0 12px;
-      font-size: 17px;
+      margin: 0 0 14px;
+      font-size: 18px;
       border-left: 4px solid var(--brand);
       padding-left: 10px;
     }
     .card-lead {
       margin: 0 0 14px;
-      font-size: 13px;
+      font-size: 14px;
       color: var(--muted);
-      line-height: 1.6;
+      line-height: 1.65;
     }
     .grid {
       display: grid;
@@ -429,12 +429,12 @@
     .howto-list {
       margin: 4px 0 4px;
       padding-left: 22px;
-      font-size: 14px;
-      line-height: 1.7;
+      font-size: 15px;
+      line-height: 1.75;
       color: var(--text);
     }
     .howto-list li {
-      margin-bottom: 4px;
+      margin-bottom: 6px;
     }
     .howto-list li b {
       font-weight: 700;
@@ -444,11 +444,11 @@
     .howto-checklist {
       list-style: none;
       margin: 6px 0 2px;
-      padding: 8px 12px;
+      padding: 10px 14px;
       background: #fafbfd;
       border: 1px solid #e2e4ec;
       border-radius: 6px;
-      font-size: 13px;
+      font-size: 14px;
       line-height: 1.7;
     }
     .howto-checklist li {
@@ -462,7 +462,7 @@
       top: 0;
       color: #1a7c38;
       font-weight: 700;
-      font-size: 15px;
+      font-size: 16px;
     }
     .howto-checklist li.auto::before {
       content: "▣";
@@ -471,14 +471,14 @@
       top: 0;
       color: #888;
       font-weight: 700;
-      font-size: 14px;
+      font-size: 15px;
     }
     .howto-checklist li.auto {
       color: var(--muted);
     }
     .howto-note {
       color: var(--muted);
-      font-size: 12px;
+      font-size: 13px;
     }
     /* 手順内の説明画像 (⑨など) */
     .howto-image-wrap {
@@ -621,19 +621,19 @@
     }
     .tool-panel-header h2 {
       margin: 0;
-      font-size: 18px;
+      font-size: 22px;
       border-left: 4px solid var(--brand);
-      padding-left: 10px;
+      padding-left: 12px;
     }
     /* サブビューの説明文 (ヘッダーの直下、cardの前) */
     .tool-panel-description {
       background: #f4f7fc;
       border-left: 3px solid var(--brand);
       border-radius: 0 6px 6px 0;
-      padding: 12px 16px;
-      margin: 0 0 18px;
-      font-size: 13px;
-      line-height: 1.7;
+      padding: 14px 18px;
+      margin: 0 0 20px;
+      font-size: 15px;
+      line-height: 1.75;
       color: var(--text);
     }
 
@@ -1239,14 +1239,14 @@
       flex-shrink: 0;
     }
     body[data-view="decide-price"] .tool-panel-header h2 {
-      font-size: 16px;
+      font-size: 18px;
     }
     body[data-view="decide-price"] .tool-panel-description {
       flex-shrink: 0;
       margin-bottom: 8px;
       padding: 8px 12px;
-      font-size: 12px;
-      line-height: 1.5;
+      font-size: 13px;
+      line-height: 1.6;
     }
     body[data-view="decide-price"] #decide-price-status:empty {
       display: none;
@@ -2080,8 +2080,8 @@
       font-weight: 700;
       color: var(--text);
       position: sticky;
-      top: 0;
-      z-index: 2;
+      top: var(--top-bar-h, 0px);
+      z-index: 40;
       border-bottom: 2px solid #d8d8de;
       text-align: center;
     }
@@ -2156,8 +2156,8 @@
       font-weight: 700;
       color: var(--text);
       position: sticky;
-      top: 0;
-      z-index: 2;
+      top: var(--top-bar-h, 0px);
+      z-index: 40;
       border-bottom: 2px solid #d8d8de;
       text-align: center;
     }
@@ -2259,7 +2259,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.19</span>
+      <span class="version">v0.52.21</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
