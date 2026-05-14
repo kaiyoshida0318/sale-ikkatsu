@@ -1734,7 +1734,7 @@
     }
     .product-table.decide-table th.col-name { background: #4a4a55; }
     .product-table.decide-table td.col-name { background: #fff; }
-    /* 赤系 (#ee4d3d) - セット商品コード/商品管理番号/SS用タイトル */
+    /* 赤系 (#ee4d3d) - 商品管理番号/システム連携用SKU番号/商品画像 */
     .product-table.decide-table th.col-red { background: #ee4d3d; }
     .product-table.decide-table td.col-red { background: #fef0ee; }
     /* 緑系 (#3dee56) - 通常価格/原価/送料 */
@@ -2001,7 +2001,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.50.1</span>
+      <span class="version">v0.50.2</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2361,7 +2361,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.50.1 &nbsp;•&nbsp;
+    SALE一括 v0.50.2 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
@@ -4143,9 +4143,9 @@
     // 列定義 (28列、Excel仕様準拠)
     // class: th/td に付けるクラス(色分け用)
     const DECIDE_COLS = [
-      { key: 'setCode',      label: 'セット商品コード', cls: 'col-red',  group: 'main' },
-      { key: 'mgr',          label: '商品管理番号',   cls: 'col-red',  group: 'main' },
-      { key: 'image',        label: '商品画像',       cls: 'col-red',  group: 'main' },
+      { key: 'mgr',          label: '商品管理番号',         cls: 'col-red',  group: 'main' },
+      { key: 'setCode',      label: 'システム連携用SKU番号', cls: 'col-red',  group: 'main' },
+      { key: 'image',        label: '商品画像',             cls: 'col-red',  group: 'main' },
       { key: 'price',        label: '通常価格',       cls: 'col-green',group: 'main' },
       { key: 'cost',         label: '原価',           cls: 'col-green',group: 'main' },
       { key: 'ship',         label: '送料',           cls: 'col-green',group: 'main', editable: true },
