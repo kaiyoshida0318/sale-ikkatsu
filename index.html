@@ -608,9 +608,19 @@
       border-left: 4px solid var(--brand);
       padding-left: 10px;
     }
-    /* サブビュー前後ナビゲーション (ヘッダー内に組み込まれた控えめな〈〉ボタン)
-       スクロールには追従しない (通常の文書フローに乗る) */
+    /* サブビュー前後ナビゲーション
+       画面に対して固定位置 (absolute) に独立配置。ページごとのヘッダー位置に
+       影響されず、常に同じ位置に表示される。スクロールには追従しない。 */
+    .subview-nav {
+      position: absolute;
+      top: 168px; /* メインタブの少し下、⑥のヘッダー付近 */
+      z-index: 5;
+      pointer-events: none;
+    }
+    .subview-nav.subview-nav-left { left: 18px; }
+    .subview-nav.subview-nav-right { right: 18px; }
     .subview-nav-btn {
+      pointer-events: auto;
       background: transparent;
       border: 0;
       padding: 6px 10px;
@@ -619,7 +629,7 @@
       color: #8a8f9a;
       cursor: pointer;
       font-family: inherit;
-      transition: color .12s, transform .08s;
+      transition: color .12s, transform .08s, background .12s;
       user-select: none;
       border-radius: 4px;
       /* 〈 〉 を鋭角に見せるため字幅を絞る */
@@ -636,10 +646,6 @@
     .subview-nav-btn:disabled {
       opacity: 0;
       pointer-events: none;
-    }
-    /* 右側のボタンは右端に押し出す */
-    .tool-panel-header > .subview-nav-btn:last-child {
-      margin-left: auto;
     }
     /* サブビューの説明文 (ヘッダーの直下、cardの前) */
     .tool-panel-description {
@@ -1249,6 +1255,7 @@
       flex-direction: column !important;
       min-height: 0 !important;
     }
+    /* ⑤画面 特殊スタイル */
     body[data-view="decide-price"] .tool-panel-header {
       margin-bottom: 2px;
       flex-shrink: 0;
@@ -2076,7 +2083,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.2</span>
+      <span class="version">v0.52.4</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2477,7 +2484,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.52.2 &nbsp;•&nbsp;
+    SALE一括 v0.52.4 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
@@ -3339,26 +3346,22 @@
       return null;
     }
     function updateSubviewNav(viewId) {
-      // 既存のナビボタンを全部除去 (前回のviewのものが残らないように)
-      document.querySelectorAll('.subview-nav-btn').forEach(b => b.remove());
+      // 既存のナビを全て除去
+      document.querySelectorAll('.subview-nav, .subview-nav-btn').forEach(n => n.remove());
 
-      const panel = document.getElementById('tool-' + viewId);
-      if (!panel) return;
-      const header = panel.querySelector('.tool-panel-header');
-      if (!header) return;
       const info = getSubviewNavInfo(viewId);
       if (!info) return; // workflow経由でないビュー → ナビなし
       if (!info.prev && !info.next) return; // 1個ブロック → ナビなし
 
-      // header を「〈   h2 + 余白   〉」のレイアウトに
-      // tool-panel-header はすでに display:flex なので、h2 を中央に伸ばす ml/mr:auto を活かす
-      function makeBtn(item, arrow, isLeft) {
+      function makeContainer(side, item, arrow) {
+        const c = document.createElement('div');
+        c.className = 'subview-nav subview-nav-' + side;
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'subview-nav-btn';
         btn.textContent = arrow;
         if (item) {
-          btn.title = (isLeft ? '前へ: ' : '次へ: ') + item.label;
+          btn.title = (side === 'left' ? '前へ: ' : '次へ: ') + item.label;
           btn.setAttribute('aria-label', btn.title);
           btn.addEventListener('click', () => {
             if (!item.action) return;
@@ -3368,17 +3371,16 @@
         } else {
           btn.disabled = true;
         }
-        return btn;
+        c.appendChild(btn);
+        return c;
       }
-      const leftBtn = makeBtn(info.prev, '〈', true);
-      const rightBtn = makeBtn(info.next, '〉', false);
-      // header の先頭に左、末尾に右を挿入
-      header.insertBefore(leftBtn, header.firstChild);
-      header.appendChild(rightBtn);
+      // body 直下に絶対配置 (ページに対して固定位置、スクロールで上に流れる)
+      document.body.appendChild(makeContainer('left', info.prev, '〈'));
+      document.body.appendChild(makeContainer('right', info.next, '〉'));
     }
     // メインタブに戻ったときもナビを消す
     function clearSubviewNav() {
-      document.querySelectorAll('.subview-nav-btn').forEach(b => b.remove());
+      document.querySelectorAll('.subview-nav, .subview-nav-btn').forEach(n => n.remove());
     }
 
     function getWorkflowState() {
