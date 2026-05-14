@@ -2063,7 +2063,14 @@
     }
     /* ⑪⑫⑬ (倉庫入れSKU記録/広告削除/広告復活) 上部のH2+説明文を sticky 固定
        - ヘッダー本体 + メインタブバー (--top-bar-h) の直下に固定
-       - 表ヘッダーはさらにその下に固定 (CSS変数 --sub-fixed-h で動的に積み上げ) */
+       - 表ヘッダーはさらにその下に固定 (CSS変数で動的に積み上げ)
+       - <main>のmargin-topがあると、スクロール開始時にH2が一瞬上に動く現象が起きるため
+         該当ビューでは <main> の margin-top を 0 にし、H2 上部の padding で間隔を確保 */
+    body[data-view="sku-record"] main,
+    body[data-view="ad-delete"] main,
+    body[data-view="ad-restore"] main {
+      margin-top: 0;
+    }
     body[data-view="sku-record"] .tool-panel-header,
     body[data-view="ad-delete"] .tool-panel-header,
     body[data-view="ad-restore"] .tool-panel-header {
@@ -2072,7 +2079,7 @@
       background: var(--bg);
       z-index: 39;
       margin-bottom: 0;
-      padding: 14px 0 8px;
+      padding: 24px 0 8px;
     }
     body[data-view="sku-record"] .tool-panel-description,
     body[data-view="ad-delete"] .tool-panel-description,
@@ -2288,7 +2295,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.28</span>
+      <span class="version">v0.52.29</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
