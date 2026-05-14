@@ -2061,6 +2061,27 @@
     #subview-prevnext.is-active ~ .header-toggle-btn {
       margin-left: 8px;
     }
+    /* ⑪⑫⑬ (倉庫入れSKU記録/広告削除/広告復活) 上部のH2+説明文を sticky 固定
+       - ヘッダー本体 + メインタブバー (--top-bar-h) の直下に固定
+       - 表ヘッダーはさらにその下に固定 (CSS変数 --sub-fixed-h で動的に積み上げ) */
+    body[data-view="sku-record"] .tool-panel-header,
+    body[data-view="ad-delete"] .tool-panel-header,
+    body[data-view="ad-restore"] .tool-panel-header {
+      position: sticky;
+      top: var(--top-bar-h, 130px);
+      background: var(--bg);
+      z-index: 39;
+      margin-bottom: 0;
+      padding: 14px 0 8px;
+    }
+    body[data-view="sku-record"] .tool-panel-description,
+    body[data-view="ad-delete"] .tool-panel-description,
+    body[data-view="ad-restore"] .tool-panel-description {
+      position: sticky;
+      top: calc(var(--top-bar-h, 130px) + var(--sub-header-h, 0px));
+      z-index: 38;
+      margin: 0 0 18px;
+    }
     /* ⑪ 倉庫入れSKU記録 */
     .sr-table-wrap {
       border: 1px solid var(--border);
@@ -2089,7 +2110,7 @@
       font-weight: 700;
       color: var(--text);
       position: sticky;
-      top: var(--top-bar-h, 130px);
+      top: calc(var(--top-bar-h, 130px) + var(--sub-header-h, 0px) + var(--sub-desc-h, 0px));
       z-index: 40;
       border-bottom: 2px solid #d8d8de;
       text-align: center;
@@ -2164,7 +2185,7 @@
       font-weight: 700;
       color: var(--text);
       position: sticky;
-      top: var(--top-bar-h, 130px);
+      top: calc(var(--top-bar-h, 130px) + var(--sub-header-h, 0px) + var(--sub-desc-h, 0px));
       z-index: 40;
       border-bottom: 2px solid #d8d8de;
       text-align: center;
@@ -2267,7 +2288,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.27</span>
+      <span class="version">v0.52.28</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2905,6 +2926,30 @@
         // main-tabs-bar は position:sticky;top:0 なので、スクロール後は viewport top:0 に張り付く
         // → サブビュー内の表ヘッダーは viewport top: tH で固定すれば main-tabs-bar の直下に来る
         document.documentElement.style.setProperty('--main-tabs-h', tH + 'px');
+
+        // ⑪⑫⑬ (sku-record/ad-delete/ad-restore) のサブビュー上部 sticky 段重ね
+        // H2見出し + 説明文 をそれぞれ動的計算
+        // - tool-panel-header → --sub-header-h
+        // - tool-panel-description → --sub-desc-h
+        // - 表ヘッダーは calc(top-bar-h + sub-header-h + sub-desc-h) で固定
+        const activeSubViews = ['sku-record', 'ad-delete', 'ad-restore'];
+        const curView = document.body.getAttribute('data-view');
+        if (activeSubViews.indexOf(curView) >= 0) {
+          const panel = document.getElementById('tool-' + curView);
+          if (panel) {
+            const headerEl = panel.querySelector('.tool-panel-header');
+            const descEl = panel.querySelector('.tool-panel-description');
+            const hHsub = headerEl ? headerEl.getBoundingClientRect().height : 0;
+            const dHsub = descEl ? descEl.getBoundingClientRect().height : 0;
+            document.documentElement.style.setProperty('--sub-header-h', hHsub + 'px');
+            document.documentElement.style.setProperty('--sub-desc-h', dHsub + 'px');
+          }
+        } else {
+          // 対象外ビューでは0にリセット (他のサブビューに影響しないように)
+          document.documentElement.style.setProperty('--sub-header-h', '0px');
+          document.documentElement.style.setProperty('--sub-desc-h', '0px');
+        }
+
         if (!archive) return;
         archive.style.top = tabsBottom + 'px';
         const aH = archive.getBoundingClientRect().height;
@@ -4874,9 +4919,9 @@
         const checked = !!whMap[r.sku];
         const trCls = checked ? ' class="is-warehoused"' : '';
         return `<tr${trCls} data-sku="${escapeHtml(r.sku)}">
+          <td class="sr-col-img"><div class="img-placeholder">未取得</div></td>
           <td class="sr-col-mgr">${escapeHtml(r.mgr)}</td>
           <td class="sr-col-sku">${escapeHtml(r.sku)}</td>
-          <td class="sr-col-img"><div class="img-placeholder">未取得</div></td>
           <td class="sr-col-wh"><input type="checkbox" class="sr-wh-check" data-sku="${escapeHtml(r.sku)}"${checked ? ' checked' : ''} aria-label="倉庫入れ"></td>
         </tr>`;
       }).join('');
@@ -4885,9 +4930,9 @@
           <table class="sr-table">
             <thead>
               <tr>
+                <th class="sr-col-img">商品画像</th>
                 <th class="sr-col-mgr">商品管理番号</th>
                 <th class="sr-col-sku">システム連携用SKU番号</th>
-                <th class="sr-col-img">商品画像</th>
                 <th class="sr-col-wh">倉庫入れ</th>
               </tr>
             </thead>
@@ -4950,9 +4995,9 @@
         const checked = !!adMap[mgr];
         const trCls = checked ? ' class="is-ad-deleted"' : '';
         return `<tr${trCls} data-mgr="${escapeHtml(mgr)}">
+          <td class="ad-col-img"><div class="img-placeholder">未取得</div></td>
           <td class="ad-col-mgr">${escapeHtml(mgr)}</td>
           <td class="ad-col-itemcode">${escapeHtml(itemCode)}</td>
-          <td class="ad-col-img"><div class="img-placeholder">未取得</div></td>
           <td class="ad-col-del"><input type="checkbox" class="ad-del-check" data-mgr="${escapeHtml(mgr)}"${checked ? ' checked' : ''} aria-label="広告削除"></td>
         </tr>`;
       }).join('');
@@ -4961,9 +5006,9 @@
           <table class="ad-table">
             <thead>
               <tr>
+                <th class="ad-col-img">商品画像</th>
                 <th class="ad-col-mgr">商品管理番号</th>
                 <th class="ad-col-itemcode">商品コード</th>
-                <th class="ad-col-img">商品画像</th>
                 <th class="ad-col-del">広告削除</th>
               </tr>
             </thead>
@@ -5025,9 +5070,9 @@
         const checked = !!map[mgr];
         const trCls = checked ? ' class="is-ad-deleted"' : '';
         return `<tr${trCls} data-mgr="${escapeHtml(mgr)}">
+          <td class="ad-col-img"><div class="img-placeholder">未取得</div></td>
           <td class="ad-col-mgr">${escapeHtml(mgr)}</td>
           <td class="ad-col-itemcode">${escapeHtml(itemCode)}</td>
-          <td class="ad-col-img"><div class="img-placeholder">未取得</div></td>
           <td class="ad-col-del"><input type="checkbox" class="ad-restore-check" data-mgr="${escapeHtml(mgr)}"${checked ? ' checked' : ''} aria-label="広告復活"></td>
         </tr>`;
       }).join('');
@@ -5036,9 +5081,9 @@
           <table class="ad-table">
             <thead>
               <tr>
+                <th class="ad-col-img">商品画像</th>
                 <th class="ad-col-mgr">商品管理番号</th>
                 <th class="ad-col-itemcode">商品コード</th>
-                <th class="ad-col-img">商品画像</th>
                 <th class="ad-col-del">広告復活</th>
               </tr>
             </thead>
