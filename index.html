@@ -2267,7 +2267,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.26</span>
+      <span class="version">v0.52.27</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2755,6 +2755,74 @@
           <div class="empty-state">対象データがありません。「① 参加商品追加」でRMSデータを取り込んでください。</div>
         </div>
       </div>
+
+      <!-- サブビュー: セール当日① 広告復活 -->
+      <div id="tool-ad-restore" class="tool-panel">
+        <div class="tool-panel-header">
+          <h2>① 広告復活</h2>
+        </div>
+        <p class="tool-panel-description">除外に入れていたセール参加商品のRPP広告を復活させる。</p>
+
+        <div id="ad-restore-status" class="status"></div>
+        <div id="ad-restore-table-container">
+          <div class="empty-state">対象データがありません。「① 参加商品追加」でRMSデータを取り込んでください。</div>
+        </div>
+      </div>
+
+      <!-- サブビュー: セール後① RMSに元データアップロード -->
+      <div id="tool-upload-original" class="tool-panel">
+        <div class="tool-panel-header">
+          <h2>① RMSに元データアップロード</h2>
+        </div>
+        <p class="tool-panel-description">セール開始準備の「⑦ RMSアップ用素材ダウンロード」で保管しておいたCSVファイルをRMSにアップロードする。それにより商品情報をセール前の状態に戻すことができる。<br>
+        アップロードにはWinSCPを使用する。</p>
+
+        <div class="card">
+          <h2>1. 保管ファイルをダウンロード</h2>
+          <p class="card-lead">⑦で保管したCSVファイルをここからダウンロードしてください。差し替えや削除は ⑦ RMSアップ用素材ダウンロード から行ってください。</p>
+          <div class="archive-file-area" id="upload-original-archive-area">
+            <div id="upload-original-display" class="archive-dropzone" style="cursor:default;">
+              <div class="archive-dropzone-empty">
+                <div class="archive-dropzone-icon">📂</div>
+                <div class="archive-dropzone-text">保管ファイルがありません<br><span class="archive-dropzone-sub">⑦ RMSアップ用素材ダウンロード でファイルを保管してください</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>2. RMSにアップロード</h2>
+          <p class="card-lead">上でダウンロードしたファイルを、WinSCPを使ってRMSにアップロードします。</p>
+          <ol class="howto-list upload-rms-steps">
+            <li>WinSCPで <b>【ゆかい屋】upload-NE用</b> にアクセス。</li>
+            <li>1. でダウンロードしたファイルを緑枠下の一覧部分にドラッグアンドドロップ。</li>
+            <li>
+              赤丸のフォルダをダブルクリック。
+              <div class="howto-image-wrap">
+                <img src="./images/upload-rms-1.png" alt="WinSCP 上層フォルダへ移動" class="howto-image" loading="lazy" />
+              </div>
+            </li>
+            <li>
+              「<b>batch</b>」を選択。
+              <div class="howto-image-wrap">
+                <img src="./images/upload-rms-2.png" alt="batch フォルダ選択" class="howto-image" loading="lazy" />
+              </div>
+            </li>
+            <li>
+              ドロップしたファイルをクリックして選択した上で「<b>アップロード</b>」をクリック。
+              <div class="howto-image-wrap">
+                <img src="./images/upload-rms-3.png" alt="アップロード操作" class="howto-image" loading="lazy" />
+              </div>
+            </li>
+            <li>アップロード先が <b>batch</b> になっていることを確認して「<b>OK</b>」をクリック。すると batch にファイルが現れる。</li>
+            <li>
+              20分ほど経つとRMSへの取り込みが完了し、batchからファイルが消える。
+              <div style="margin-top:6px;">※ もし batch の並びにある <b>logs</b> にファイルが現れていた場合は、何らかのエラーが発生したということなので、中身を開いてエラー内容をチェックし対応する。</div>
+            </li>
+            <li>アップから30分程度経ったらRMSで反映確認。</li>
+          </ol>
+        </div>
+      </div>
     </div>
   </main>
 
@@ -2895,7 +2963,7 @@
     // ブラウザ/マウスの「戻る」でサブビューから戻れるよう、サブビュー遷移時は history.pushState する
     let _suppressPushState = false; // popstate由来の呼び出しでは積まない
     const MAIN_TABS = ['products', 'workflow'];
-    const VALID_VIEWS = ['products','workflow','add-products','decide-price','decide-title','dl-rms-csv','make-rms-csv','cost-set-item','cost-set-component','cost-non-set','upload-rms','rms-event','sku-record','ad-delete'];
+    const VALID_VIEWS = ['products','workflow','add-products','decide-price','decide-title','dl-rms-csv','make-rms-csv','cost-set-item','cost-set-component','cost-non-set','upload-rms','rms-event','sku-record','ad-delete','ad-restore','upload-original'];
     const LAST_VIEW_KEY = 'sale-ikkatsu-last-view';
     // 直近のメインタブ(サブビューから戻る時の戻り先)
     let _lastMainTab = 'products';
@@ -2948,6 +3016,14 @@
       // ad-delete サブビュー (⑫) を開くときは表を再描画
       if (viewId === 'ad-delete') {
         if (typeof renderAdDeleteTable === 'function') renderAdDeleteTable();
+      }
+      // ad-restore サブビュー (セール当日①) を開くときは表を再描画
+      if (viewId === 'ad-restore') {
+        if (typeof renderAdRestoreTable === 'function') renderAdRestoreTable();
+      }
+      // upload-original サブビュー (セール後①) を開くときは保管ファイル表示を更新
+      if (viewId === 'upload-original') {
+        if (typeof renderUploadOriginalArchive === 'function') renderUploadOriginalArchive();
       }
       // make-rms-csv サブビュー: 状態はメモリ内のスロットに保持されているので特に再描画不要
       // 検索用DLボタンの活性/非活性更新
@@ -3477,6 +3553,8 @@
       if (typeof renderDecideTitleTable === "function") renderDecideTitleTable();
       if (typeof renderSkuRecordTable === "function") renderSkuRecordTable();
       if (typeof renderAdDeleteTable === "function") renderAdDeleteTable();
+      if (typeof renderAdRestoreTable === "function") renderAdRestoreTable();
+      if (typeof renderUploadOriginalArchive === "function") renderUploadOriginalArchive();
     });
 
     function renderProductTable() {
@@ -3644,7 +3722,7 @@
         label: 'セール当日',
         className: 'block-day',
         buttons: [
-          { id: 'day-ad-restore', label: '広告復活' },
+          { id: 'day-ad-restore', label: '広告復活', action: 'open-ad-restore' },
         ],
       },
       {
@@ -3652,7 +3730,7 @@
         label: 'セール後',
         className: 'block-after',
         buttons: [
-          { id: 'after-upload-original', label: 'RMSに元データアップロード' },
+          { id: 'after-upload-original', label: 'RMSに元データアップロード', action: 'open-upload-original' },
           { id: 'after-sku-restore', label: '倉庫入れSKU復活' },
           { id: 'after-top-image-back', label: 'トップ画像戻し' },
         ],
@@ -4903,6 +4981,158 @@
           if (tr) tr.classList.toggle('is-ad-deleted', cb.checked);
         });
       });
+    }
+
+    // ============================================================
+    // セール当日① 広告復活 (⑫の表と同じ構造、データは独立)
+    // ------------------------------------------------------------
+    // データ: archive[ym].adRestore = { '<mgr>': true }
+    // ============================================================
+    function getAdRestoreMap() {
+      const ym = currentYM || getCurrentYM();
+      if (!ym) return {};
+      const archive = loadArchive();
+      const data = archive[ym];
+      if (!data) return {};
+      return (data.adRestore && typeof data.adRestore === 'object') ? data.adRestore : {};
+    }
+    function setAdRestore(mgr, checked) {
+      const ym = currentYM || getCurrentYM();
+      if (!ym) return;
+      const archive = loadArchive();
+      if (!archive[ym]) return;
+      const map = (archive[ym].adRestore && typeof archive[ym].adRestore === 'object') ? archive[ym].adRestore : {};
+      if (checked) {
+        map[mgr] = true;
+      } else {
+        delete map[mgr];
+      }
+      archive[ym].adRestore = map;
+      saveArchive(archive);
+    }
+    function renderAdRestoreTable() {
+      const container = document.getElementById('ad-restore-table-container');
+      if (!container) return;
+      const rows = getCurrentRows();
+      if (!rows || rows.length === 0) {
+        container.innerHTML = `<div class="empty-state">対象データがありません。「① 参加商品追加」でRMSデータを取り込んでください。</div>`;
+        return;
+      }
+      const map = getAdRestoreMap();
+      const rowsHtml = rows.map(r => {
+        const mgr = r.mgr || '';
+        const itemCode = r.itemCode || '';
+        const checked = !!map[mgr];
+        const trCls = checked ? ' class="is-ad-deleted"' : '';
+        return `<tr${trCls} data-mgr="${escapeHtml(mgr)}">
+          <td class="ad-col-mgr">${escapeHtml(mgr)}</td>
+          <td class="ad-col-itemcode">${escapeHtml(itemCode)}</td>
+          <td class="ad-col-img"><div class="img-placeholder">未取得</div></td>
+          <td class="ad-col-del"><input type="checkbox" class="ad-restore-check" data-mgr="${escapeHtml(mgr)}"${checked ? ' checked' : ''} aria-label="広告復活"></td>
+        </tr>`;
+      }).join('');
+      container.innerHTML = `
+        <div class="ad-table-wrap">
+          <table class="ad-table">
+            <thead>
+              <tr>
+                <th class="ad-col-mgr">商品管理番号</th>
+                <th class="ad-col-itemcode">商品コード</th>
+                <th class="ad-col-img">商品画像</th>
+                <th class="ad-col-del">広告復活</th>
+              </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+        </div>
+      `;
+      container.querySelectorAll('input.ad-restore-check').forEach(cb => {
+        cb.addEventListener('change', () => {
+          const mgr = cb.getAttribute('data-mgr');
+          if (!mgr) return;
+          setAdRestore(mgr, cb.checked);
+          const tr = cb.closest('tr');
+          if (tr) tr.classList.toggle('is-ad-deleted', cb.checked);
+        });
+      });
+    }
+
+    // ============================================================
+    // セール後① RMSに元データアップロード
+    // ------------------------------------------------------------
+    // ⑦で保管した archive[ym].normalItemCsv の読み取り専用表示+DLボタン
+    // ============================================================
+    function renderUploadOriginalArchive() {
+      const display = document.getElementById('upload-original-display');
+      if (!display) return;
+      const ym = currentYM || getCurrentYM();
+      if (!ym) {
+        display.innerHTML = `
+          <div class="archive-dropzone-empty">
+            <div class="archive-dropzone-icon">⚠️</div>
+            <div class="archive-dropzone-text">セール期間が未設定です<br><span class="archive-dropzone-sub">先に開始日時を入力してください</span></div>
+          </div>
+        `;
+        return;
+      }
+      const archive = loadArchive();
+      const data = archive[ym];
+      const entry = (data && data.normalItemCsv) ? data.normalItemCsv : null;
+      if (!entry || !entry.dataB64) {
+        display.innerHTML = `
+          <div class="archive-dropzone-empty">
+            <div class="archive-dropzone-icon">📂</div>
+            <div class="archive-dropzone-text">保管ファイルがありません<br><span class="archive-dropzone-sub">⑦ RMSアップ用素材ダウンロード でファイルを保管してください</span></div>
+          </div>
+        `;
+        return;
+      }
+      // フォーマット関数 (bindNormalItemArchive 内のものと同等)
+      const formatSize = (b) => {
+        if (!b && b !== 0) return '';
+        if (b < 1024) return b + ' B';
+        if (b < 1024*1024) return (b/1024).toFixed(1) + ' KB';
+        return (b/1024/1024).toFixed(2) + ' MB';
+      };
+      const formatDateTime = (iso) => {
+        if (!iso) return '';
+        try {
+          const d = new Date(iso);
+          const y = d.getFullYear();
+          const m = String(d.getMonth()+1).padStart(2,'0');
+          const day = String(d.getDate()).padStart(2,'0');
+          const hh = String(d.getHours()).padStart(2,'0');
+          const mm = String(d.getMinutes()).padStart(2,'0');
+          return `${y}/${m}/${day} ${hh}:${mm}`;
+        } catch (e) { return iso; }
+      };
+      display.innerHTML = `
+        <div class="archive-file-saved">
+          <div class="archive-file-saved-icon">📄</div>
+          <div class="archive-file-saved-info">
+            <div class="archive-file-saved-name">${escapeHtml(entry.name || '(名前なし)')}</div>
+            <div class="archive-file-saved-meta">${escapeHtml(formatSize(entry.size))} ・ アップ: ${escapeHtml(formatDateTime(entry.uploadedAt))}</div>
+          </div>
+          <div class="archive-file-saved-actions">
+            <button type="button" class="archive-file-btn" data-action="download-original">ダウンロード</button>
+          </div>
+        </div>
+      `;
+      const btn = display.querySelector('button[data-action="download-original"]');
+      if (btn) {
+        btn.addEventListener('click', () => {
+          const u8 = b642u8(entry.dataB64);
+          const blob = new Blob([u8], { type: 'application/octet-stream' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = entry.name || 'normal-item.csv';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        });
+      }
     }
 
     function renderDecideTitleTable() {
