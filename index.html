@@ -275,6 +275,10 @@
     body[data-view="decide-price"] main {
       max-width: 100%;
     }
+    /* ⑥ セール用タイトル決定: 表が広いので画面幅いっぱい */
+    body[data-view="decide-title"] main {
+      max-width: 100%;
+    }
     /* ワークフロー画面: 5列ボタンに余裕を持たせるため広げる */
     body[data-view="workflow"] main {
       max-width: 1280px;
@@ -1979,7 +1983,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.49.0</span>
+      <span class="version">v0.49.1</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2327,7 +2331,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.49.0 &nbsp;•&nbsp;
+    SALE一括 v0.49.1 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
