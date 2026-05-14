@@ -588,6 +588,41 @@
       gap: 10px;
       margin-bottom: 14px;
     }
+    /* サブビュー上部の〈〉ナビ (ヘッダーの上の余白に右寄せ) */
+    .subview-prevnext {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 8px;
+      height: 28px;
+      margin-bottom: 6px;
+      flex-shrink: 0;
+    }
+    .subview-prevnext .pn-btn {
+      width: 32px;
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      border-radius: 6px;
+      font-size: 18px;
+      line-height: 1;
+      color: var(--muted);
+      cursor: pointer;
+      font-family: inherit;
+      padding: 0;
+      transition: background 0.12s, color 0.12s;
+    }
+    .subview-prevnext .pn-btn:hover {
+      background: #f0f0f2;
+      color: var(--text);
+    }
+    .subview-prevnext .pn-btn.is-hidden {
+      visibility: hidden;
+      pointer-events: none;
+    }
     .back-btn {
       background: transparent;
       border: 1px solid var(--border);
@@ -2044,7 +2079,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.5</span>
+      <span class="version">v0.52.6</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2117,6 +2152,10 @@
 
       <!-- サブビュー: 参加商品追加 (RMSデータCSV → 商品一覧) -->
       <div id="tool-add-products" class="tool-panel">
+        <div class="subview-prevnext" data-prevnext>
+          <button type="button" class="pn-btn pn-prev" data-pn="prev" aria-label="前の手順">〈</button>
+          <button type="button" class="pn-btn pn-next" data-pn="next" aria-label="次の手順">〉</button>
+        </div>
         <div class="tool-panel-header">
           <h2>① 参加商品追加</h2>
         </div>
@@ -2164,6 +2203,10 @@
 
       <!-- サブビュー: セール価格決定 (作成済みの計算結果を表で表示) -->
       <div id="tool-decide-price" class="tool-panel">
+        <div class="subview-prevnext" data-prevnext>
+          <button type="button" class="pn-btn pn-prev" data-pn="prev" aria-label="前の手順">〈</button>
+          <button type="button" class="pn-btn pn-next" data-pn="next" aria-label="次の手順">〉</button>
+        </div>
         <div class="tool-panel-header">
           <h2>⑤ 割引率決定</h2>
         </div>
@@ -2182,6 +2225,10 @@
 
       <!-- サブビュー: ⑥ セール用タイトル決定 -->
       <div id="tool-decide-title" class="tool-panel">
+        <div class="subview-prevnext" data-prevnext>
+          <button type="button" class="pn-btn pn-prev" data-pn="prev" aria-label="前の手順">〈</button>
+          <button type="button" class="pn-btn pn-next" data-pn="next" aria-label="次の手順">〉</button>
+        </div>
         <div class="tool-panel-header">
           <h2>⑥ セール用タイトル決定</h2>
         </div>
@@ -2200,6 +2247,10 @@
 
       <!-- サブビュー: ⑦ RMSアップ用素材ダウンロード -->
       <div id="tool-dl-rms-csv" class="tool-panel">
+        <div class="subview-prevnext" data-prevnext>
+          <button type="button" class="pn-btn pn-prev" data-pn="prev" aria-label="前の手順">〈</button>
+          <button type="button" class="pn-btn pn-next" data-pn="next" aria-label="次の手順">〉</button>
+        </div>
         <div class="tool-panel-header">
           <h2>⑦ RMSアップ用素材ダウンロード</h2>
         </div>
@@ -2258,6 +2309,10 @@
 
       <!-- サブビュー: ⑧ RMSアップ用CSV作成 -->
       <div id="tool-make-rms-csv" class="tool-panel">
+        <div class="subview-prevnext" data-prevnext>
+          <button type="button" class="pn-btn pn-prev" data-pn="prev" aria-label="前の手順">〈</button>
+          <button type="button" class="pn-btn pn-next" data-pn="next" aria-label="次の手順">〉</button>
+        </div>
         <div class="tool-panel-header">
           <h2>⑧ RMSアップ用CSV作成</h2>
         </div>
@@ -2306,6 +2361,10 @@
 
       <!-- サブビュー: ② 原価特定 NE-セット商品コード -->
       <div id="tool-cost-set-item" class="tool-panel">
+        <div class="subview-prevnext" data-prevnext>
+          <button type="button" class="pn-btn pn-prev" data-pn="prev" aria-label="前の手順">〈</button>
+          <button type="button" class="pn-btn pn-next" data-pn="next" aria-label="次の手順">〉</button>
+        </div>
         <div class="tool-panel-header">
           <h2>② 原価特定-NE-セット商品コード</h2>
         </div>
@@ -2344,6 +2403,10 @@
 
       <!-- サブビュー: ③ 原価特定 NE-セット構成物コード -->
       <div id="tool-cost-set-component" class="tool-panel">
+        <div class="subview-prevnext" data-prevnext>
+          <button type="button" class="pn-btn pn-prev" data-pn="prev" aria-label="前の手順">〈</button>
+          <button type="button" class="pn-btn pn-next" data-pn="next" aria-label="次の手順">〉</button>
+        </div>
         <div class="tool-panel-header">
           <h2>③ 原価特定-NE-セット構成物コード</h2>
         </div>
@@ -2394,6 +2457,10 @@
 
       <!-- サブビュー: ④ 原価特定-NE-セット無しコード -->
       <div id="tool-cost-non-set" class="tool-panel">
+        <div class="subview-prevnext" data-prevnext>
+          <button type="button" class="pn-btn pn-prev" data-pn="prev" aria-label="前の手順">〈</button>
+          <button type="button" class="pn-btn pn-next" data-pn="next" aria-label="次の手順">〉</button>
+        </div>
         <div class="tool-panel-header">
           <h2>④ 原価特定-NE-セット無しコード</h2>
         </div>
@@ -2445,7 +2512,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.52.5 &nbsp;•&nbsp;
+    SALE一括 v0.52.6 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
@@ -2657,7 +2724,58 @@
           history.replaceState(null, '', location.pathname + location.search);
         }
       }
+
+      // サブビュー上部の〈〉ナビを更新
+      updateSubviewPrevNext(viewId);
     }
+
+    // サブビュー間の前後ナビゲーション
+    // - 対象: WORKFLOW_BLOCKS の prep ブロックで action が 'open-xxx' のボタン群
+    // - 順番はその並び順。端は非表示。ブロック間移動なし。
+    function getPrepSubviewOrder() {
+      const prep = WORKFLOW_BLOCKS.find(b => b.id === 'prep');
+      if (!prep) return [];
+      const out = [];
+      for (const btn of prep.buttons) {
+        if (typeof btn.action === 'string' && btn.action.startsWith('open-')) {
+          out.push(btn.action.slice('open-'.length));
+        }
+      }
+      return out;
+    }
+    function updateSubviewPrevNext(viewId) {
+      const order = getPrepSubviewOrder();
+      const idx = order.indexOf(viewId);
+      // 現在のサブビュー panel 内の prevnext のみ更新 (他は触らない)
+      const panel = document.getElementById('tool-' + viewId);
+      if (!panel) return;
+      const nav = panel.querySelector('.subview-prevnext');
+      if (!nav) return; // このサブビューにナビなし
+      const prevBtn = nav.querySelector('.pn-prev');
+      const nextBtn = nav.querySelector('.pn-next');
+      if (idx <= 0) {
+        prevBtn.classList.add('is-hidden');
+        prevBtn.dataset.target = '';
+      } else {
+        prevBtn.classList.remove('is-hidden');
+        prevBtn.dataset.target = order[idx - 1];
+      }
+      if (idx < 0 || idx >= order.length - 1) {
+        nextBtn.classList.add('is-hidden');
+        nextBtn.dataset.target = '';
+      } else {
+        nextBtn.classList.remove('is-hidden');
+        nextBtn.dataset.target = order[idx + 1];
+      }
+    }
+    // 〈〉クリックでサブビュー遷移 (イベント委譲、1回バインド)
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('.subview-prevnext .pn-btn');
+      if (!btn) return;
+      const target = btn.dataset.target;
+      if (!target) return;
+      showView(target);
+    });
 
     // マウスの「戻る」/ブラウザバック
     window.addEventListener('popstate', (e) => {
