@@ -501,13 +501,6 @@
       background: var(--brand);
       transition: width .3s;
     }
-    footer {
-      text-align: center;
-      padding: 20px;
-      color: var(--muted);
-      font-size: 12px;
-    }
-    footer a { color: var(--muted); }
     .badge {
       display: inline-block;
       padding: 2px 8px;
@@ -1988,6 +1981,52 @@
     .disc-btn.disc-20.is-selected { background: #a14d0a; border-color: #a14d0a; box-shadow: 0 0 0 2px rgba(161,77,10,0.25); }
     .disc-btn.disc-30.is-selected { background: #165d28; border-color: #165d28; box-shadow: 0 0 0 2px rgba(22,93,40,0.25); }
     .disc-btn.disc-50.is-selected { background: #a81f1f; border-color: #a81f1f; box-shadow: 0 0 0 2px rgba(168,31,31,0.25); }
+
+    /* サブビュー前後ナビ 〈〉
+       - main-tabs-bar 内、ヘッダー隠すボタンの左隣に配置
+       - 表示/非表示は JS が .is-active クラスで制御 (WORKFLOW_BLOCKS から自動判定)
+       - 将来 action 付きボタンが増えたら CSS変更なしで自動対応
+       - main-tabs-bar 自体が position:sticky なのでスクロールしても画面上部に固定 */
+    #subview-prevnext {
+      margin-left: auto; /* 右寄せ。後続の header-toggle-btn の margin-left:auto を外す */
+      align-self: center;
+      display: none;
+      gap: 2px;
+      align-items: center;
+    }
+    #subview-prevnext.is-active {
+      display: inline-flex;
+    }
+    #subview-prevnext .pn-btn {
+      width: 32px;
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      border-radius: 6px;
+      font-size: 18px;
+      line-height: 1;
+      color: var(--muted);
+      cursor: pointer;
+      font-family: inherit;
+      padding: 0;
+      transition: background 0.12s, color 0.12s;
+    }
+    #subview-prevnext .pn-btn:hover {
+      background: #eef0f4;
+      color: var(--text);
+    }
+    #subview-prevnext .pn-btn.is-hidden {
+      visibility: hidden;
+      pointer-events: none;
+    }
+    /* ナビが表示中 (is-active) のときは header-toggle-btn の margin-left:auto を解除
+       (代わりに #subview-prevnext 側で右寄せしているため、両方が auto だと並びが壊れる) */
+    #subview-prevnext.is-active ~ .header-toggle-btn {
+      margin-left: 8px;
+    }
   </style>
 </head>
 <body>
@@ -2044,7 +2083,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.7</span>
+      <span class="version">v0.52.11</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2069,6 +2108,11 @@
       </svg>
       セール作業手順
     </button>
+    <!-- サブビュー前後ナビ (①〜⑧サブビュー時のみ表示、ヘッダー隠すボタンの左隣に固定) -->
+    <div id="subview-prevnext" aria-label="前後の手順">
+      <button type="button" class="pn-btn pn-prev" data-pn="prev" aria-label="前の手順">〈</button>
+      <button type="button" class="pn-btn pn-next" data-pn="next" aria-label="次の手順">〉</button>
+    </div>
     <button type="button" id="btn-toggle-header" class="header-toggle-btn" title="ヘッダーを隠す / 表示" aria-label="ヘッダーを隠す / 表示">
       <svg class="icon-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <polyline points="6 15 12 9 18 15"></polyline>
@@ -2444,11 +2488,6 @@
     </div>
   </main>
 
-  <footer>
-    SALE一括 v0.52.7 &nbsp;•&nbsp;
-    <a href="https://github.com/">GitHub</a>
-  </footer>
-
   <!-- 自前のロジック (ExcelJS/merger/builder は ⑬ 撤去に伴い不要に) -->
   <script>
     // ---- 状態管理 ----
@@ -2658,7 +2697,66 @@
         }
       }
 
+      // サブビュー前後ナビ更新
+      updateSubviewPrevNext(viewId);
     }
+
+    // サブビュー前後ナビ: 現在のviewが属するブロック内で前後を計算
+    // - WORKFLOW_BLOCKS の全ブロックを走査し、action 付きボタンを順序として持つ
+    // - 現在のviewが含まれるブロックを特定 → そのブロック内の order で前後を決定
+    // - ブロック間移動はなし。各ブロックの端は非表示
+    // - 将来 ⑨以降や day/after ブロックのボタンに action を付与すれば自動で対応
+    function getCurrentBlockSubviewOrder(viewId) {
+      for (const block of WORKFLOW_BLOCKS) {
+        const order = [];
+        for (const btn of block.buttons) {
+          if (typeof btn.action === 'string' && btn.action.startsWith('open-')) {
+            order.push(btn.action.slice('open-'.length));
+          }
+        }
+        if (order.includes(viewId)) return order;
+      }
+      return [];
+    }
+    function updateSubviewPrevNext(viewId) {
+      const nav = document.getElementById('subview-prevnext');
+      if (!nav) return;
+      const prevBtn = nav.querySelector('.pn-prev');
+      const nextBtn = nav.querySelector('.pn-next');
+      const order = getCurrentBlockSubviewOrder(viewId);
+      const idx = order.indexOf(viewId);
+      if (idx < 0) {
+        // 対象外view: ナビ自体を非表示にして抜ける
+        nav.classList.remove('is-active');
+        prevBtn.dataset.target = '';
+        nextBtn.dataset.target = '';
+        return;
+      }
+      // 対象view: ナビを表示
+      nav.classList.add('is-active');
+      if (idx <= 0) {
+        prevBtn.classList.add('is-hidden');
+        prevBtn.dataset.target = '';
+      } else {
+        prevBtn.classList.remove('is-hidden');
+        prevBtn.dataset.target = order[idx - 1];
+      }
+      if (idx >= order.length - 1) {
+        nextBtn.classList.add('is-hidden');
+        nextBtn.dataset.target = '';
+      } else {
+        nextBtn.classList.remove('is-hidden');
+        nextBtn.dataset.target = order[idx + 1];
+      }
+    }
+    // 〈〉クリック (イベント委譲、1回バインド)
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('#subview-prevnext .pn-btn');
+      if (!btn) return;
+      const target = btn.dataset.target;
+      if (!target) return;
+      showView(target);
+    });
 
 
     // マウスの「戻る」/ブラウザバック
