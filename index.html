@@ -608,6 +608,17 @@
       border-left: 4px solid var(--brand);
       padding-left: 10px;
     }
+    /* サブビューの説明文 (ヘッダーの直下、cardの前) */
+    .tool-panel-description {
+      background: #f4f7fc;
+      border-left: 3px solid var(--brand);
+      border-radius: 0 6px 6px 0;
+      padding: 12px 16px;
+      margin: 0 0 18px;
+      font-size: 13px;
+      line-height: 1.7;
+      color: var(--text);
+    }
 
     /* メインタブ(アプリ上部の常駐タブ) */
     .main-tabs-bar {
@@ -1211,6 +1222,13 @@
     }
     body[data-view="decide-price"] .tool-panel-header h2 {
       font-size: 16px;
+    }
+    body[data-view="decide-price"] .tool-panel-description {
+      flex-shrink: 0;
+      margin-bottom: 8px;
+      padding: 8px 12px;
+      font-size: 12px;
+      line-height: 1.5;
     }
     body[data-view="decide-price"] #decide-price-status:empty {
       display: none;
@@ -1983,7 +2001,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.49.1</span>
+      <span class="version">v0.50.1</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2060,6 +2078,7 @@
           <button type="button" class="back-btn" data-back>← 戻る</button>
           <h2>① 参加商品追加</h2>
         </div>
+        <p class="tool-panel-description">セール参加商品のデータをRMSからダウンロードし、それをSALE一括内に取り込んでいく。</p>
 
         <div class="card">
           <h2>1. RMSデータのダウンロード</h2>
@@ -2107,6 +2126,7 @@
           <button type="button" class="back-btn" data-back>← 戻る</button>
           <h2>⑤ 割引率決定</h2>
         </div>
+        <p class="tool-panel-description">10～50％OFFの利益額・利益率を見て割引率を決定していく。</p>
 
         <div id="decide-price-status" class="status"></div>
         <div id="decide-price-table-wrap" class="product-table-wrap">
@@ -2125,6 +2145,8 @@
           <button type="button" class="back-btn" data-back>← 戻る</button>
           <h2>⑥ セール用タイトル決定</h2>
         </div>
+        <p class="tool-panel-description">セール用のタイトルを記入していく。<br>
+        スーパーSALEであれば先頭を「【スーパーSALEで◯％OFF】」のようにする。文字数は <b>127文字以内</b>。</p>
 
         <div id="decide-title-table-wrap" class="product-table-wrap">
           <div id="decide-title-table-container">
@@ -2142,6 +2164,8 @@
           <button type="button" class="back-btn" data-back>← 戻る</button>
           <h2>⑦ RMSアップ用素材ダウンロード</h2>
         </div>
+        <p class="tool-panel-description">RMSにアップするための2つのファイルを用意していく。<br>
+        RMSからダウンロードしたファイルに関しては、セール後に使用するためこのページで保管しておく。</p>
 
         <div class="card">
           <h2>1. アップ用ファイルのダウンロード(SALE一括内から)</h2>
@@ -2199,6 +2223,8 @@
           <button type="button" class="back-btn" data-back>← 戻る</button>
           <h2>② 原価特定-NE-セット商品コード</h2>
         </div>
+        <p class="tool-panel-description">割引率を決定するために必要となる原価情報を収集する。<br>
+        ここではセット商品の情報をネクストエンジンから抽出し、SALE一括内に取り込んでいく。</p>
 
         <div class="card">
           <h2>1. CSVファイルの作成</h2>
@@ -2236,6 +2262,8 @@
           <button type="button" class="back-btn" data-back>← 戻る</button>
           <h2>③ 原価特定-NE-セット構成物コード</h2>
         </div>
+        <p class="tool-panel-description">割引率を決定するために必要となる原価情報を収集する。<br>
+        ②でネクストエンジンからダウンロードしたデータには、セット商品を構成している商品の個別原価が現れない。そのため、ここではそれらの構成物をネクストエンジンで検索し直し個別の原価を特定していく。</p>
 
         <div class="card">
           <h2>1. 検索用ファイルのダウンロード(SALE一括内から)</h2>
@@ -2285,6 +2313,8 @@
           <button type="button" class="back-btn" data-back>← 戻る</button>
           <h2>④ 原価特定-NE-セット無しコード</h2>
         </div>
+        <p class="tool-panel-description">割引率を決定するために必要となる原価情報を収集する。<br>
+        ここでは、セットのない単一商品をネクストエンジンで検索して原価を特定し、SALE一括内に取り込んでいく。</p>
 
         <div class="card">
           <h2>1. 検索用ファイルのダウンロード(SALE一括内から)</h2>
@@ -2331,7 +2361,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.49.1 &nbsp;•&nbsp;
+    SALE一括 v0.50.1 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
