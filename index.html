@@ -735,6 +735,12 @@
       gap: 12px;
       align-items: start;
     }
+    /* ブロック間の区切り線 (セール開始準備 / セール当日 / セール後) */
+    .workflow-block + .workflow-block {
+      border-top: 1px solid var(--border);
+      padding-top: 20px;
+      margin-top: 8px;
+    }
     .workflow-block-label {
       padding: 12px 14px;
       border-radius: 8px;
@@ -1866,7 +1872,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.48.2</span>
+      <span class="version">v0.48.3</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2201,7 +2207,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.48.2 &nbsp;•&nbsp;
+    SALE一括 v0.48.3 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
