@@ -480,6 +480,26 @@
       color: var(--muted);
       font-size: 12px;
     }
+    /* 手順内の説明画像 (⑨など) */
+    .howto-image-wrap {
+      margin: 8px 0 12px;
+      padding: 8px;
+      background: #fafbfd;
+      border: 1px solid #e2e4ec;
+      border-radius: 6px;
+      display: inline-block;
+      max-width: 100%;
+    }
+    .howto-image {
+      display: block;
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+      border: 1px solid #d0d4dc;
+    }
+    .upload-rms-steps li {
+      margin-bottom: 10px;
+    }
     .progress {
       margin-top: 12px;
       padding: 14px 18px;
@@ -2083,7 +2103,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.11</span>
+      <span class="version">v0.52.12</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2485,6 +2505,47 @@
           </form>
         </div>
       </div>
+
+      <!-- サブビュー: ⑨ RMSにアップロード -->
+      <div id="tool-upload-rms" class="tool-panel">
+        <div class="tool-panel-header">
+          <h2>⑨ RMSにアップロード</h2>
+        </div>
+        <p class="tool-panel-description">⑧で作成した「normal-item-sale」ファイルをRMSにアップロードしていく。<br>
+        アップロードにはWinSCPを使用する。</p>
+
+        <div class="card">
+          <h2>アップロードの手順</h2>
+          <ol class="howto-list upload-rms-steps">
+            <li>WinSCPで <b>【ゆかい屋】upload-NE用</b> にアクセス。</li>
+            <li>「<b>normal-item-sale</b>」ファイルを緑枠下の一覧部分にドラッグアンドドロップ。</li>
+            <li>
+              赤丸のフォルダをダブルクリック。
+              <div class="howto-image-wrap">
+                <img src="./images/upload-rms-1.png" alt="WinSCP 上層フォルダへ移動" class="howto-image" loading="lazy" />
+              </div>
+            </li>
+            <li>
+              「<b>batch</b>」を選択。
+              <div class="howto-image-wrap">
+                <img src="./images/upload-rms-2.png" alt="batch フォルダ選択" class="howto-image" loading="lazy" />
+              </div>
+            </li>
+            <li>
+              ドロップした「<b>normal-item-sale</b>」をクリックして選択した上で「<b>アップロード</b>」をクリック。
+              <div class="howto-image-wrap">
+                <img src="./images/upload-rms-3.png" alt="アップロード操作" class="howto-image" loading="lazy" />
+              </div>
+            </li>
+            <li>アップロード先が <b>batch</b> になっていることを確認して「<b>OK</b>」をクリック。すると batch にファイルが現れる。</li>
+            <li>
+              20分ほど経つとRMSへの取り込みが完了し、batchからファイルが消える。
+              <div class="howto-note" style="margin-top:6px;">※ もし batch の並びにある <b>logs</b> にファイルが現れていた場合は、何らかのエラーが発生したということなので、中身を開いてエラー内容をチェックし対応する。</div>
+            </li>
+            <li>アップから30分程度経ったら楽天RMSで反映確認。</li>
+          </ol>
+        </div>
+      </div>
     </div>
   </main>
 
@@ -2621,7 +2682,7 @@
     // ブラウザ/マウスの「戻る」でサブビューから戻れるよう、サブビュー遷移時は history.pushState する
     let _suppressPushState = false; // popstate由来の呼び出しでは積まない
     const MAIN_TABS = ['products', 'workflow'];
-    const VALID_VIEWS = ['products','workflow','add-products','decide-price','decide-title','dl-rms-csv','make-rms-csv','cost-set-item','cost-set-component','cost-non-set'];
+    const VALID_VIEWS = ['products','workflow','add-products','decide-price','decide-title','dl-rms-csv','make-rms-csv','cost-set-item','cost-set-component','cost-non-set','upload-rms'];
     const LAST_VIEW_KEY = 'sale-ikkatsu-last-view';
     // 直近のメインタブ(サブビューから戻る時の戻り先)
     let _lastMainTab = 'products';
@@ -3345,7 +3406,7 @@
           { id: 'prep-decide-title', label: 'セール用タイトル決定', action: 'open-decide-title' },
           { id: 'prep-dl-rms-csv', label: 'RMSアップ用素材ダウンロード', action: 'open-dl-rms-csv' },
           { id: 'prep-make-rms-csv', label: 'RMSアップ用CSV作成', action: 'open-make-rms-csv' },
-          { id: 'prep-upload-rms', label: 'RMSにアップロード' },
+          { id: 'prep-upload-rms', label: 'RMSにアップロード', action: 'open-upload-rms' },
           { id: 'prep-rms-event', label: 'RMSイベント申請' },
           { id: 'prep-sku-record', label: '倉庫入れSKU記録' },
           { id: 'prep-ad-delete', label: '広告削除' },
