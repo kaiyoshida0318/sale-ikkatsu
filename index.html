@@ -1382,6 +1382,23 @@
       font-size: 14px;
       font-weight: 700;
       color: var(--text);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .mk-slot-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--brand);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 800;
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      flex-shrink: 0;
     }
     .mk-slot-sub {
       font-size: 12px;
@@ -2026,7 +2043,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.51.3</span>
+      <span class="version">v0.51.4</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2256,7 +2273,7 @@
 
           <div class="mk-slots">
             <div class="mk-slot" data-slot="sale">
-              <div class="mk-slot-label">① SALE一括内で生成したCSV</div>
+              <div class="mk-slot-label"><span class="mk-slot-badge">A</span>SALE一括内で生成したCSV</div>
               <div class="mk-slot-sub">⑦ 手順1でSALE一括からDLしたファイル(RMSアップ用素材)</div>
               <div id="mk-slot-sale-zone" class="archive-dropzone" tabindex="0" role="button" aria-label="クリックまたはドラッグでファイルをセット">
                 <div class="archive-dropzone-empty">
@@ -2268,7 +2285,7 @@
             </div>
 
             <div class="mk-slot" data-slot="rms">
-              <div class="mk-slot-label">② RMSからダウンロードしたCSV</div>
+              <div class="mk-slot-label"><span class="mk-slot-badge">B</span>RMSからダウンロードしたCSV</div>
               <div class="mk-slot-sub">⑦ 手順2でRMSからDLしたファイル (normal-item…)</div>
               <div id="mk-slot-rms-zone" class="archive-dropzone" tabindex="0" role="button" aria-label="クリックまたはドラッグでファイルをセット">
                 <div class="archive-dropzone-empty">
@@ -2435,7 +2452,7 @@
   </main>
 
   <footer>
-    SALE一括 v0.51.3 &nbsp;•&nbsp;
+    SALE一括 v0.51.4 &nbsp;•&nbsp;
     <a href="https://github.com/">GitHub</a>
   </footer>
 
