@@ -2090,7 +2090,7 @@
       font-weight: 700;
       color: var(--text);
       position: sticky;
-      top: var(--top-bar-h, 0px);
+      top: var(--main-tabs-h, 46px);
       z-index: 40;
       border-bottom: 2px solid #d8d8de;
       text-align: center;
@@ -2166,7 +2166,7 @@
       font-weight: 700;
       color: var(--text);
       position: sticky;
-      top: var(--top-bar-h, 0px);
+      top: var(--main-tabs-h, 46px);
       z-index: 40;
       border-bottom: 2px solid #d8d8de;
       text-align: center;
@@ -2269,7 +2269,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.23</span>
+      <span class="version">v0.52.24</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2835,6 +2835,10 @@
         const tH = tabs.getBoundingClientRect().height;
         const tabsBottom = hH + tH;
         document.documentElement.style.setProperty('--top-bar-h', tabsBottom + 'px');
+        // メインタブバー単独の高さ (サブビューでの表sticky用)
+        // main-tabs-bar は position:sticky;top:0 なので、スクロール後は viewport top:0 に張り付く
+        // → サブビュー内の表ヘッダーは viewport top: tH で固定すれば main-tabs-bar の直下に来る
+        document.documentElement.style.setProperty('--main-tabs-h', tH + 'px');
         if (!archive) return;
         archive.style.top = tabsBottom + 'px';
         const aH = archive.getBoundingClientRect().height;
