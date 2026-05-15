@@ -376,7 +376,7 @@
       content: "⬇ ";
       font-weight: 700;
     }
-    /* ⑬/セール後③ トップ画像 ダウンロードボタン群 */
+    /* ⑬/セール後③ サムネイル ダウンロードボタン群 */
     .top-image-dl-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -2529,7 +2529,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.63</span>
+      <span class="version">v0.52.64</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -3032,16 +3032,16 @@
         </div>
       </div>
 
-      <!-- サブビュー: ⑬ トップ画像変更 -->
+      <!-- サブビュー: ⑬ サムネイル変更 -->
       <div id="tool-thumb-change" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>⑬ トップ画像変更</h2>
+          <h2>⑬ サムネイル変更</h2>
         </div>
-        <p class="tool-panel-description">SALE一括から通常のトップ画像を％ごとにダウンロードし、<br>
-        セール用トップ画像をChatGPTで生成していく。</p>
+        <p class="tool-panel-description">SALE一括から通常のサムネイルを％ごとにダウンロードし、<br>
+        セール用サムネイルをChatGPTで生成していく。</p>
 
         <div class="card">
-          <h2>通常のトップ画像をダウンロード</h2>
+          <h2>通常のサムネイルをダウンロード</h2>
           <div class="top-image-dl-grid">
             <button type="button" data-rate="10" class="top-image-dl-btn disc-10">10%OFF商品</button>
             <button type="button" data-rate="20" class="top-image-dl-btn disc-20">20%OFF商品</button>
@@ -3165,15 +3165,15 @@
         </div>
       </div>
 
-      <!-- サブビュー: セール後③ トップ画像戻し -->
+      <!-- サブビュー: セール後③ サムネイル戻し -->
       <div id="tool-top-image-back" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>③ トップ画像戻し</h2>
+          <h2>③ サムネイル戻し</h2>
         </div>
-        <p class="tool-panel-description">トップ画像をセール用から通常のものに戻していく。</p>
+        <p class="tool-panel-description">サムネイルをセール用から通常のものに戻していく。</p>
 
         <div class="card">
-          <h2>通常のトップ画像をダウンロード</h2>
+          <h2>通常のサムネイルをダウンロード</h2>
           <div class="top-image-dl-grid">
             <button type="button" data-rate="10" class="top-image-dl-btn disc-10">10%OFF商品</button>
             <button type="button" data-rate="20" class="top-image-dl-btn disc-20">20%OFF商品</button>
@@ -3955,7 +3955,7 @@
       if (typeof renderTopImageDlButtons === "function") renderTopImageDlButtons();
     });
 
-    // ⑬トップ画像変更 / セール後③トップ画像戻し の DLボタン末尾に
+    // ⑬サムネイル変更 / セール後③サムネイル戻し の DLボタン末尾に
     // 「(該当商品数)」を付与する。商品管理番号単位で各割引率(10/20/30/50)の件数を集計。
     // 集計ロジック: ①取り込み済み rows(商品管理番号単位) × discounts(SKU→割引率) を
     // mgrToFirstSku を介して mgr → 割引率に解決する (⑫等で使われている同じパターン)。
@@ -4431,7 +4431,7 @@
           { id: 'prep-rms-event', label: 'RMSイベント申請', action: 'open-rms-event' },
           { id: 'prep-sku-record', label: '審査落ちSKU倉庫入れ', action: 'open-sku-record' },
           { id: 'prep-ad-delete', label: '広告削除', action: 'open-ad-delete' },
-          { id: 'prep-thumb-change', label: 'トップ画像変更', action: 'open-thumb-change' },
+          { id: 'prep-thumb-change', label: 'サムネイル変更', action: 'open-thumb-change' },
           { id: 'prep-sp-banner', label: 'スマホ上部バナー設置予約', action: 'open-sp-banner' },
         ],
       },
@@ -4450,7 +4450,7 @@
         buttons: [
           { id: 'after-upload-original', label: 'RMS-元CSVアップロード', action: 'open-upload-original' },
           { id: 'after-sku-restore', label: '審査落ちSKU倉庫出し', action: 'open-sku-restore' },
-          { id: 'after-top-image-back', label: 'トップ画像戻し', action: 'open-top-image-back' },
+          { id: 'after-top-image-back', label: 'サムネイル戻し', action: 'open-top-image-back' },
         ],
       },
     ];
