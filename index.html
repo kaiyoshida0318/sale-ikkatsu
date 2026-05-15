@@ -2206,6 +2206,12 @@
       border-bottom: 2px solid #d8d8de;
       text-align: center;
     }
+    /* ⑪⑭(sku-record/sku-restore) は通常bodyスクロールなので、
+       表ヘッダーはメインタブバーの直下 (--top-bar-h の位置) で固定する */
+    body[data-view="sku-record"] .sr-table thead th,
+    body[data-view="sku-restore"] .sr-table thead th {
+      top: var(--top-bar-h, 130px);
+    }
     .sr-table th.sr-col-mgr,
     .sr-table td.sr-col-mgr {
       width: 140px;
@@ -2379,7 +2385,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.41</span>
+      <span class="version">v0.52.42</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2949,6 +2955,30 @@
           </ol>
         </div>
       </div>
+
+      <!-- サブビュー: セール後② 倉庫入れSKU戻し -->
+      <div id="tool-sku-restore" class="tool-panel">
+        <div class="tool-panel-header">
+          <h2>② 倉庫入れSKU戻し</h2>
+        </div>
+        <p class="tool-panel-description">セール開始準備の「⑪ 倉庫入れSKU記録」で倉庫に入れたSKUを販売中にもどしていく。</p>
+
+        <div class="card">
+          <h2>1. 倉庫から戻す手順</h2>
+          <p>RMSで画像の赤丸部分をクリックし、該当SKUの倉庫指定を「倉庫」から「販売中」に変える。</p>
+          <div class="howto-image-wrap">
+            <img src="./images/sku-record-1.png" alt="RMS 商品一覧 SKUを開く" class="howto-image" loading="lazy" />
+          </div>
+        </div>
+
+        <div class="card sku-record-card">
+          <h2>2. 倉庫入れSKU記録表</h2>
+          <div id="sku-restore-status" class="status"></div>
+          <div id="sku-restore-table-container">
+            <div class="empty-state">対象データがありません。「① 参加商品追加」でRMSデータを取り込んでください。</div>
+          </div>
+        </div>
+      </div>
     </div>
   </main>
 
@@ -3093,7 +3123,7 @@
     // ブラウザ/マウスの「戻る」でサブビューから戻れるよう、サブビュー遷移時は history.pushState する
     let _suppressPushState = false; // popstate由来の呼び出しでは積まない
     const MAIN_TABS = ['products', 'workflow'];
-    const VALID_VIEWS = ['products','workflow','add-products','decide-price','decide-title','dl-rms-csv','make-rms-csv','cost-set-item','cost-set-component','cost-non-set','upload-rms','rms-event','sku-record','ad-delete','ad-restore','upload-original'];
+    const VALID_VIEWS = ['products','workflow','add-products','decide-price','decide-title','dl-rms-csv','make-rms-csv','cost-set-item','cost-set-component','cost-non-set','upload-rms','rms-event','sku-record','ad-delete','ad-restore','upload-original','sku-restore'];
     const LAST_VIEW_KEY = 'sale-ikkatsu-last-view';
     // 直近のメインタブ(サブビューから戻る時の戻り先)
     let _lastMainTab = 'products';
@@ -3154,6 +3184,10 @@
       // upload-original サブビュー (セール後①) を開くときは保管ファイル表示を更新
       if (viewId === 'upload-original') {
         if (typeof renderUploadOriginalArchive === 'function') renderUploadOriginalArchive();
+      }
+      // sku-restore サブビュー (セール後②) を開くときは表を再描画
+      if (viewId === 'sku-restore') {
+        if (typeof renderSkuRestoreTable === 'function') renderSkuRestoreTable();
       }
       // make-rms-csv サブビュー: 状態はメモリ内のスロットに保持されているので特に再描画不要
       // 検索用DLボタンの活性/非活性更新
@@ -3690,6 +3724,7 @@
       if (typeof renderAdDeleteTable === "function") renderAdDeleteTable();
       if (typeof renderAdRestoreTable === "function") renderAdRestoreTable();
       if (typeof renderUploadOriginalArchive === "function") renderUploadOriginalArchive();
+      if (typeof renderSkuRestoreTable === "function") renderSkuRestoreTable();
     });
 
     function renderProductTable() {
@@ -3866,7 +3901,7 @@
         className: 'block-after',
         buttons: [
           { id: 'after-upload-original', label: 'RMSに元データアップロード', action: 'open-upload-original' },
-          { id: 'after-sku-restore', label: '倉庫入れSKU戻し' },
+          { id: 'after-sku-restore', label: '倉庫入れSKU戻し', action: 'open-sku-restore' },
           { id: 'after-top-image-back', label: 'トップ画像戻し' },
         ],
       },
@@ -5067,6 +5102,79 @@
           const sku = cb.getAttribute('data-sku');
           if (!sku) return;
           setWarehouseSku(sku, cb.checked);
+          const tr = cb.closest('tr');
+          if (tr) tr.classList.toggle('is-warehoused', cb.checked);
+        });
+      });
+    }
+
+    // ============================================================
+    // セール後② 倉庫入れSKU戻し (sku-restore)
+    // ------------------------------------------------------------
+    // ⑪と同じ表構造で、データは独立 (archive[ym].skuRestore = { '<sku>': true })
+    // 最右列は「倉庫出し」チェック
+    // ============================================================
+    function getSkuRestoreMap() {
+      const ym = currentYM || getCurrentYM();
+      if (!ym) return {};
+      const archive = loadArchive();
+      const data = archive[ym];
+      if (!data) return {};
+      return (data.skuRestore && typeof data.skuRestore === 'object') ? data.skuRestore : {};
+    }
+    function setSkuRestore(sku, checked) {
+      const ym = currentYM || getCurrentYM();
+      if (!ym) return;
+      const archive = loadArchive();
+      if (!archive[ym]) return;
+      const map = (archive[ym].skuRestore && typeof archive[ym].skuRestore === 'object') ? archive[ym].skuRestore : {};
+      if (checked) {
+        map[sku] = true;
+      } else {
+        delete map[sku];
+      }
+      archive[ym].skuRestore = map;
+      saveArchive(archive);
+    }
+    function renderSkuRestoreTable() {
+      const container = document.getElementById('sku-restore-table-container');
+      if (!container) return;
+      const { rows, reason } = buildSkuRecordRows();
+      if (!rows || rows.length === 0) {
+        container.innerHTML = `<div class="empty-state">${escapeHtml(reason || '対象データがありません')}</div>`;
+        return;
+      }
+      const map = getSkuRestoreMap();
+      const rowsHtml = rows.map(r => {
+        const checked = !!map[r.sku];
+        const trCls = checked ? ' class="is-warehoused"' : '';
+        return `<tr${trCls} data-sku="${escapeHtml(r.sku)}">
+          <td class="sr-col-img"><div class="img-placeholder">未取得</div></td>
+          <td class="sr-col-mgr">${escapeHtml(r.mgr)}</td>
+          <td class="sr-col-sku">${escapeHtml(r.sku)}</td>
+          <td class="sr-col-wh"><input type="checkbox" class="sr-restore-check" data-sku="${escapeHtml(r.sku)}"${checked ? ' checked' : ''} aria-label="倉庫出し"></td>
+        </tr>`;
+      }).join('');
+      container.innerHTML = `
+        <div class="sr-table-wrap">
+          <table class="sr-table">
+            <thead>
+              <tr>
+                <th class="sr-col-img">商品画像</th>
+                <th class="sr-col-mgr">商品管理番号</th>
+                <th class="sr-col-sku">システム連携用SKU番号</th>
+                <th class="sr-col-wh">倉庫出し</th>
+              </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+        </div>
+      `;
+      container.querySelectorAll('input.sr-restore-check').forEach(cb => {
+        cb.addEventListener('change', () => {
+          const sku = cb.getAttribute('data-sku');
+          if (!sku) return;
+          setSkuRestore(sku, cb.checked);
           const tr = cb.closest('tr');
           if (tr) tr.classList.toggle('is-warehoused', cb.checked);
         });
