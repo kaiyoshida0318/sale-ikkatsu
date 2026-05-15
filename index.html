@@ -2540,7 +2540,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.72</span>
+      <span class="version">v0.52.73</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4067,6 +4067,9 @@
     }
 
     // 指定割引率の商品 [{mgr, itemCode, imageUrl, filenameBase}] を返す (imageUrl がある商品のみ)
+    // 商品コードは row.itemCode を信用せず、RMS-CSVから同一商品管理番号のSKU群を集めて
+    // その場で commonPrefixByHyphen で再計算する。これにより過去取り込みデータでも
+    // 最新の共通プレフィクスルールが適用される。
     function getDiscountTargetsForImageDl(rate) {
       const targets = [];
       try {
@@ -4078,7 +4081,7 @@
         const discounts = (data.discounts) || {};
         const baseRows = (data.rows && Array.isArray(data.rows)) ? data.rows : [];
         if (baseRows.length === 0) return targets;
-        // mgr→firstSku マップ
+        // mgr→firstSku マップ + mgr→[sku, sku, ...] マップ
         const text = decodeShiftJIS(b642u8(data.rmsCsvB64));
         const rmsRows = parseCsvText(text);
         if (rmsRows.length < 2) return targets;
@@ -4088,6 +4091,7 @@
         const iPrice = rh.findIndex(x => x && x.indexOf('通常購入販売価格') >= 0);
         if (iMgr < 0 || iSku < 0) return targets;
         const mgrToFirstSku = {};
+        const mgrToSkus = {};
         for (let i = 1; i < rmsRows.length; i++) {
           const r = rmsRows[i];
           if (!r) continue;
@@ -4097,6 +4101,8 @@
           if (!mgr || !sku) continue;
           if (iPrice >= 0 && !priceRaw) continue;
           if (!(mgr in mgrToFirstSku)) mgrToFirstSku[mgr] = sku;
+          if (!mgrToSkus[mgr]) mgrToSkus[mgr] = [];
+          mgrToSkus[mgr].push(sku);
         }
         // 重複ファイル名対策のためのカウンタ
         const nameCount = {};
@@ -4109,7 +4115,9 @@
           if (discounts[firstSku] !== rate) continue;
           const imageUrl = row.imageUrl || '';
           if (!imageUrl) continue; // 画像URLが取得できなかった商品はスキップ
-          const itemCode = (row.itemCode || '').trim();
+          // 商品コードはその場で再計算 (row.itemCode は古いロジックの可能性があるため信用しない)
+          const skus = mgrToSkus[mgr] || [];
+          const itemCode = (skus.length > 0 ? commonPrefixByHyphen(skus) : '').trim();
           // ファイル名ベース: 商品コード優先、空なら商品管理番号でフォールバック
           let base = sanitizeFilenameBase(itemCode) || sanitizeFilenameBase(mgr) || 'image';
           // 同名衝突時は _2, _3... を付ける
