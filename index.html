@@ -2529,7 +2529,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.69</span>
+      <span class="version">v0.52.70</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4043,9 +4043,19 @@
     // - 出力ZIPファイル名: top-XXoff.zip
     // - 画像取得は fetch → 失敗時 canvas フォールバックの2段構え
     // - 取得失敗した分はスキップし、コンソールにログ。残りは正常にZIPへ
+    // - 枚数が ZIP_THRESHOLD 未満なら個別DL、それ以上ならZIP一括
+    const ZIP_THRESHOLD = 6; // 6枚以上でZIP、5枚以下は個別DL
     let _topImageDlInProgress = false;
 
-    // 指定割引率の商品 [{mgr, imageUrl}] を返す (imageUrl がある商品のみ)
+    // ファイル名としてOSで安全な文字列に整形 (Windows/Mac/Linux 共通NG文字を _ に)
+    function sanitizeFilenameBase(name) {
+      const s = String(name || '').trim();
+      if (!s) return '';
+      // / \ ? * : " < > | と制御文字を _ に。先頭末尾の . と空白も除去
+      return s.replace(/[\\\/\?\*\:\"<>\|\x00-\x1f]/g, '_').replace(/^[\.\s]+|[\.\s]+$/g, '');
+    }
+
+    // 指定割引率の商品 [{mgr, itemCode, imageUrl, filenameBase}] を返す (imageUrl がある商品のみ)
     function getDiscountTargetsForImageDl(rate) {
       const targets = [];
       try {
@@ -4077,6 +4087,8 @@
           if (iPrice >= 0 && !priceRaw) continue;
           if (!(mgr in mgrToFirstSku)) mgrToFirstSku[mgr] = sku;
         }
+        // 重複ファイル名対策のためのカウンタ
+        const nameCount = {};
         // 該当割引率の管理番号を抽出
         for (const row of baseRows) {
           const mgr = row.mgr;
@@ -4086,7 +4098,17 @@
           if (discounts[firstSku] !== rate) continue;
           const imageUrl = row.imageUrl || '';
           if (!imageUrl) continue; // 画像URLが取得できなかった商品はスキップ
-          targets.push({ mgr, imageUrl });
+          const itemCode = (row.itemCode || '').trim();
+          // ファイル名ベース: 商品コード優先、空なら商品管理番号でフォールバック
+          let base = sanitizeFilenameBase(itemCode) || sanitizeFilenameBase(mgr) || 'image';
+          // 同名衝突時は _2, _3... を付ける
+          if (nameCount[base]) {
+            nameCount[base]++;
+            base = base + '_' + nameCount[base];
+          } else {
+            nameCount[base] = 1;
+          }
+          targets.push({ mgr, itemCode, imageUrl, filenameBase: base });
         }
       } catch (e) { console.error('getDiscountTargetsForImageDl error:', e); }
       return targets;
@@ -4214,20 +4236,23 @@
       renderTopImageDlButtons();
     }
 
-    // メイン: 指定%OFFの商品画像をZIPでDL
+    // メイン: 指定%OFFの商品画像をDL。
+    // 枚数 < ZIP_THRESHOLD: 個別DL (商品コード.jpg)
+    // 枚数 >= ZIP_THRESHOLD: ZIP一括 (top-XXoff.zip、中身は商品コード.jpg)
     async function handleTopImageDlClick(btn) {
       if (_topImageDlInProgress) return;
       if (btn.classList.contains('is-disabled')) return;
-      if (typeof window.JSZip === 'undefined') {
-        setTopImageDlStatus('ZIPライブラリが読み込めていません。ページをリロードしてください。', 'error');
-        return;
-      }
       const rate = parseInt(btn.getAttribute('data-rate') || '0', 10);
       if (![10, 20, 30, 50].includes(rate)) return;
 
       const targets = getDiscountTargetsForImageDl(rate);
       if (targets.length === 0) {
         setTopImageDlStatus(rate + '%OFF商品の画像がありません。', 'error');
+        return;
+      }
+      const useZip = targets.length >= ZIP_THRESHOLD;
+      if (useZip && typeof window.JSZip === 'undefined') {
+        setTopImageDlStatus('ZIPライブラリが読み込めていません。ページをリロードしてください。', 'error');
         return;
       }
 
@@ -4237,20 +4262,17 @@
       btn.textContent = '取得中 0/' + targets.length;
       setTopImageDlStatus(rate + '%OFF商品の画像を取得中… (0/' + targets.length + ')');
 
-      const zip = new JSZip();
-      let okCount = 0;
+      // 1. 全画像をBlobで取得
+      const fetched = []; // { filenameBase, blob }
       const failed = [];
-
       for (let i = 0; i < targets.length; i++) {
         const t = targets[i];
         try {
           const blob = await fetchImageAsBlob(t.imageUrl);
-          // ZIP内のファイル名: <商品管理番号>.jpg (重複は管理番号単位なので発生しない想定)
-          zip.file(t.mgr + '.jpg', blob);
-          okCount++;
+          fetched.push({ filenameBase: t.filenameBase, blob });
         } catch (e) {
-          console.warn('image dl failed:', t.mgr, t.imageUrl, e);
-          failed.push(t.mgr);
+          console.warn('image dl failed:', t.itemCode || t.mgr, t.imageUrl, e);
+          failed.push(t.itemCode || t.mgr);
         }
         const done = i + 1;
         btn.textContent = '取得中 ' + done + '/' + targets.length;
@@ -4258,19 +4280,44 @@
       }
 
       try {
-        if (okCount === 0) {
+        if (fetched.length === 0) {
           setTopImageDlStatus('画像の取得に全て失敗しました。ネットワーク接続を確認してください。', 'error');
-        } else {
+        } else if (useZip) {
+          // 2-A. ZIP一括DL
           btn.textContent = 'ZIP作成中…';
-          const zipBlob = await zip.generateAsync({ type: 'blob' }, (meta) => {
-            // 圧縮中の進捗 (画像はほぼ非圧縮なので一瞬)
-          });
+          const zip = new JSZip();
+          for (const f of fetched) {
+            zip.file(f.filenameBase + '.jpg', f.blob);
+          }
+          const zipBlob = await zip.generateAsync({ type: 'blob' });
           saveBlobAs(zipBlob, 'top-' + rate + 'off.zip');
           if (failed.length === 0) {
-            setTopImageDlStatus(rate + '%OFF商品の画像 ' + okCount + '件をZIPでダウンロードしました。', 'success');
+            setTopImageDlStatus(rate + '%OFF商品の画像 ' + fetched.length + '件をZIPでダウンロードしました。', 'success');
           } else {
             setTopImageDlStatus(
-              rate + '%OFF商品の画像 ' + okCount + '件をZIPでダウンロードしました。' +
+              rate + '%OFF商品の画像 ' + fetched.length + '件をZIPでダウンロードしました。' +
+              ' (取得失敗 ' + failed.length + '件: ' + failed.slice(0, 5).join(', ') +
+              (failed.length > 5 ? ' …' : '') + ')',
+              'success'
+            );
+          }
+        } else {
+          // 2-B. 個別DL (5枚以下)
+          // 連続クリックすると Chrome が「複数DL許可しますか?」を一度出す。
+          // 各DLの間に少し間隔を空けてブラウザの取り扱いを安定化させる。
+          btn.textContent = '保存中…';
+          for (let i = 0; i < fetched.length; i++) {
+            const f = fetched[i];
+            saveBlobAs(f.blob, f.filenameBase + '.jpg');
+            if (i < fetched.length - 1) {
+              await new Promise(r => setTimeout(r, 250));
+            }
+          }
+          if (failed.length === 0) {
+            setTopImageDlStatus(rate + '%OFF商品の画像 ' + fetched.length + '件をダウンロードしました。', 'success');
+          } else {
+            setTopImageDlStatus(
+              rate + '%OFF商品の画像 ' + fetched.length + '件をダウンロードしました。' +
               ' (取得失敗 ' + failed.length + '件: ' + failed.slice(0, 5).join(', ') +
               (failed.length > 5 ? ' …' : '') + ')',
               'success'
@@ -4278,8 +4325,8 @@
           }
         }
       } catch (e) {
-        console.error('zip generate/save error:', e);
-        setTopImageDlStatus('ZIP生成に失敗しました: ' + (e.message || e), 'error');
+        console.error('dl error:', e);
+        setTopImageDlStatus((useZip ? 'ZIP生成' : '保存') + 'に失敗しました: ' + (e.message || e), 'error');
       } finally {
         btn.textContent = originalLabel;
         _topImageDlInProgress = false;
