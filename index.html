@@ -2109,15 +2109,14 @@
       gap: 12px;
     }
 
-    /* ⑪⑫⑬ (倉庫入れSKU記録/広告削除/広告復活)
+    /* ⑫⑬ (広告削除/広告復活)
        flex chain 方式で「上部ブロックは固定・表エリアだけスクロール」を実現
-       ⑤画面と同じパターン: body自体はスクロールしない、表内部だけスクロール対象 */
-    body[data-view="sku-record"],
+       ⑤画面と同じパターン: body自体はスクロールしない、表内部だけスクロール対象
+       ※ ⑪は手順カード+記録表の構成のため、ここから外して通常bodyスクロールで運用 */
     body[data-view="ad-delete"],
     body[data-view="ad-restore"] {
       overflow: hidden !important;
     }
-    body[data-view="sku-record"] main,
     body[data-view="ad-delete"] main,
     body[data-view="ad-restore"] main {
       margin-top: 4px;
@@ -2127,7 +2126,6 @@
       flex-direction: column !important;
       overflow: hidden !important;
     }
-    body[data-view="sku-record"] main > #app,
     body[data-view="ad-delete"] main > #app,
     body[data-view="ad-restore"] main > #app {
       flex: 1 1 auto !important;
@@ -2136,7 +2134,6 @@
       min-height: 0 !important;
       overflow: hidden !important;
     }
-    body[data-view="sku-record"] #tool-sku-record.tool-panel.active,
     body[data-view="ad-delete"] #tool-ad-delete.tool-panel.active,
     body[data-view="ad-restore"] #tool-ad-restore.tool-panel.active {
       display: flex !important;
@@ -2144,8 +2141,7 @@
       flex-direction: column !important;
       min-height: 0 !important;
     }
-    /* ⑪⑫⑬ 上部のH2見出し: flex-shrink:0 で固定領域 */
-    body[data-view="sku-record"] .tool-panel-header,
+    /* ⑫⑬ 上部のH2見出し: flex-shrink:0 で固定領域 */
     body[data-view="ad-delete"] .tool-panel-header,
     body[data-view="ad-restore"] .tool-panel-header {
       display: flex;
@@ -2155,15 +2151,13 @@
       margin-bottom: 0;
       padding: 12px 0 8px;
     }
-    /* ⑪⑫⑬ 説明文: flex-shrink:0 で固定領域 */
-    body[data-view="sku-record"] .tool-panel-description,
+    /* ⑫⑬ 説明文: flex-shrink:0 で固定領域 */
     body[data-view="ad-delete"] .tool-panel-description,
     body[data-view="ad-restore"] .tool-panel-description {
       flex-shrink: 0;
       margin: 0 0 14px;
     }
-    /* ⑪⑫⑬ 表コンテナ: 残り高さいっぱい、内部スクロール */
-    body[data-view="sku-record"] #sku-record-table-container,
+    /* ⑫⑬ 表コンテナ: 残り高さいっぱい、内部スクロール */
     body[data-view="ad-delete"] #ad-delete-table-container,
     body[data-view="ad-restore"] #ad-restore-table-container {
       flex: 1 1 auto;
@@ -2172,7 +2166,6 @@
       flex-direction: column;
     }
     /* 表ラッパー: 内部スクロールコンテナ */
-    body[data-view="sku-record"] .sr-table-wrap,
     body[data-view="ad-delete"] .ad-table-wrap,
     body[data-view="ad-restore"] .ad-table-wrap {
       flex: 1 1 auto;
@@ -2386,7 +2379,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.39</span>
+      <span class="version">v0.52.40</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2852,12 +2845,24 @@
         <div class="tool-panel-header">
           <h2>⑪ 倉庫入れSKU記録</h2>
         </div>
-        <p class="tool-panel-description">セール参加可否の審査は商品コード単位ではなく、中のSKU単位で行われる。そのため、参加条件を満たしていないSKUがあった場合でも、そのSKUを個別に倉庫に入れることで参加が可能になる。<br>
-        ここでは、倉庫入れSKUが発生した場合にそのSKUを記録していく。</p>
+        <p class="tool-panel-description">セール参加可否の審査は商品コード単位ではなく、中のSKU単位で行われる。<br>
+        そのため、審査の結果✕が出たSKUがあった場合でも、そのSKUだけを倉庫に入れることで再度審査を受けることができる。<br>
+        ここでは、倉庫に入れたSKUを記録をしていく。</p>
 
-        <div id="sku-record-status" class="status"></div>
-        <div id="sku-record-table-container">
-          <div class="empty-state">対象データがありません。「① 参加商品追加」でRMSデータを取り込んでください。</div>
+        <div class="card">
+          <h2>1. 倉庫に入れる手順</h2>
+          <p>RMSで画像の赤丸部分をクリックし、該当SKUの倉庫指定を「販売中」から「倉庫」に変える。</p>
+          <div class="howto-image-wrap">
+            <img src="./images/sku-record-1.png" alt="RMS 商品一覧 SKUを開く" class="howto-image" loading="lazy" />
+          </div>
+        </div>
+
+        <div class="card sku-record-card">
+          <h2>2. 倉庫入れSKU記録表</h2>
+          <div id="sku-record-status" class="status"></div>
+          <div id="sku-record-table-container">
+            <div class="empty-state">対象データがありません。「① 参加商品追加」でRMSデータを取り込んでください。</div>
+          </div>
         </div>
       </div>
 
@@ -3861,7 +3866,7 @@
         className: 'block-after',
         buttons: [
           { id: 'after-upload-original', label: 'RMSに元データアップロード', action: 'open-upload-original' },
-          { id: 'after-sku-restore', label: '倉庫入れSKU復活' },
+          { id: 'after-sku-restore', label: '倉庫入れSKU戻し' },
           { id: 'after-top-image-back', label: 'トップ画像戻し' },
         ],
       },
