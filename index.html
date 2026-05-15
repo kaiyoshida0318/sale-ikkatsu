@@ -2529,7 +2529,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.64</span>
+      <span class="version">v0.52.65</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4092,9 +4092,28 @@
       return targets;
     }
 
-    // URL から画像 Blob を取得 (fetch 直、失敗時は canvas フォールバック)
+    // CORSプロキシ設定: 楽天image.rakuten.co.jp が CORSヘッダを返さないため、
+    // 無料のCORSプロキシ経由で取得する。
+    // 公開プロキシは将来停止する可能性があるので、ここを差し替えるだけで切り替え可能。
+    // 候補: 'https://corsproxy.io/?url=' / 'https://api.allorigins.win/raw?url='
+    const CORS_PROXY_URL = 'https://corsproxy.io/?url=';
+    function buildCorsProxyUrl(originalUrl) {
+      return CORS_PROXY_URL + encodeURIComponent(originalUrl);
+    }
+
+    // URL から画像 Blob を取得。
+    // 順序: ①CORSプロキシ経由 fetch → ②直 fetch → ③canvas 経由
     async function fetchImageAsBlob(url) {
-      // 1. fetch 直
+      // 1. CORSプロキシ経由 fetch (楽天画像は CORS NG なのでこれが主経路)
+      try {
+        const proxied = buildCorsProxyUrl(url);
+        const res = await fetch(proxied, { credentials: 'omit', cache: 'no-cache' });
+        if (res.ok) {
+          const blob = await res.blob();
+          if (blob && blob.size > 0) return blob;
+        }
+      } catch (e) { /* プロキシ失敗 → 次へ */ }
+      // 2. 直 fetch (将来楽天が CORS 対応した場合の保険)
       try {
         const res = await fetch(url, { mode: 'cors', credentials: 'omit', cache: 'no-cache' });
         if (res.ok) {
@@ -4102,7 +4121,7 @@
           if (blob && blob.size > 0) return blob;
         }
       } catch (e) { /* CORS等で失敗 → canvasへ */ }
-      // 2. <img crossorigin> + canvas
+      // 3. <img crossorigin> + canvas (環境次第で動くことがある)
       return new Promise((resolve, reject) => {
         const img = new Image();
         img.crossOrigin = 'anonymous';
