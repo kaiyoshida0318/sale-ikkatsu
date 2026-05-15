@@ -1114,6 +1114,36 @@
       font-size: 11px;
       color: #999;
     }
+    /* 商品画像サムネ汎用 (各表で共通使用)
+       - 各表のセル/プレースホルダーと同じサイズ感に追従 */
+    .product-image-thumb {
+      display: block;
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      margin: 0 auto;
+      background: #fff;
+    }
+    .product-table .product-image-thumb {
+      width: 64px;
+      height: 64px;
+      border-radius: 6px;
+      border: 1px solid #e6e6ec;
+    }
+    .dt-table td.dt-col-img .product-image-thumb,
+    .sr-table td.sr-col-img .product-image-thumb,
+    .ad-table td.ad-col-img .product-image-thumb {
+      width: 56px;
+      height: 56px;
+      border-radius: 4px;
+      border: 1px solid #e6e6ec;
+    }
+    .group-img .product-image-thumb {
+      width: 56px;
+      height: 56px;
+      border-radius: 4px;
+      border: 1px solid #e6e6ec;
+    }
     .product-table .discount-multi {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -2410,7 +2440,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.50</span>
+      <span class="version">v0.52.51</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -3865,7 +3895,7 @@
           return `<tr>
             <td class="mgr">${escapeHtml(r.mgr || '')}</td>
             <td class="mgr">${escapeHtml(r.itemCode || '')}</td>
-            <td class="img-cell"><div class="img-placeholder">未取得</div></td>
+            <td class="img-cell">${imageCellHtml(r.imageUrl)}</td>
             <td class="col-discount${discClass}">${discLabel}</td>
             <td class="name">${escapeHtml(r.name || '')}</td>
           </tr>`;
@@ -3905,6 +3935,18 @@
       return String(s).replace(/[&<>"']/g, c => ({
         '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
       })[c]);
+    }
+
+    // 商品画像セルのHTMLを生成
+    // - imageUrl があれば <img> (CORSなし・遅延読み込み・エラー時はプレースホルダーに置換)
+    // - なければ「未取得」プレースホルダー
+    // ※ 各表 (product-table / dt-table / sr-table / ad-table) で共通使用
+    function imageCellHtml(imageUrl) {
+      if (imageUrl && typeof imageUrl === 'string') {
+        const safe = escapeHtml(imageUrl);
+        return `<img src="${safe}" alt="" class="product-image-thumb" loading="lazy" referrerpolicy="no-referrer" onerror="this.outerHTML='<div class=&quot;img-placeholder&quot;>未取得</div>';">`;
+      }
+      return '<div class="img-placeholder">未取得</div>';
     }
 
     // ---- セール作業フロー ----
@@ -4207,8 +4249,43 @@
       }
     }
 
+    // 楽天RMSの商品画像URL列を組み立てる
+    // - RMSのCSVは「商品画像パス1」「商品画像名1」「PC用販売説明文」内のURL等、
+    //   バージョンや出力種別で列名が違うため、複数候補から最初に見つかったものを採用
+    // - 相対パス (例: "shop/cabinet/01/foo.jpg") の場合は楽天画像CDNのドメインを補完
+    function resolveRakutenImageUrl(raw) {
+      if (!raw) return '';
+      const s = String(raw).trim();
+      if (!s) return '';
+      // 既に絶対URL
+      if (/^https?:\/\//i.test(s)) return s;
+      // 楽天画像パスの典型: "shop/cabinet/..." / "/shop/cabinet/..."
+      const path = s.replace(/^\/+/, '');
+      return 'https://image.rakuten.co.jp/' + path;
+    }
+    // CSVヘッダーから画像URL列のインデックスを返す (見つからなければ -1)
+    function findImageUrlColumn(header) {
+      // 候補を優先順で探索
+      const candidates = [
+        '商品画像URL',
+        '商品画像パス1',
+        '商品画像パス',
+        '商品画像名1',
+        '商品画像名',
+        '画像URL',
+        '画像パス',
+      ];
+      for (const cand of candidates) {
+        const idx = header.findIndex(h => h && h.trim() === cand);
+        if (idx >= 0) return idx;
+      }
+      // 部分一致フォールバック
+      const idxFallback = header.findIndex(h => h && h.indexOf('商品画像') >= 0);
+      return idxFallback;
+    }
+
     // CSVから商品一覧(rows形式)を組み立てる
-    // 戻り値: [{ mgr, itemCode, name }, ...]
+    // 戻り値: [{ mgr, itemCode, name, imageUrl }, ...]
     function buildProductsFromRmsCsv(csvText) {
       const rows = parseCsvText(csvText);
       if (rows.length < 2) return [];
@@ -4216,6 +4293,7 @@
       const idxMgr = header.findIndex(h => h && h.indexOf('商品管理番号') >= 0);
       const idxName = header.findIndex(h => h && h.trim() === '商品名');
       const idxSku = header.findIndex(h => h && h.indexOf('システム連携用SKU番号') >= 0);
+      const idxImg = findImageUrlColumn(header);
       if (idxMgr < 0 || idxName < 0 || idxSku < 0) {
         throw new Error('CSVの列が見つかりません (商品管理番号 / 商品名 / システム連携用SKU番号)');
       }
@@ -4228,10 +4306,15 @@
         if (!mgr) continue;
         const name = (r[idxName] || '').trim();
         const sku = (r[idxSku] || '').trim();
-        if (!groups.has(mgr)) groups.set(mgr, { name, skus: [] });
+        const imgRaw = idxImg >= 0 ? (r[idxImg] || '').trim() : '';
+        if (!groups.has(mgr)) groups.set(mgr, { name, skus: [], imageUrl: '' });
         const g = groups.get(mgr);
         if (!g.name && name) g.name = name;
         if (sku) g.skus.push(sku);
+        // 最初に見つかった非空の画像URLを採用 (商品管理番号 = 商品単位なので大体共通)
+        if (!g.imageUrl && imgRaw) {
+          g.imageUrl = resolveRakutenImageUrl(imgRaw);
+        }
       }
       // rows化
       const result = [];
@@ -4240,6 +4323,7 @@
           mgr: mgr,
           itemCode: commonPrefixByHyphen(g.skus),
           name: g.name,
+          imageUrl: g.imageUrl || '',
         });
       }
       return result;
@@ -4975,6 +5059,13 @@
       }
       const editedCells = (data.editedCells && typeof data.editedCells === 'object') ? data.editedCells : {};
       const discounts = (data.discounts && typeof data.discounts === 'object') ? data.discounts : {};
+      // 商品管理番号 → 画像URL のマップ (archive[ym].rows から)
+      const imgMap = {};
+      if (Array.isArray(data.rows)) {
+        for (const row of data.rows) {
+          if (row && row.mgr && row.imageUrl) imgMap[row.mgr] = row.imageUrl;
+        }
+      }
       const groups = order.map((mgr, idx) => {
         const sku = firstSku[mgr] || '';
         const ed = editedCells[sku] || {};
@@ -4982,7 +5073,7 @@
         const dispName = (ed.name !== undefined && ed.name !== null && ed.name !== '') ? ed.name : baseName;
         const dispSs = (ed.ssTitle !== undefined && ed.ssTitle !== null) ? ed.ssTitle : '';
         const disc = discounts[sku] ?? null;
-        return { mgr, sku, name: dispName, ssTitle: dispSs, discount: disc, _origIdx: idx };
+        return { mgr, sku, name: dispName, ssTitle: dispSs, discount: disc, imageUrl: imgMap[mgr] || '', _origIdx: idx };
       });
       // 割引率の昇順ソート (10 → 20 → 30 → 50)、未選択(null)は末尾、同じ割引率は元の出現順
       const discRank = (d) => (d === 10 || d === 20 || d === 30 || d === 50) ? d : Infinity;
@@ -5091,6 +5182,13 @@
       if (iMgr < 0 || iSku < 0) {
         return { rows: [], reason: 'RMSデータCSVに必要な列が見つかりません' };
       }
+      // 商品管理番号 → 画像URL のマップ (archive[ym].rows から)
+      const imgMap = {};
+      if (Array.isArray(data.rows)) {
+        for (const row of data.rows) {
+          if (row && row.mgr && row.imageUrl) imgMap[row.mgr] = row.imageUrl;
+        }
+      }
       const rows = [];
       for (let i = 1; i < rmsRows.length; i++) {
         const r = rmsRows[i];
@@ -5101,7 +5199,7 @@
         if (!mgr || !sku) continue;
         // 通常価格空欄行は⑤と同じ基準でスキップ
         if (iPrice >= 0 && !priceRaw) continue;
-        rows.push({ mgr, sku });
+        rows.push({ mgr, sku, imageUrl: imgMap[mgr] || '' });
       }
       return { rows, reason: '' };
     }
@@ -5118,7 +5216,7 @@
         const checked = !!whMap[r.sku];
         const trCls = checked ? ' class="is-warehoused"' : '';
         return `<tr${trCls} data-sku="${escapeHtml(r.sku)}">
-          <td class="sr-col-img"><div class="img-placeholder">未取得</div></td>
+          <td class="sr-col-img">${imageCellHtml(r.imageUrl)}</td>
           <td class="sr-col-mgr">${escapeHtml(r.mgr)}</td>
           <td class="sr-col-sku">${escapeHtml(r.sku)}</td>
           <td class="sr-col-wh"><input type="checkbox" class="sr-wh-check" data-sku="${escapeHtml(r.sku)}"${checked ? ' checked' : ''} aria-label="倉庫入れ"></td>
@@ -5199,7 +5297,7 @@
         const checked = !!map[r.sku];
         const trCls = checked ? ' class="is-warehoused"' : '';
         return `<tr${trCls} data-sku="${escapeHtml(r.sku)}">
-          <td class="sr-col-img"><div class="img-placeholder">未取得</div></td>
+          <td class="sr-col-img">${imageCellHtml(r.imageUrl)}</td>
           <td class="sr-col-mgr">${escapeHtml(r.mgr)}</td>
           <td class="sr-col-sku">${escapeHtml(r.sku)}</td>
           <td class="sr-col-wh"><input type="checkbox" class="sr-restore-check" data-sku="${escapeHtml(r.sku)}"${checked ? ' checked' : ''} aria-label="倉庫出し"></td>
@@ -5275,7 +5373,7 @@
         const checked = !!adMap[mgr];
         const trCls = checked ? ' class="is-ad-deleted"' : '';
         return `<tr${trCls} data-mgr="${escapeHtml(mgr)}">
-          <td class="ad-col-img"><div class="img-placeholder">未取得</div></td>
+          <td class="ad-col-img">${imageCellHtml(r.imageUrl)}</td>
           <td class="ad-col-itemcode">${escapeHtml(itemCode)}</td>
           <td class="ad-col-mgr">${escapeHtml(mgr)}</td>
           <td class="ad-col-del"><input type="checkbox" class="ad-del-check" data-mgr="${escapeHtml(mgr)}"${checked ? ' checked' : ''} aria-label="広告削除"></td>
@@ -5362,7 +5460,7 @@
         const checked = !!map[mgr];
         const trCls = checked ? ' class="is-ad-deleted"' : '';
         return `<tr${trCls} data-mgr="${escapeHtml(mgr)}">
-          <td class="ad-col-img"><div class="img-placeholder">未取得</div></td>
+          <td class="ad-col-img">${imageCellHtml(r.imageUrl)}</td>
           <td class="ad-col-itemcode">${escapeHtml(itemCode)}</td>
           <td class="ad-col-mgr">${escapeHtml(mgr)}</td>
           <td class="ad-col-del"><input type="checkbox" class="ad-restore-check" data-mgr="${escapeHtml(mgr)}"${checked ? ' checked' : ''} aria-label="広告復活"></td>
@@ -5504,7 +5602,7 @@
         const cntClass = cntOver ? ' is-over' : '';
         return `<tr data-mgr="${escapeHtml(g.mgr)}">
           <td class="dt-col-mgr">${escapeHtml(g.mgr)}</td>
-          <td class="dt-col-img"><div class="img-placeholder">未取得</div></td>
+          <td class="dt-col-img">${imageCellHtml(g.imageUrl)}</td>
           <td class="dt-col-disc${discClass}">${discLabel}</td>
           <td class="dt-col-name editable" contenteditable="true" data-sku="${escapeHtml(g.sku)}" data-field="name" data-mgr="${escapeHtml(g.mgr)}">${escapeHtml(g.name)}</td>
           <td class="dt-col-ss editable" contenteditable="true" data-sku="${escapeHtml(g.sku)}" data-field="ssTitle" data-mgr="${escapeHtml(g.mgr)}">${escapeHtml(g.ssTitle)}</td>
@@ -6642,6 +6740,17 @@
         const name = row.name || '';
         const sku = row.setCode || '';
         const cur = row.discount ?? null;
+        // 画像URLを archive[ym].rows から逆引き
+        let imgUrl = '';
+        try {
+          const ym = currentYM || getCurrentYM();
+          if (ym) {
+            const archive = loadArchive();
+            const rows = (archive[ym] && Array.isArray(archive[ym].rows)) ? archive[ym].rows : [];
+            const hit = rows.find(r => r && r.mgr === mgr);
+            if (hit && hit.imageUrl) imgUrl = hit.imageUrl;
+          }
+        } catch (e) { /* 無視 */ }
         const btns = [10,20,30,50].map(v =>
           `<button type="button" class="disc-btn ${cur===v ? 'is-selected disc-'+v : ''}" data-discount="${v}">${v}%</button>`
         ).join('');
@@ -6650,11 +6759,9 @@
           : cur === 30 ? '#e8f4ec'
           : cur === 50 ? '#faeaea'
           : '#f7f8fc';
-        // 旧: 赤枠の商品コードバッジ (group-mgr) → 廃止
-        // 新: 商品画像 (現時点では未取得プレースホルダー)
         return `<div class="product-group-header" style="background:${bgColor};">
           <div class="group-header-row1">
-            <div class="group-img"><div class="img-placeholder">未取得</div></div>
+            <div class="group-img">${imageCellHtml(imgUrl)}</div>
             <span class="group-name">${escapeHtml(name)}</span>
             <div class="group-disc-wrap">
               <span class="group-disc-label">割引率</span>
@@ -6684,7 +6791,18 @@
           if (c.key.endsWith('rate') && dispV !== null && dispV !== undefined && dispV !== '') {
             cellInner = escapeHtml(fmtCell(dispV)) + '%';
           } else if (c.key === 'image') {
-            cellInner = `<div class="img-placeholder">未取得</div>`;
+            // ⑤ のSKU行の画像セル: mgr 単位の画像をarchive[ym].rowsから逆引き
+            let imgUrl2 = '';
+            try {
+              const ym2 = currentYM || getCurrentYM();
+              if (ym2) {
+                const archive2 = loadArchive();
+                const rows2 = (archive2[ym2] && Array.isArray(archive2[ym2].rows)) ? archive2[ym2].rows : [];
+                const hit2 = rows2.find(rw => rw && rw.mgr === r.mgr);
+                if (hit2 && hit2.imageUrl) imgUrl2 = hit2.imageUrl;
+              }
+            } catch (e) { /* 無視 */ }
+            cellInner = imageCellHtml(imgUrl2);
           } else {
             cellInner = escapeHtml(fmtCell(dispV));
           }
