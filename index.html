@@ -2379,7 +2379,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.40</span>
+      <span class="version">v0.52.41</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -5118,8 +5118,8 @@
         const trCls = checked ? ' class="is-ad-deleted"' : '';
         return `<tr${trCls} data-mgr="${escapeHtml(mgr)}">
           <td class="ad-col-img"><div class="img-placeholder">未取得</div></td>
-          <td class="ad-col-mgr">${escapeHtml(mgr)}</td>
           <td class="ad-col-itemcode">${escapeHtml(itemCode)}</td>
+          <td class="ad-col-mgr">${escapeHtml(mgr)}</td>
           <td class="ad-col-del"><input type="checkbox" class="ad-del-check" data-mgr="${escapeHtml(mgr)}"${checked ? ' checked' : ''} aria-label="広告削除"></td>
         </tr>`;
       }).join('');
@@ -5129,8 +5129,8 @@
             <thead>
               <tr>
                 <th class="ad-col-img">商品画像</th>
-                <th class="ad-col-mgr">商品管理番号</th>
                 <th class="ad-col-itemcode">商品コード</th>
+                <th class="ad-col-mgr">商品管理番号</th>
                 <th class="ad-col-del">広告削除</th>
               </tr>
             </thead>
@@ -5205,8 +5205,8 @@
         const trCls = checked ? ' class="is-ad-deleted"' : '';
         return `<tr${trCls} data-mgr="${escapeHtml(mgr)}">
           <td class="ad-col-img"><div class="img-placeholder">未取得</div></td>
-          <td class="ad-col-mgr">${escapeHtml(mgr)}</td>
           <td class="ad-col-itemcode">${escapeHtml(itemCode)}</td>
+          <td class="ad-col-mgr">${escapeHtml(mgr)}</td>
           <td class="ad-col-del"><input type="checkbox" class="ad-restore-check" data-mgr="${escapeHtml(mgr)}"${checked ? ' checked' : ''} aria-label="広告復活"></td>
         </tr>`;
       }).join('');
@@ -5216,8 +5216,8 @@
             <thead>
               <tr>
                 <th class="ad-col-img">商品画像</th>
-                <th class="ad-col-mgr">商品管理番号</th>
                 <th class="ad-col-itemcode">商品コード</th>
+                <th class="ad-col-mgr">商品管理番号</th>
                 <th class="ad-col-del">広告復活</th>
               </tr>
             </thead>
