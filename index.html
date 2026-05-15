@@ -1107,7 +1107,6 @@
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: 0 0 8px 8px;
-      padding: 16px;
       overflow-x: auto;
     }
     .product-table {
@@ -1127,6 +1126,9 @@
     .product-table td:last-child {
       border-right: 0;
     }
+    .product-table thead tr {
+      background: #f4f5f8;
+    }
     .product-table th {
       background: #f4f5f8;
       font-weight: 700;
@@ -1141,9 +1143,11 @@
     }
     .product-table tr:hover td { background: #fafbfd; }
     /* 商品名セル: セル本体は幅を制限、内側 .name-clip で3行省略 */
+    /* min-width で最小確保、max-width で上限を切る。画面が狭ければ縮む */
     .product-table td.name {
-      width: 640px;
+      min-width: 320px;
       max-width: 640px;
+      width: 640px;
       vertical-align: middle;
     }
     .product-table .name-clip {
@@ -1172,7 +1176,7 @@
     .product-table th.col-mgr { min-width: 130px; }
     .product-table th.col-itemcode { min-width: 160px; }
     .product-table th.col-img { width: 120px; }
-    .product-table th.col-pname { width: 640px; max-width: 640px; }
+    .product-table th.col-pname { min-width: 320px; max-width: 640px; width: 640px; }
     .product-table th.col-name { min-width: 240px; max-width: 360px; }
     .product-table th.col-discount,
     .product-table td.col-discount {
@@ -1201,7 +1205,8 @@
       font-style: italic;
     }
     .table-hint {
-      margin-top: 10px;
+      margin-top: 0;
+      padding: 12px 16px;
       font-size: 12px;
       color: var(--muted);
     }
@@ -2546,7 +2551,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.74</span>
+      <span class="version">v0.52.76</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2593,7 +2598,6 @@
           <select id="archive-select" class="archive-select">
             <option value="">（履歴なし）</option>
           </select>
-          <span id="archive-period" class="archive-period"></span>
         </div>
 
         <div class="tabs" role="tablist">
@@ -4052,6 +4056,29 @@
       });
     }
 
+    // セール参加商品タブの各タブラベルに該当件数 (N) を表示する。
+    // - 全体: 商品管理番号単位の総数 (baseRows.length)
+    // - 10/20/30/50: getMgrCountByDiscount で割引率指定済みの件数
+    // - 対象: .tabs > .tab (data-offrate 属性で判別)
+    function renderProductTabCounts() {
+      const tabs = document.querySelectorAll('.tabs .tab[data-offrate]');
+      if (tabs.length === 0) return;
+      const counts = getMgrCountByDiscount();
+      const baseRows = getCurrentRows();
+      const total = (baseRows && Array.isArray(baseRows)) ? baseRows.length : 0;
+      tabs.forEach(tab => {
+        const rate = tab.getAttribute('data-offrate');
+        let label, n;
+        if (rate === 'all') { label = '全体'; n = total; }
+        else if (rate === '10') { label = '10%OFF'; n = counts[10] || 0; }
+        else if (rate === '20') { label = '20%OFF'; n = counts[20] || 0; }
+        else if (rate === '30') { label = '30%OFF'; n = counts[30] || 0; }
+        else if (rate === '50') { label = '50%OFF'; n = counts[50] || 0; }
+        else return;
+        tab.textContent = label + ' (' + n + ')';
+      });
+    }
+
     // ---- ⑬/セール後③: 商品画像 ZIP ダウンロード ----
     // 指定割引率 (10/20/30/50) に該当する商品 (商品管理番号単位) の imageUrl を集めて
     // ZIP化してダウンロードする。
@@ -4371,6 +4398,8 @@
     function renderProductTable() {
       const container = document.getElementById('product-table-container');
       if (!container) return;
+      // タブのラベルにも件数を反映 (全体/10/20/30/50)
+      if (typeof renderProductTabCounts === 'function') renderProductTabCounts();
 
       // 列ヘッダー(5列固定)
       const headHtml = `<tr>
