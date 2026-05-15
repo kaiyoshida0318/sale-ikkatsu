@@ -376,7 +376,7 @@
     /* ⑬/セール後③ トップ画像 ダウンロードボタン群 */
     .top-image-dl-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      grid-template-columns: repeat(2, 1fr);
       gap: 14px;
       margin-top: 4px;
     }
@@ -414,6 +414,17 @@
     .top-image-dl-btn.disc-30:hover { background: #d3ebdb; }
     .top-image-dl-btn.disc-50 { border-color: #d83838; color: #d83838; background: #fce8e8; }
     .top-image-dl-btn.disc-50:hover { background: #f8d3d3; }
+    /* 該当商品数 0 のとき: 押せない見た目に。色クラス(disc-XX)より後ろなので確実に上書き */
+    .top-image-dl-btn.is-disabled,
+    .top-image-dl-btn.is-disabled:hover {
+      border-color: #c8ccd1;
+      color: #9aa0a6;
+      background: #f1f3f5;
+      cursor: not-allowed;
+      pointer-events: none;
+      transform: none;
+      box-shadow: none;
+    }
     .status {
       margin-top: 14px;
       font-size: 14px;
@@ -2483,7 +2494,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.58</span>
+      <span class="version">v0.52.62</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2991,16 +3002,16 @@
         <div class="tool-panel-header">
           <h2>⑬ トップ画像変更</h2>
         </div>
-        <p class="tool-panel-description">SALE一括から現在のトップ画像を％ごとにダウンロードし、<br>
+        <p class="tool-panel-description">SALE一括から通常のトップ画像を％ごとにダウンロードし、<br>
         セール用トップ画像をChatGPTで生成していく。</p>
 
         <div class="card">
-          <h2>現在のトップ画像をダウンロード</h2>
+          <h2>通常のトップ画像をダウンロード</h2>
           <div class="top-image-dl-grid">
-            <a href="./images/top-images/top-10.jpg" download class="top-image-dl-btn disc-10">10%OFF商品</a>
-            <a href="./images/top-images/top-20.jpg" download class="top-image-dl-btn disc-20">20%OFF商品</a>
-            <a href="./images/top-images/top-30.jpg" download class="top-image-dl-btn disc-30">30%OFF商品</a>
-            <a href="./images/top-images/top-50.jpg" download class="top-image-dl-btn disc-50">50%OFF商品</a>
+            <a href="./images/top-images/top-10.jpg" download="top-10off.jpg" class="top-image-dl-btn disc-10">10%OFF商品</a>
+            <a href="./images/top-images/top-20.jpg" download="top-20off.jpg" class="top-image-dl-btn disc-20">20%OFF商品</a>
+            <a href="./images/top-images/top-30.jpg" download="top-30off.jpg" class="top-image-dl-btn disc-30">30%OFF商品</a>
+            <a href="./images/top-images/top-50.jpg" download="top-50off.jpg" class="top-image-dl-btn disc-50">50%OFF商品</a>
           </div>
         </div>
       </div>
@@ -3099,7 +3110,7 @@
         <div class="tool-panel-header">
           <h2>② 審査落ちSKU倉庫出し</h2>
         </div>
-        <p class="tool-panel-description">セール開始準備⑪で倉庫に入れたSKUを販売中にもどしていく。</p>
+        <p class="tool-panel-description">セール開始準備⑪で倉庫に入れたSKUを販売中に戻していく。</p>
 
         <div class="card">
           <h2>1. 倉庫から出す手順</h2>
@@ -3123,15 +3134,15 @@
         <div class="tool-panel-header">
           <h2>③ トップ画像戻し</h2>
         </div>
-        <p class="tool-panel-description">トップ画像をセール用から通常のものに差し替えていく。</p>
+        <p class="tool-panel-description">トップ画像をセール用から通常のものに戻していく。</p>
 
         <div class="card">
-          <h2>現在のトップ画像をダウンロード</h2>
+          <h2>通常のトップ画像をダウンロード</h2>
           <div class="top-image-dl-grid">
-            <a href="./images/top-images/top-10.jpg" download class="top-image-dl-btn disc-10">10%OFF商品</a>
-            <a href="./images/top-images/top-20.jpg" download class="top-image-dl-btn disc-20">20%OFF商品</a>
-            <a href="./images/top-images/top-30.jpg" download class="top-image-dl-btn disc-30">30%OFF商品</a>
-            <a href="./images/top-images/top-50.jpg" download class="top-image-dl-btn disc-50">50%OFF商品</a>
+            <a href="./images/top-images/top-10.jpg" download="top-10off.jpg" class="top-image-dl-btn disc-10">10%OFF商品</a>
+            <a href="./images/top-images/top-20.jpg" download="top-20off.jpg" class="top-image-dl-btn disc-20">20%OFF商品</a>
+            <a href="./images/top-images/top-30.jpg" download="top-30off.jpg" class="top-image-dl-btn disc-30">30%OFF商品</a>
+            <a href="./images/top-images/top-50.jpg" download="top-50off.jpg" class="top-image-dl-btn disc-50">50%OFF商品</a>
           </div>
         </div>
       </div>
@@ -3362,6 +3373,11 @@
       // sku-restore サブビュー (セール後②) を開くときは表を再描画
       if (viewId === 'sku-restore') {
         if (typeof renderSkuRestoreTable === 'function') renderSkuRestoreTable();
+      }
+      // thumb-change (⑬) / top-image-back (セール後③) を開くときは
+      // DLボタン末尾の該当商品数を最新化
+      if (viewId === 'thumb-change' || viewId === 'top-image-back') {
+        if (typeof renderTopImageDlButtons === 'function') renderTopImageDlButtons();
       }
       // make-rms-csv サブビュー: 状態はメモリ内のスロットに保持されているので特に再描画不要
       // 検索用DLボタンの活性/非活性更新
@@ -3899,7 +3915,86 @@
       if (typeof renderAdRestoreTable === "function") renderAdRestoreTable();
       if (typeof renderUploadOriginalArchive === "function") renderUploadOriginalArchive();
       if (typeof renderSkuRestoreTable === "function") renderSkuRestoreTable();
+      if (typeof renderTopImageDlButtons === "function") renderTopImageDlButtons();
     });
+
+    // ⑬トップ画像変更 / セール後③トップ画像戻し の DLボタン末尾に
+    // 「(該当商品数)」を付与する。商品管理番号単位で各割引率(10/20/30/50)の件数を集計。
+    // 集計ロジック: ①取り込み済み rows(商品管理番号単位) × discounts(SKU→割引率) を
+    // mgrToFirstSku を介して mgr → 割引率に解決する (⑫等で使われている同じパターン)。
+    function getMgrCountByDiscount() {
+      const result = { 10: 0, 20: 0, 30: 0, 50: 0 };
+      try {
+        const ym = currentYM || (typeof getCurrentYM === 'function' ? getCurrentYM() : null);
+        if (!ym) return result;
+        const archive = loadArchive();
+        const data = archive[ym];
+        if (!data || !data.rmsCsvB64) return result;
+        const discounts = (data.discounts) || {};
+        // baseRows: 商品管理番号単位 (①取り込み済み)
+        const baseRows = (data.rows && Array.isArray(data.rows)) ? data.rows : [];
+        if (baseRows.length === 0) return result;
+        // RMSデータから mgr→最初のSKU マップ作成 (renderProductTableと同ロジック)
+        const text = decodeShiftJIS(b642u8(data.rmsCsvB64));
+        const rmsRows = parseCsvText(text);
+        if (rmsRows.length < 2) return result;
+        const rh = rmsRows[0];
+        const iMgr = rh.findIndex(x => x && x.indexOf('商品管理番号') >= 0);
+        const iSku = rh.findIndex(x => x && x.indexOf('システム連携用SKU番号') >= 0);
+        const iPrice = rh.findIndex(x => x && x.indexOf('通常購入販売価格') >= 0);
+        if (iMgr < 0 || iSku < 0) return result;
+        const mgrToFirstSku = {};
+        for (let i = 1; i < rmsRows.length; i++) {
+          const r = rmsRows[i];
+          if (!r) continue;
+          const mgr = (r[iMgr] || '').trim();
+          const sku = (r[iSku] || '').trim();
+          const priceRaw = iPrice >= 0 ? (r[iPrice] || '').trim() : '';
+          if (!mgr || !sku) continue;
+          if (iPrice >= 0 && !priceRaw) continue;
+          if (!(mgr in mgrToFirstSku)) mgrToFirstSku[mgr] = sku;
+        }
+        // baseRows の各 mgr について割引率を解決してカウント
+        for (const row of baseRows) {
+          const mgr = row.mgr;
+          if (!mgr) continue;
+          const firstSku = mgrToFirstSku[mgr];
+          if (!firstSku) continue;
+          const d = discounts[firstSku];
+          if (d === 10 || d === 20 || d === 30 || d === 50) {
+            result[d]++;
+          }
+        }
+      } catch (e) { /* RMSデータなし等は0のまま */ }
+      return result;
+    }
+
+    // ⑬/セール後③ のDLボタンのテキスト末尾に「(N)」を付与/更新する。
+    // 対象: .top-image-dl-btn (disc-10/20/30/50)。両画面とも同じクラスで描画。
+    // 件数0のときは is-disabled クラスでグレー化&クリック不可にする。
+    function renderTopImageDlButtons() {
+      const counts = getMgrCountByDiscount();
+      document.querySelectorAll('.top-image-dl-btn').forEach(btn => {
+        let rate = null;
+        if (btn.classList.contains('disc-10')) rate = 10;
+        else if (btn.classList.contains('disc-20')) rate = 20;
+        else if (btn.classList.contains('disc-30')) rate = 30;
+        else if (btn.classList.contains('disc-50')) rate = 50;
+        if (rate === null) return;
+        const n = counts[rate] || 0;
+        btn.textContent = rate + '%OFF商品 (' + n + ')';
+        // 0件: 押せない見た目に
+        if (n === 0) {
+          btn.classList.add('is-disabled');
+          btn.setAttribute('aria-disabled', 'true');
+          btn.setAttribute('tabindex', '-1');
+        } else {
+          btn.classList.remove('is-disabled');
+          btn.removeAttribute('aria-disabled');
+          btn.removeAttribute('tabindex');
+        }
+      });
+    }
 
     function renderProductTable() {
       const container = document.getElementById('product-table-container');
