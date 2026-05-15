@@ -2483,7 +2483,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.57</span>
+      <span class="version">v0.52.58</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -3005,6 +3005,26 @@
         </div>
       </div>
 
+      <!-- サブビュー: ⑭ スマホ上部バナー設置予約 -->
+      <div id="tool-sp-banner" class="tool-panel">
+        <div class="tool-panel-header">
+          <h2>⑭ スマホ上部バナー設置予約</h2>
+        </div>
+        <p class="tool-panel-description">RMSでセール用のスマホ上部バナーの設置予約をする。</p>
+
+        <div class="card">
+          <h2>設定手順</h2>
+          <ol class="howto-list">
+            <li>RMSで <b>店舗設定 → 5 デザイン設定 → 共通バナー設定</b> を開く。</li>
+            <li><b>大バナー画像</b> の「<b>+ 追加</b>」をクリック。</li>
+            <li>「<b>スマホ上部バナー</b>」フォルダ内から画像を選択。</li>
+            <li><b>開始日時・終了日時</b> をセール期間に合わせて設定。</li>
+            <li>上下矢印マークを使って、追加したバナーを<b>一番上</b>に移動。</li>
+            <li>「<b>登録する</b>」をクリック。</li>
+          </ol>
+        </div>
+      </div>
+
       <!-- サブビュー: セール当日① 広告復活 -->
       <div id="tool-ad-restore" class="tool-panel">
         <div class="tool-panel-header">
@@ -3277,7 +3297,7 @@
     // ブラウザ/マウスの「戻る」でサブビューから戻れるよう、サブビュー遷移時は history.pushState する
     let _suppressPushState = false; // popstate由来の呼び出しでは積まない
     const MAIN_TABS = ['products', 'workflow'];
-    const VALID_VIEWS = ['products','workflow','add-products','decide-price','decide-title','dl-rms-csv','make-rms-csv','cost-set-item','cost-set-component','cost-non-set','upload-rms','rms-event','sku-record','ad-delete','ad-restore','upload-original','sku-restore','thumb-change','top-image-back'];
+    const VALID_VIEWS = ['products','workflow','add-products','decide-price','decide-title','dl-rms-csv','make-rms-csv','cost-set-item','cost-set-component','cost-non-set','upload-rms','rms-event','sku-record','ad-delete','ad-restore','upload-original','sku-restore','thumb-change','sp-banner','top-image-back'];
     const LAST_VIEW_KEY = 'sale-ikkatsu-last-view';
     // 直近のメインタブ(サブビューから戻る時の戻り先)
     let _lastMainTab = 'products';
@@ -4051,6 +4071,7 @@
           { id: 'prep-sku-record', label: '審査落ちSKU倉庫入れ', action: 'open-sku-record' },
           { id: 'prep-ad-delete', label: '広告削除', action: 'open-ad-delete' },
           { id: 'prep-thumb-change', label: 'トップ画像変更', action: 'open-thumb-change' },
+          { id: 'prep-sp-banner', label: 'スマホ上部バナー設置予約', action: 'open-sp-banner' },
         ],
       },
       {
