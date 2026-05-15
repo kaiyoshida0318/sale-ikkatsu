@@ -2540,7 +2540,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.71</span>
+      <span class="version">v0.52.72</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4754,43 +4754,30 @@
     }
 
     // SKUの配列から、ハイフン区切りの共通プレフィクスを抽出
-    // 例: ["ep-anker-25-01-q10-no-no", "ep-anker-25-01-q20-no-black"] → "ep-anker-25-01"
-    // SKUの共通プレフィクスを算出
-    //   1. ハイフン区切りで完全一致するブロックを取る
-    //   2. 次のブロック(完全一致しなかった先頭ブロック)について、頭から共通している文字を追加
-    //   3. 一切共通ブロックが無い場合も、先頭ブロックの頭共通文字を取り出す
-    // 例: ['tb-23-03-hx664-p','tb-23-03-hx924-p'] → 'tb-23-03-hx'
+    // 仕様: ハイフン区切りのブロック単位でのみ共通を判定する。
+    //       ブロック途中で文字が共通でも、ブロックを分割して取り出すことはしない。
+    //       (例: 'ep-anker-25-01-q10-no-no' と 'ep-anker-25-01-q20-no-black' は
+    //            'ep-anker-25-01' まで。'q' は取らない)
+    // 例: ["ep-anker-25-01-q10-no-no", "ep-anker-25-01-q10-no-black"] → "ep-anker-25-01-q10-no"
+    //     ["ep-anker-25-01-q10-no-no", "ep-anker-25-01-q20-no-black"] → "ep-anker-25-01"
+    //     ['tb-23-03-hx664-p','tb-23-03-hx924-p'] → 'tb-23-03'
     //     ['abc-1','abc-2'] → 'abc'
-    //     ['xyz','xyw']     → 'xy'
+    //     ['xyz','xyw']     → '' (1ブロック目から不一致なので共通なし)
+    //     [単独要素]        → その要素そのもの
     function commonPrefixByHyphen(skus) {
       const list = skus.filter(s => s && s.length > 0);
       if (list.length === 0) return '';
       if (list.length === 1) return list[0];
       const parts = list.map(s => s.split('-'));
       const minBlocks = Math.min(...parts.map(p => p.length));
-      // step1: 完全一致ブロック
+      // ハイフン区切りで完全一致するブロックだけを採用 (ブロック途中での部分一致は採らない)
       let fullMatched = 0;
       for (let i = 0; i < minBlocks; i++) {
         const v = parts[0][i];
         if (parts.every(p => p[i] === v)) fullMatched++;
         else break;
       }
-      const commonBlocks = parts[0].slice(0, fullMatched);
-      // step2: 次のブロック (=fullMatched 番目) について頭から共通する文字
-      let partialBlock = '';
-      if (fullMatched < minBlocks) {
-        const candidates = parts.map(p => p[fullMatched] || '');
-        const minLen = Math.min(...candidates.map(s => s.length));
-        let n = 0;
-        while (n < minLen && candidates.every(s => s[n] === candidates[0][n])) n++;
-        partialBlock = candidates[0].slice(0, n);
-      }
-      // 組み立て: 完全一致ブロックの後ろに、もし partialBlock があればハイフン区切りで追加
-      let result = commonBlocks.join('-');
-      if (partialBlock) {
-        result = result ? result + '-' + partialBlock : partialBlock;
-      }
-      return result;
+      return parts[0].slice(0, fullMatched).join('-');
     }
 
     // ArrayBuffer (Shift_JIS) → 文字列
