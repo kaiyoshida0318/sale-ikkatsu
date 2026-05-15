@@ -17,6 +17,9 @@
   <meta property="og:type" content="website" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:image" content="assets/ogp.png" />
+
+  <!-- JSZip: ⑬/セール後③ で商品画像をまとめてZIP化するために使用 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha512-XMVd28F1oH/O71fzwBnV7HucLxVwtxf26XV8P4wPk26EDxuGZ91N8bsOttmnomcCD3CS5ZMRL50H0GgOHvegtg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <style>
     :root {
       --brand: #1e3a5f;
@@ -395,6 +398,11 @@
       text-decoration: none;
       transition: transform .12s, box-shadow .12s, background .12s;
       cursor: pointer;
+      /* button タグのデフォルトリセット (<a>から<button>に変更したため) */
+      font-family: inherit;
+      line-height: 1.2;
+      appearance: none;
+      -webkit-appearance: none;
     }
     .top-image-dl-btn:hover {
       transform: translateY(-1px);
@@ -425,6 +433,33 @@
       transform: none;
       box-shadow: none;
     }
+    /* DL処理中: 押下中ボタン本人 (色は disc-XX 由来を維持) */
+    .top-image-dl-btn.is-busy,
+    .top-image-dl-btn.is-busy:hover {
+      cursor: progress;
+      pointer-events: none;
+      transform: none;
+      box-shadow: none;
+      opacity: 0.85;
+    }
+    /* DL処理中: 同画面の他ボタンを巻き込み無効化 (色は薄める) */
+    .top-image-dl-btn.is-locked,
+    .top-image-dl-btn.is-locked:hover {
+      cursor: not-allowed;
+      pointer-events: none;
+      transform: none;
+      box-shadow: none;
+      opacity: 0.5;
+    }
+    /* DLステータス表示 (ボタン群の直下) */
+    .top-image-dl-status {
+      margin-top: 12px;
+      min-height: 20px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+    .top-image-dl-status.is-error { color: #c0392b; }
+    .top-image-dl-status.is-success { color: #1a7c38; }
     .status {
       margin-top: 14px;
       font-size: 14px;
@@ -2494,7 +2529,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.62</span>
+      <span class="version">v0.52.63</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -3008,11 +3043,12 @@
         <div class="card">
           <h2>通常のトップ画像をダウンロード</h2>
           <div class="top-image-dl-grid">
-            <a href="./images/top-images/top-10.jpg" download="top-10off.jpg" class="top-image-dl-btn disc-10">10%OFF商品</a>
-            <a href="./images/top-images/top-20.jpg" download="top-20off.jpg" class="top-image-dl-btn disc-20">20%OFF商品</a>
-            <a href="./images/top-images/top-30.jpg" download="top-30off.jpg" class="top-image-dl-btn disc-30">30%OFF商品</a>
-            <a href="./images/top-images/top-50.jpg" download="top-50off.jpg" class="top-image-dl-btn disc-50">50%OFF商品</a>
+            <button type="button" data-rate="10" class="top-image-dl-btn disc-10">10%OFF商品</button>
+            <button type="button" data-rate="20" class="top-image-dl-btn disc-20">20%OFF商品</button>
+            <button type="button" data-rate="30" class="top-image-dl-btn disc-30">30%OFF商品</button>
+            <button type="button" data-rate="50" class="top-image-dl-btn disc-50">50%OFF商品</button>
           </div>
+          <div id="thumb-change-dl-status" class="top-image-dl-status" aria-live="polite"></div>
         </div>
       </div>
 
@@ -3139,11 +3175,12 @@
         <div class="card">
           <h2>通常のトップ画像をダウンロード</h2>
           <div class="top-image-dl-grid">
-            <a href="./images/top-images/top-10.jpg" download="top-10off.jpg" class="top-image-dl-btn disc-10">10%OFF商品</a>
-            <a href="./images/top-images/top-20.jpg" download="top-20off.jpg" class="top-image-dl-btn disc-20">20%OFF商品</a>
-            <a href="./images/top-images/top-30.jpg" download="top-30off.jpg" class="top-image-dl-btn disc-30">30%OFF商品</a>
-            <a href="./images/top-images/top-50.jpg" download="top-50off.jpg" class="top-image-dl-btn disc-50">50%OFF商品</a>
+            <button type="button" data-rate="10" class="top-image-dl-btn disc-10">10%OFF商品</button>
+            <button type="button" data-rate="20" class="top-image-dl-btn disc-20">20%OFF商品</button>
+            <button type="button" data-rate="30" class="top-image-dl-btn disc-30">30%OFF商品</button>
+            <button type="button" data-rate="50" class="top-image-dl-btn disc-50">50%OFF商品</button>
           </div>
+          <div id="top-image-back-dl-status" class="top-image-dl-status" aria-live="polite"></div>
         </div>
       </div>
     </div>
@@ -3972,9 +4009,11 @@
     // ⑬/セール後③ のDLボタンのテキスト末尾に「(N)」を付与/更新する。
     // 対象: .top-image-dl-btn (disc-10/20/30/50)。両画面とも同じクラスで描画。
     // 件数0のときは is-disabled クラスでグレー化&クリック不可にする。
+    // 進行中 (is-busy) のボタンはテキスト/状態を一切いじらない (DL処理中の表示を保護)。
     function renderTopImageDlButtons() {
       const counts = getMgrCountByDiscount();
       document.querySelectorAll('.top-image-dl-btn').forEach(btn => {
+        if (btn.classList.contains('is-busy') || btn.classList.contains('is-locked')) return;
         let rate = null;
         if (btn.classList.contains('disc-10')) rate = 10;
         else if (btn.classList.contains('disc-20')) rate = 20;
@@ -3993,6 +4032,233 @@
           btn.removeAttribute('aria-disabled');
           btn.removeAttribute('tabindex');
         }
+      });
+    }
+
+    // ---- ⑬/セール後③: 商品画像 ZIP ダウンロード ----
+    // 指定割引率 (10/20/30/50) に該当する商品 (商品管理番号単位) の imageUrl を集めて
+    // ZIP化してダウンロードする。
+    // - 1管理番号=1画像 (重複なし)
+    // - ZIP内ファイル名: <商品管理番号>.jpg
+    // - 出力ZIPファイル名: top-XXoff.zip
+    // - 画像取得は fetch → 失敗時 canvas フォールバックの2段構え
+    // - 取得失敗した分はスキップし、コンソールにログ。残りは正常にZIPへ
+    let _topImageDlInProgress = false;
+
+    // 指定割引率の商品 [{mgr, imageUrl}] を返す (imageUrl がある商品のみ)
+    function getDiscountTargetsForImageDl(rate) {
+      const targets = [];
+      try {
+        const ym = currentYM || (typeof getCurrentYM === 'function' ? getCurrentYM() : null);
+        if (!ym) return targets;
+        const archive = loadArchive();
+        const data = archive[ym];
+        if (!data || !data.rmsCsvB64) return targets;
+        const discounts = (data.discounts) || {};
+        const baseRows = (data.rows && Array.isArray(data.rows)) ? data.rows : [];
+        if (baseRows.length === 0) return targets;
+        // mgr→firstSku マップ
+        const text = decodeShiftJIS(b642u8(data.rmsCsvB64));
+        const rmsRows = parseCsvText(text);
+        if (rmsRows.length < 2) return targets;
+        const rh = rmsRows[0];
+        const iMgr = rh.findIndex(x => x && x.indexOf('商品管理番号') >= 0);
+        const iSku = rh.findIndex(x => x && x.indexOf('システム連携用SKU番号') >= 0);
+        const iPrice = rh.findIndex(x => x && x.indexOf('通常購入販売価格') >= 0);
+        if (iMgr < 0 || iSku < 0) return targets;
+        const mgrToFirstSku = {};
+        for (let i = 1; i < rmsRows.length; i++) {
+          const r = rmsRows[i];
+          if (!r) continue;
+          const mgr = (r[iMgr] || '').trim();
+          const sku = (r[iSku] || '').trim();
+          const priceRaw = iPrice >= 0 ? (r[iPrice] || '').trim() : '';
+          if (!mgr || !sku) continue;
+          if (iPrice >= 0 && !priceRaw) continue;
+          if (!(mgr in mgrToFirstSku)) mgrToFirstSku[mgr] = sku;
+        }
+        // 該当割引率の管理番号を抽出
+        for (const row of baseRows) {
+          const mgr = row.mgr;
+          if (!mgr) continue;
+          const firstSku = mgrToFirstSku[mgr];
+          if (!firstSku) continue;
+          if (discounts[firstSku] !== rate) continue;
+          const imageUrl = row.imageUrl || '';
+          if (!imageUrl) continue; // 画像URLが取得できなかった商品はスキップ
+          targets.push({ mgr, imageUrl });
+        }
+      } catch (e) { console.error('getDiscountTargetsForImageDl error:', e); }
+      return targets;
+    }
+
+    // URL から画像 Blob を取得 (fetch 直、失敗時は canvas フォールバック)
+    async function fetchImageAsBlob(url) {
+      // 1. fetch 直
+      try {
+        const res = await fetch(url, { mode: 'cors', credentials: 'omit', cache: 'no-cache' });
+        if (res.ok) {
+          const blob = await res.blob();
+          if (blob && blob.size > 0) return blob;
+        }
+      } catch (e) { /* CORS等で失敗 → canvasへ */ }
+      // 2. <img crossorigin> + canvas
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.referrerPolicy = 'no-referrer';
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            canvas.toBlob(b => {
+              if (b && b.size > 0) resolve(b);
+              else reject(new Error('canvas.toBlob returned empty'));
+            }, 'image/jpeg', 0.92);
+          } catch (e) { reject(e); }
+        };
+        img.onerror = () => reject(new Error('image load failed'));
+        img.src = url;
+      });
+    }
+
+    // ZIPファイルを保存 (ブラウザDL)
+    function saveBlobAs(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      // すぐ revoke するとDLが取りこぼされる環境があるため少し待つ
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+    }
+
+    // ステータス表示更新 (現在開いている画面の状態DOMに反映)
+    function setTopImageDlStatus(text, kind) {
+      const ids = ['thumb-change-dl-status', 'top-image-back-dl-status'];
+      ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        // 表示中の画面の方だけに出す
+        const panel = el.closest('.tool-panel');
+        if (!panel || !panel.classList.contains('active')) {
+          el.textContent = '';
+          el.classList.remove('is-error', 'is-success');
+          return;
+        }
+        el.textContent = text || '';
+        el.classList.remove('is-error', 'is-success');
+        if (kind === 'error') el.classList.add('is-error');
+        else if (kind === 'success') el.classList.add('is-success');
+      });
+    }
+
+    // 同一画面のボタン群を「処理中ロック」状態に
+    function lockTopImageDlButtons(activeBtn) {
+      const panel = activeBtn.closest('.tool-panel');
+      if (!panel) return;
+      panel.querySelectorAll('.top-image-dl-btn').forEach(b => {
+        if (b === activeBtn) {
+          b.classList.add('is-busy');
+        } else {
+          b.classList.add('is-locked');
+        }
+      });
+    }
+    function unlockTopImageDlButtons(activeBtn) {
+      const panel = activeBtn.closest('.tool-panel');
+      if (!panel) return;
+      panel.querySelectorAll('.top-image-dl-btn').forEach(b => {
+        b.classList.remove('is-busy', 'is-locked');
+      });
+      // 件数表示を再適用 (テキストが「取得中 i/N」のままなので戻す)
+      renderTopImageDlButtons();
+    }
+
+    // メイン: 指定%OFFの商品画像をZIPでDL
+    async function handleTopImageDlClick(btn) {
+      if (_topImageDlInProgress) return;
+      if (btn.classList.contains('is-disabled')) return;
+      if (typeof window.JSZip === 'undefined') {
+        setTopImageDlStatus('ZIPライブラリが読み込めていません。ページをリロードしてください。', 'error');
+        return;
+      }
+      const rate = parseInt(btn.getAttribute('data-rate') || '0', 10);
+      if (![10, 20, 30, 50].includes(rate)) return;
+
+      const targets = getDiscountTargetsForImageDl(rate);
+      if (targets.length === 0) {
+        setTopImageDlStatus(rate + '%OFF商品の画像がありません。', 'error');
+        return;
+      }
+
+      _topImageDlInProgress = true;
+      lockTopImageDlButtons(btn);
+      const originalLabel = btn.textContent;
+      btn.textContent = '取得中 0/' + targets.length;
+      setTopImageDlStatus(rate + '%OFF商品の画像を取得中… (0/' + targets.length + ')');
+
+      const zip = new JSZip();
+      let okCount = 0;
+      const failed = [];
+
+      for (let i = 0; i < targets.length; i++) {
+        const t = targets[i];
+        try {
+          const blob = await fetchImageAsBlob(t.imageUrl);
+          // ZIP内のファイル名: <商品管理番号>.jpg (重複は管理番号単位なので発生しない想定)
+          zip.file(t.mgr + '.jpg', blob);
+          okCount++;
+        } catch (e) {
+          console.warn('image dl failed:', t.mgr, t.imageUrl, e);
+          failed.push(t.mgr);
+        }
+        const done = i + 1;
+        btn.textContent = '取得中 ' + done + '/' + targets.length;
+        setTopImageDlStatus(rate + '%OFF商品の画像を取得中… (' + done + '/' + targets.length + ')');
+      }
+
+      try {
+        if (okCount === 0) {
+          setTopImageDlStatus('画像の取得に全て失敗しました。ネットワーク接続を確認してください。', 'error');
+        } else {
+          btn.textContent = 'ZIP作成中…';
+          const zipBlob = await zip.generateAsync({ type: 'blob' }, (meta) => {
+            // 圧縮中の進捗 (画像はほぼ非圧縮なので一瞬)
+          });
+          saveBlobAs(zipBlob, 'top-' + rate + 'off.zip');
+          if (failed.length === 0) {
+            setTopImageDlStatus(rate + '%OFF商品の画像 ' + okCount + '件をZIPでダウンロードしました。', 'success');
+          } else {
+            setTopImageDlStatus(
+              rate + '%OFF商品の画像 ' + okCount + '件をZIPでダウンロードしました。' +
+              ' (取得失敗 ' + failed.length + '件: ' + failed.slice(0, 5).join(', ') +
+              (failed.length > 5 ? ' …' : '') + ')',
+              'success'
+            );
+          }
+        }
+      } catch (e) {
+        console.error('zip generate/save error:', e);
+        setTopImageDlStatus('ZIP生成に失敗しました: ' + (e.message || e), 'error');
+      } finally {
+        btn.textContent = originalLabel;
+        _topImageDlInProgress = false;
+        unlockTopImageDlButtons(btn);
+      }
+    }
+
+    // ボタンへのクリックハンドラ登録 (1回だけ、DOMContentLoaded後)
+    function bindTopImageDlButtons() {
+      document.querySelectorAll('.top-image-dl-btn').forEach(btn => {
+        if (btn.dataset.dlBound === '1') return;
+        btn.dataset.dlBound = '1';
+        btn.addEventListener('click', () => handleTopImageDlClick(btn));
       });
     }
 
@@ -7803,6 +8069,7 @@
     refreshArchiveSelect();
     renderProductTable();
     if (typeof renderWorkflow === "function") renderWorkflow();
+    if (typeof bindTopImageDlButtons === "function") bindTopImageDlButtons();
 
     // ⑤画面: ホイール振り分け
     //   - .product-group-table-wrap.is-scrollable 上 (=10行超のテーブル): ネイティブ任せ (内部縦スクロール)
