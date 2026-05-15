@@ -1140,7 +1140,7 @@
       font-variant-numeric: tabular-nums;
     }
     .product-table tr:hover td { background: #fafbfd; }
-    .product-table .name { max-width: 360px; white-space: normal; }
+    .product-table .name { max-width: 480px; white-space: normal; }
     .product-table .placeholder-cell {
       color: #b5b5c0;
       font-style: italic;
@@ -1155,7 +1155,7 @@
     .product-table th.col-mgr { min-width: 130px; }
     .product-table th.col-itemcode { min-width: 160px; }
     .product-table th.col-img { width: 120px; }
-    .product-table th.col-pname { min-width: 320px; }
+    .product-table th.col-pname { min-width: 480px; }
     .product-table th.col-name { min-width: 240px; max-width: 360px; }
     .product-table th.col-discount,
     .product-table td.col-discount {
@@ -1190,8 +1190,8 @@
     }
     .product-table .img-cell { text-align: center; }
     .product-table .img-placeholder {
-      width: 64px;
-      height: 64px;
+      width: 96px;
+      height: 96px;
       background: #f0f0f2;
       border: 1px dashed #c9c9d1;
       border-radius: 6px;
@@ -1214,8 +1214,8 @@
       background: #fff;
     }
     .product-table .product-image-thumb {
-      width: 64px;
-      height: 64px;
+      width: 96px;
+      height: 96px;
       border-radius: 6px;
       border: 1px solid #e6e6ec;
     }
@@ -2529,7 +2529,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.65</span>
+      <span class="version">v0.52.68</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4093,26 +4093,41 @@
     }
 
     // CORSプロキシ設定: 楽天image.rakuten.co.jp が CORSヘッダを返さないため、
-    // 無料のCORSプロキシ経由で取得する。
-    // 公開プロキシは将来停止する可能性があるので、ここを差し替えるだけで切り替え可能。
-    // 候補: 'https://corsproxy.io/?url=' / 'https://api.allorigins.win/raw?url='
-    const CORS_PROXY_URL = 'https://corsproxy.io/?url=';
-    function buildCorsProxyUrl(originalUrl) {
-      return CORS_PROXY_URL + encodeURIComponent(originalUrl);
-    }
+    // 公開CORSプロキシ経由で取得する。複数候補を順次試し、最初に成功したものを採用。
+    // 各プロキシは将来停止/仕様変更する可能性があるので、配列を編集するだけで切替可能。
+    //   - 各エントリの build(originalUrl) は最終的なプロキシ済みURLを返す
+    //   - 配列の先頭から順に試行、成功時点で打ち切り
+    //   - 1回の処理 (画像N枚) の中で、最初に成功したプロキシを以降も優先使用 (高速化)
+    const CORS_PROXIES = [
+      { name: 'allorigins',   build: u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u) },
+      { name: 'codetabs',     build: u => 'https://api.codetabs.com/v1/proxy/?quest=' + encodeURIComponent(u) },
+      { name: 'isomorphic',   build: u => 'https://cors.isomorphic-git.org/' + u },
+      { name: 'corsproxy.io', build: u => 'https://corsproxy.io/?url=' + encodeURIComponent(u) },
+    ];
+    let _preferredProxyIdx = 0; // 直近成功したプロキシのインデックス (バッチ内で再利用)
 
     // URL から画像 Blob を取得。
-    // 順序: ①CORSプロキシ経由 fetch → ②直 fetch → ③canvas 経由
+    // 順序: ①プロキシ群を順次試行 → ②直 fetch (将来楽天がCORS対応した場合) → ③canvas
     async function fetchImageAsBlob(url) {
-      // 1. CORSプロキシ経由 fetch (楽天画像は CORS NG なのでこれが主経路)
-      try {
-        const proxied = buildCorsProxyUrl(url);
-        const res = await fetch(proxied, { credentials: 'omit', cache: 'no-cache' });
-        if (res.ok) {
-          const blob = await res.blob();
-          if (blob && blob.size > 0) return blob;
-        }
-      } catch (e) { /* プロキシ失敗 → 次へ */ }
+      // 1. プロキシ群を順次試行 (前回成功したやつから優先)
+      const order = [];
+      for (let i = 0; i < CORS_PROXIES.length; i++) {
+        order.push((_preferredProxyIdx + i) % CORS_PROXIES.length);
+      }
+      for (const idx of order) {
+        const px = CORS_PROXIES[idx];
+        try {
+          const proxied = px.build(url);
+          const res = await fetch(proxied, { credentials: 'omit', cache: 'no-cache' });
+          if (res.ok) {
+            const blob = await res.blob();
+            if (blob && blob.size > 0) {
+              _preferredProxyIdx = idx; // 次回もこれから試す
+              return blob;
+            }
+          }
+        } catch (e) { /* このプロキシは失敗、次へ */ }
+      }
       // 2. 直 fetch (将来楽天が CORS 対応した場合の保険)
       try {
         const res = await fetch(url, { mode: 'cors', credentials: 'omit', cache: 'no-cache' });
