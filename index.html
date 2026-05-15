@@ -2227,9 +2227,15 @@
       top: var(--top-bar-h, 130px);
       z-index: 41;
       background: var(--card);
-      margin: 0 -22px 14px;
-      padding: 18px 22px 12px;
+      margin: 0 -22px 0;
+      padding: 18px 22px 18px;
       border-bottom: 1px solid var(--border);
+    }
+    /* h2のmargin-bottomを0にして、その分は表ラッパーのmargin-topで確保
+       (sticky の h2 と表ヘッダーの間に透明な隙間ができないように) */
+    body[data-view="sku-record"] .sku-record-card .sr-table-wrap,
+    body[data-view="sku-restore"] .sku-record-card .sr-table-wrap {
+      margin-top: 0;
     }
     .sr-table th.sr-col-mgr,
     .sr-table td.sr-col-mgr {
@@ -2404,7 +2410,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.46</span>
+      <span class="version">v0.52.49</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2983,7 +2989,7 @@
         <p class="tool-panel-description">セール開始準備⑪で倉庫に入れたSKUを販売中にもどしていく。</p>
 
         <div class="card">
-          <h2>1. 倉庫から戻す手順</h2>
+          <h2>1. 倉庫から出す手順</h2>
           <p>RMSで画像の赤丸部分をクリックし、該当SKUの倉庫指定を「倉庫」から「販売中」に変える。</p>
           <div class="howto-image-wrap">
             <img src="./images/sku-record-1.png" alt="RMS 商品一覧 SKUを開く" class="howto-image" loading="lazy" />
@@ -2991,7 +2997,7 @@
         </div>
 
         <div class="card sku-record-card">
-          <h2>2. 倉庫入れSKU記録表</h2>
+          <h2>2. 倉庫出しSKU記録表</h2>
           <div id="sku-restore-status" class="status"></div>
           <div id="sku-restore-table-container">
             <div class="empty-state">対象データがありません。「① 参加商品追加」でRMSデータを取り込んでください。</div>
@@ -3086,17 +3092,15 @@
 
         // ⑪⑭ (sku-record/sku-restore) の「2. 倉庫入れSKU記録表」カードの h2 が
         // sticky で固定されるため、表ヘッダーの top を h2 の高さ分ずらす必要がある
-        // → --sku-card-h2-h に h2 (margin込み) の実高さを設定
+        // → --sku-card-h2-h に h2 の実高さ (paddingを含むbox高さ) を設定
+        //   h2 は margin-bottom: 0 で運用するため、box高さだけで十分
         const curView2 = document.body.getAttribute('data-view');
         if (curView2 === 'sku-record' || curView2 === 'sku-restore') {
           const panel2 = document.getElementById('tool-' + curView2);
           const cardH2 = panel2 ? panel2.querySelector('.sku-record-card > h2') : null;
           if (cardH2) {
             const rect = cardH2.getBoundingClientRect();
-            // margin-bottom も含めて表ヘッダーを下にずらす
-            const cs = window.getComputedStyle(cardH2);
-            const mb = parseFloat(cs.marginBottom) || 0;
-            document.documentElement.style.setProperty('--sku-card-h2-h', (rect.height + mb) + 'px');
+            document.documentElement.style.setProperty('--sku-card-h2-h', rect.height + 'px');
           } else {
             document.documentElement.style.setProperty('--sku-card-h2-h', '0px');
           }
