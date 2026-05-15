@@ -2210,7 +2210,26 @@
        表ヘッダーはメインタブバーの直下 (--top-bar-h の位置) で固定する */
     body[data-view="sku-record"] .sr-table thead th,
     body[data-view="sku-restore"] .sr-table thead th {
+      top: calc(var(--top-bar-h, 130px) + var(--sku-card-h2-h, 0px));
+    }
+    /* ⑪⑭の「2. 倉庫入れSKU記録表」カードの h2 も sticky 化、
+       表ヘッダーと一緒に固定する。
+       カードのpadding-topを0にして「通常位置と sticky位置のズレ」を回避し、
+       h2自身がpaddingで上余白を確保する形 */
+    body[data-view="sku-record"] .sku-record-card,
+    body[data-view="sku-restore"] .sku-record-card {
+      padding-top: 0;
+      overflow: visible;
+    }
+    body[data-view="sku-record"] .sku-record-card > h2,
+    body[data-view="sku-restore"] .sku-record-card > h2 {
+      position: sticky;
       top: var(--top-bar-h, 130px);
+      z-index: 41;
+      background: var(--card);
+      margin: 0 -22px 14px;
+      padding: 18px 22px 12px;
+      border-bottom: 1px solid var(--border);
     }
     .sr-table th.sr-col-mgr,
     .sr-table td.sr-col-mgr {
@@ -2385,7 +2404,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.44</span>
+      <span class="version">v0.52.46</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2791,7 +2810,7 @@
       <!-- サブビュー: ⑨ RMSにアップロード -->
       <div id="tool-upload-rms" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>⑨ RMSにアップロード</h2>
+          <h2>⑨ RMS-完成CSVアップロード</h2>
         </div>
         <p class="tool-panel-description">セール開始準備⑧で作成した「normal-item-sale」ファイルをRMSにアップロードしていく。<br>
         アップロードにはWinSCPを使用する。</p>
@@ -2849,7 +2868,7 @@
       <!-- サブビュー: ⑪ 倉庫入れSKU記録 -->
       <div id="tool-sku-record" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>⑪ 倉庫入れSKU記録</h2>
+          <h2>⑪ 審査落ちSKU倉庫入れ</h2>
         </div>
         <p class="tool-panel-description">セール参加可否の審査は商品コード単位ではなく、中のSKU単位で行われる。<br>
         そのため、審査の結果✕が出たSKUがあった場合でも、そのSKUだけを倉庫に入れることで再度審査を受けることができる。<br>
@@ -2904,7 +2923,7 @@
       <!-- サブビュー: セール後① RMSに元データアップロード -->
       <div id="tool-upload-original" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>① RMSに元データアップロード</h2>
+          <h2>① RMS-元CSVアップロード</h2>
         </div>
         <p class="tool-panel-description">セール開始準備の「⑦ RMSアップ用素材ダウンロード」で保管しておいたCSVファイルをRMSにアップロードする。それにより商品情報をセール前の状態に戻すことができる。<br>
         アップロードにはWinSCPを使用する。</p>
@@ -2959,7 +2978,7 @@
       <!-- サブビュー: セール後② 倉庫入れSKU戻し -->
       <div id="tool-sku-restore" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>② 倉庫入れSKU戻し</h2>
+          <h2>② 審査落ちSKU倉庫出し</h2>
         </div>
         <p class="tool-panel-description">セール開始準備⑪で倉庫に入れたSKUを販売中にもどしていく。</p>
 
@@ -3064,6 +3083,26 @@
 
         // ⑪⑫⑬ は flex chain 方式に変更したため、stickyのtop計算は不要
         // (削除済み: --sub-header-h, --sub-desc-h)
+
+        // ⑪⑭ (sku-record/sku-restore) の「2. 倉庫入れSKU記録表」カードの h2 が
+        // sticky で固定されるため、表ヘッダーの top を h2 の高さ分ずらす必要がある
+        // → --sku-card-h2-h に h2 (margin込み) の実高さを設定
+        const curView2 = document.body.getAttribute('data-view');
+        if (curView2 === 'sku-record' || curView2 === 'sku-restore') {
+          const panel2 = document.getElementById('tool-' + curView2);
+          const cardH2 = panel2 ? panel2.querySelector('.sku-record-card > h2') : null;
+          if (cardH2) {
+            const rect = cardH2.getBoundingClientRect();
+            // margin-bottom も含めて表ヘッダーを下にずらす
+            const cs = window.getComputedStyle(cardH2);
+            const mb = parseFloat(cs.marginBottom) || 0;
+            document.documentElement.style.setProperty('--sku-card-h2-h', (rect.height + mb) + 'px');
+          } else {
+            document.documentElement.style.setProperty('--sku-card-h2-h', '0px');
+          }
+        } else {
+          document.documentElement.style.setProperty('--sku-card-h2-h', '0px');
+        }
 
         if (!archive) return;
         archive.style.top = tabsBottom + 'px';
@@ -3880,9 +3919,9 @@
           { id: 'prep-decide-title', label: 'セール用タイトル決定', action: 'open-decide-title' },
           { id: 'prep-dl-rms-csv', label: 'RMSアップ用素材ダウンロード', action: 'open-dl-rms-csv' },
           { id: 'prep-make-rms-csv', label: 'RMSアップ用CSV作成', action: 'open-make-rms-csv' },
-          { id: 'prep-upload-rms', label: 'RMSにアップロード', action: 'open-upload-rms' },
+          { id: 'prep-upload-rms', label: 'RMS-完成CSVアップロード', action: 'open-upload-rms' },
           { id: 'prep-rms-event', label: 'RMSイベント申請', action: 'open-rms-event' },
-          { id: 'prep-sku-record', label: '倉庫入れSKU記録', action: 'open-sku-record' },
+          { id: 'prep-sku-record', label: '審査落ちSKU倉庫入れ', action: 'open-sku-record' },
           { id: 'prep-ad-delete', label: '広告削除', action: 'open-ad-delete' },
           { id: 'prep-thumb-change', label: 'トップ画像変更' },
         ],
@@ -3900,8 +3939,8 @@
         label: 'セール後',
         className: 'block-after',
         buttons: [
-          { id: 'after-upload-original', label: 'RMSに元データアップロード', action: 'open-upload-original' },
-          { id: 'after-sku-restore', label: '倉庫入れSKU戻し', action: 'open-sku-restore' },
+          { id: 'after-upload-original', label: 'RMS-元CSVアップロード', action: 'open-upload-original' },
+          { id: 'after-sku-restore', label: '審査落ちSKU倉庫出し', action: 'open-sku-restore' },
           { id: 'after-top-image-back', label: 'トップ画像戻し' },
         ],
       },
