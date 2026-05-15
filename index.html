@@ -2385,7 +2385,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.42</span>
+      <span class="version">v0.52.44</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2607,7 +2607,7 @@
         <div class="tool-panel-header">
           <h2>⑧ RMSアップ用CSV作成</h2>
         </div>
-        <p class="tool-panel-description">⑦で用意した2つのファイルをアップロードして組み合わせることで、RMSにアップするセールバージョンのCSVファイルを作成する。</p>
+        <p class="tool-panel-description">セール開始準備⑦で用意した2つのファイルをアップロードして組み合わせることで、RMSにアップするセールバージョンのCSVファイルを作成する。</p>
 
         <div class="card">
           <h2>1. 2つのファイルをアップロード</h2>
@@ -2661,7 +2661,7 @@
         <div class="card">
           <h2>1. CSVファイルの作成</h2>
           <ol class="howto-list">
-            <li>① でアップした<b>RMSデータCSV</b>の「<b>システム連携用SKU番号</b>」列をコピー</li>
+            <li>セール開始準備①でアップした<b>RMSデータCSV</b>の「<b>システム連携用SKU番号</b>」列をコピー</li>
             <li>ネクストエンジンの「セット商品検索」を開く</li>
             <li>「複数コード」欄にコピーしたSKU番号を貼り付け → 検索</li>
             <li>検索結果の一覧を<b>ダウンロード</b>(CSV)</li>
@@ -2699,7 +2699,7 @@
         <div class="card">
           <h2>1. 検索用ファイルのダウンロード(SALE一括内から)</h2>
           <div class="howto-list" style="padding-left: 0;">
-            ② で取り込んだ <b>NE-セット商品コードCSV</b> から、商品コードを抽出した検索用CSVをダウンロードします。<br>
+            セール開始準備②で取り込んだ<b>NE-セット商品コードCSV</b>から、商品コードを抽出した検索用CSVをダウンロードします。<br>
             <span style="color: var(--muted); font-size: 12px;">※「<code>"</code>」は除去・重複は1件にまとめ・ヘッダー「商品コード」付き</span>
           </div>
           <div class="actions" style="margin-top: 12px;">
@@ -2749,7 +2749,7 @@
         <div class="card">
           <h2>1. 検索用ファイルのダウンロード(SALE一括内から)</h2>
           <div class="howto-list" style="padding-left: 0;">
-            ① で取り込んだ <b>RMSデータCSV</b> から、「<b>バリエーション項目キー2</b>」以降が空欄の行 (=セット無しの単品候補) の SKU を抽出した検索用CSVをダウンロードします。<br>
+            セール開始準備①で取り込んだ <b>RMSデータCSV</b> から、「<b>バリエーション項目キー2</b>」以降が空欄の行 (=セット無しの単品候補) の SKU を抽出した検索用CSVをダウンロードします。<br>
             <span style="color: var(--muted); font-size: 12px;">※ヘッダー「商品コード」付き・重複は1件にまとめ</span>
           </div>
           <div class="actions" style="margin-top: 12px;">
@@ -2793,7 +2793,7 @@
         <div class="tool-panel-header">
           <h2>⑨ RMSにアップロード</h2>
         </div>
-        <p class="tool-panel-description">⑧で作成した「normal-item-sale」ファイルをRMSにアップロードしていく。<br>
+        <p class="tool-panel-description">セール開始準備⑧で作成した「normal-item-sale」ファイルをRMSにアップロードしていく。<br>
         アップロードにはWinSCPを使用する。</p>
 
         <div class="card">
@@ -2893,7 +2893,7 @@
           <h2>① 広告復活</h2>
           <span class="check-complete-badge" id="ad-restore-complete-badge"></span>
         </div>
-        <p class="tool-panel-description">除外に入れていたセール参加商品のRPP広告を復活させる。</p>
+        <p class="tool-panel-description">セール開始準備⑫で除外に入れたセール参加商品のRPP広告を復活させる。</p>
 
         <div id="ad-restore-status" class="status"></div>
         <div id="ad-restore-table-container">
@@ -2961,7 +2961,7 @@
         <div class="tool-panel-header">
           <h2>② 倉庫入れSKU戻し</h2>
         </div>
-        <p class="tool-panel-description">セール開始準備の「⑪ 倉庫入れSKU記録」で倉庫に入れたSKUを販売中にもどしていく。</p>
+        <p class="tool-panel-description">セール開始準備⑪で倉庫に入れたSKUを販売中にもどしていく。</p>
 
         <div class="card">
           <h2>1. 倉庫から戻す手順</h2>
