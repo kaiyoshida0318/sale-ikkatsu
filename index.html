@@ -2410,7 +2410,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.49</span>
+      <span class="version">v0.52.50</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -5182,9 +5182,16 @@
     function renderSkuRestoreTable() {
       const container = document.getElementById('sku-restore-table-container');
       if (!container) return;
-      const { rows, reason } = buildSkuRecordRows();
-      if (!rows || rows.length === 0) {
+      const { rows: allRows, reason } = buildSkuRecordRows();
+      if (!allRows || allRows.length === 0) {
         container.innerHTML = `<div class="empty-state">${escapeHtml(reason || '対象データがありません')}</div>`;
+        return;
+      }
+      // ⑪ 審査落ちSKU倉庫入れ でチェックが入ったSKUのみに絞り込む
+      const warehoused = getWarehouseSkuMap();
+      const rows = allRows.filter(r => !!warehoused[r.sku]);
+      if (rows.length === 0) {
+        container.innerHTML = `<div class="empty-state">対象SKUがありません。<br>「⑪ 審査落ちSKU倉庫入れ」で倉庫入れにチェックを入れたSKUがここに表示されます。</div>`;
         return;
       }
       const map = getSkuRestoreMap();
