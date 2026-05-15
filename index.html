@@ -1140,8 +1140,14 @@
       font-variant-numeric: tabular-nums;
     }
     .product-table tr:hover td { background: #fafbfd; }
-    .product-table .name {
+    /* 商品名セル: セル本体は幅を制限、内側 .name-clip で3行省略 */
+    .product-table td.name {
+      width: 640px;
       max-width: 640px;
+      vertical-align: middle;
+    }
+    .product-table .name-clip {
+      max-width: 100%;
       white-space: normal;
       overflow-wrap: anywhere;
       word-break: break-word;
@@ -1166,7 +1172,7 @@
     .product-table th.col-mgr { min-width: 130px; }
     .product-table th.col-itemcode { min-width: 160px; }
     .product-table th.col-img { width: 120px; }
-    .product-table th.col-pname { min-width: 640px; }
+    .product-table th.col-pname { width: 640px; max-width: 640px; }
     .product-table th.col-name { min-width: 240px; max-width: 360px; }
     .product-table th.col-discount,
     .product-table td.col-discount {
@@ -2540,7 +2546,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.73</span>
+      <span class="version">v0.52.74</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4382,7 +4388,9 @@
       // 「全体」「10%」「20%」「30%」「50%」のフィルタ判定に使う
       // 代表SKUは①のRMS取り込みデータから直接取り出す (mergerと同じ順序)
       // → archive[ym].rmsCsvB64 をデコードして、各 mgr の最初のSKU を見つける
+      // 同時に mgrToSkus (各管理番号の全SKU一覧) も作り、itemCode を新ロジックで再計算する
       let mgrToFirstSku = {};  // { mgr -> 最初のSKU }
+      let mgrToSkus = {};      // { mgr -> [sku, sku, ...] }
       try {
         const ym = currentYM || getCurrentYM();
         if (ym) {
@@ -4407,12 +4415,23 @@
                   // 通常価格空欄行は⑤でスキップされるので、こちらも合わせて除外
                   if (iPrice >= 0 && !priceRaw) continue;
                   if (!(mgr in mgrToFirstSku)) mgrToFirstSku[mgr] = sku;
+                  if (!mgrToSkus[mgr]) mgrToSkus[mgr] = [];
+                  mgrToSkus[mgr].push(sku);
                 }
               }
             }
           }
         }
       } catch (e) { /* RMSデータが無い場合は空のまま */ }
+
+      // 商品コードを新ロジックで再計算 (アーカイブの r.itemCode は古いロジックの可能性があるため信用しない)
+      // 再計算結果は表示専用 (アーカイブには書き戻さない)
+      const resolveItemCode = (mgr, fallback) => {
+        const skus = mgrToSkus[mgr] || [];
+        if (skus.length === 0) return fallback || '';
+        const code = commonPrefixByHyphen(skus);
+        return code || (fallback || '');
+      };
 
       // 各商品管理番号の割引率 = 代表SKUの割引率
       let mgrDiscounts = {};
@@ -4434,7 +4453,7 @@
         if (currentOffRate === 'all') {
           // 全体: ①取り込み済みの全商品
           displayRows = baseRows.map(r => ({
-            mgr: r.mgr, itemCode: r.itemCode, name: r.name, imageUrl: r.imageUrl || '',
+            mgr: r.mgr, itemCode: resolveItemCode(r.mgr, r.itemCode), name: r.name, imageUrl: r.imageUrl || '',
             discount: mgrDiscounts[r.mgr] ?? null
           }));
         } else {
@@ -4442,7 +4461,7 @@
           displayRows = baseRows
             .filter(r => mgrDiscounts[r.mgr] === target)
             .map(r => ({
-              mgr: r.mgr, itemCode: r.itemCode, name: r.name, imageUrl: r.imageUrl || '',
+              mgr: r.mgr, itemCode: resolveItemCode(r.mgr, r.itemCode), name: r.name, imageUrl: r.imageUrl || '',
               discount: target
             }));
         }
@@ -4459,7 +4478,7 @@
             <td class="mgr">${escapeHtml(r.itemCode || '')}</td>
             <td class="img-cell">${imageCellHtml(r.imageUrl)}</td>
             <td class="col-discount${discClass}">${discLabel}</td>
-            <td class="name" title="${escapeHtml(r.name || '')}">${escapeHtml(r.name || '')}</td>
+            <td class="name" title="${escapeHtml(r.name || '')}"><div class="name-clip">${escapeHtml(r.name || '')}</div></td>
           </tr>`;
         }).join('');
       }
