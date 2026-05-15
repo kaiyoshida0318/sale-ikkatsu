@@ -373,6 +373,47 @@
       content: "⬇ ";
       font-weight: 700;
     }
+    /* ⑬/セール後③ トップ画像 ダウンロードボタン群 */
+    .top-image-dl-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      margin-top: 4px;
+    }
+    .top-image-dl-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 18px 16px;
+      border: 1.5px solid;
+      border-radius: 10px;
+      background: #fff;
+      color: var(--text);
+      font-size: 16px;
+      font-weight: 800;
+      text-decoration: none;
+      transition: transform .12s, box-shadow .12s, background .12s;
+      cursor: pointer;
+    }
+    .top-image-dl-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    }
+    .top-image-dl-btn::before {
+      content: "⬇";
+      font-size: 18px;
+      font-weight: 900;
+    }
+    /* 割引率ごとの色: セール参加商品タブと統一パレット */
+    .top-image-dl-btn.disc-10 { border-color: #2d6cb8; color: #2d6cb8; background: #eef4fc; }
+    .top-image-dl-btn.disc-10:hover { background: #dee9f7; }
+    .top-image-dl-btn.disc-20 { border-color: #d36916; color: #d36916; background: #fdf1e6; }
+    .top-image-dl-btn.disc-20:hover { background: #fbe2ce; }
+    .top-image-dl-btn.disc-30 { border-color: #2a8a45; color: #2a8a45; background: #e8f5ed; }
+    .top-image-dl-btn.disc-30:hover { background: #d3ebdb; }
+    .top-image-dl-btn.disc-50 { border-color: #d83838; color: #d83838; background: #fce8e8; }
+    .top-image-dl-btn.disc-50:hover { background: #f8d3d3; }
     .status {
       margin-top: 14px;
       font-size: 14px;
@@ -2442,7 +2483,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.55</span>
+      <span class="version">v0.52.57</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2945,6 +2986,25 @@
         </div>
       </div>
 
+      <!-- サブビュー: ⑬ トップ画像変更 -->
+      <div id="tool-thumb-change" class="tool-panel">
+        <div class="tool-panel-header">
+          <h2>⑬ トップ画像変更</h2>
+        </div>
+        <p class="tool-panel-description">SALE一括から現在のトップ画像を％ごとにダウンロードし、<br>
+        セール用トップ画像をChatGPTで生成していく。</p>
+
+        <div class="card">
+          <h2>現在のトップ画像をダウンロード</h2>
+          <div class="top-image-dl-grid">
+            <a href="./images/top-images/top-10.jpg" download class="top-image-dl-btn disc-10">10%OFF商品</a>
+            <a href="./images/top-images/top-20.jpg" download class="top-image-dl-btn disc-20">20%OFF商品</a>
+            <a href="./images/top-images/top-30.jpg" download class="top-image-dl-btn disc-30">30%OFF商品</a>
+            <a href="./images/top-images/top-50.jpg" download class="top-image-dl-btn disc-50">50%OFF商品</a>
+          </div>
+        </div>
+      </div>
+
       <!-- サブビュー: セール当日① 広告復活 -->
       <div id="tool-ad-restore" class="tool-panel">
         <div class="tool-panel-header">
@@ -3034,6 +3094,24 @@
           <div id="sku-restore-status" class="status"></div>
           <div id="sku-restore-table-container">
             <div class="empty-state">対象データがありません。「① 参加商品追加」でRMSデータを取り込んでください。</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- サブビュー: セール後③ トップ画像戻し -->
+      <div id="tool-top-image-back" class="tool-panel">
+        <div class="tool-panel-header">
+          <h2>③ トップ画像戻し</h2>
+        </div>
+        <p class="tool-panel-description">トップ画像をセール用から通常のものに差し替えていく。</p>
+
+        <div class="card">
+          <h2>現在のトップ画像をダウンロード</h2>
+          <div class="top-image-dl-grid">
+            <a href="./images/top-images/top-10.jpg" download class="top-image-dl-btn disc-10">10%OFF商品</a>
+            <a href="./images/top-images/top-20.jpg" download class="top-image-dl-btn disc-20">20%OFF商品</a>
+            <a href="./images/top-images/top-30.jpg" download class="top-image-dl-btn disc-30">30%OFF商品</a>
+            <a href="./images/top-images/top-50.jpg" download class="top-image-dl-btn disc-50">50%OFF商品</a>
           </div>
         </div>
       </div>
@@ -3199,7 +3277,7 @@
     // ブラウザ/マウスの「戻る」でサブビューから戻れるよう、サブビュー遷移時は history.pushState する
     let _suppressPushState = false; // popstate由来の呼び出しでは積まない
     const MAIN_TABS = ['products', 'workflow'];
-    const VALID_VIEWS = ['products','workflow','add-products','decide-price','decide-title','dl-rms-csv','make-rms-csv','cost-set-item','cost-set-component','cost-non-set','upload-rms','rms-event','sku-record','ad-delete','ad-restore','upload-original','sku-restore'];
+    const VALID_VIEWS = ['products','workflow','add-products','decide-price','decide-title','dl-rms-csv','make-rms-csv','cost-set-item','cost-set-component','cost-non-set','upload-rms','rms-event','sku-record','ad-delete','ad-restore','upload-original','sku-restore','thumb-change','top-image-back'];
     const LAST_VIEW_KEY = 'sale-ikkatsu-last-view';
     // 直近のメインタブ(サブビューから戻る時の戻り先)
     let _lastMainTab = 'products';
@@ -3972,7 +4050,7 @@
           { id: 'prep-rms-event', label: 'RMSイベント申請', action: 'open-rms-event' },
           { id: 'prep-sku-record', label: '審査落ちSKU倉庫入れ', action: 'open-sku-record' },
           { id: 'prep-ad-delete', label: '広告削除', action: 'open-ad-delete' },
-          { id: 'prep-thumb-change', label: 'トップ画像変更' },
+          { id: 'prep-thumb-change', label: 'トップ画像変更', action: 'open-thumb-change' },
         ],
       },
       {
@@ -3990,7 +4068,7 @@
         buttons: [
           { id: 'after-upload-original', label: 'RMS-元CSVアップロード', action: 'open-upload-original' },
           { id: 'after-sku-restore', label: '審査落ちSKU倉庫出し', action: 'open-sku-restore' },
-          { id: 'after-top-image-back', label: 'トップ画像戻し' },
+          { id: 'after-top-image-back', label: 'トップ画像戻し', action: 'open-top-image-back' },
         ],
       },
     ];
