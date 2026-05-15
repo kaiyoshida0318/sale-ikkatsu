@@ -1140,7 +1140,18 @@
       font-variant-numeric: tabular-nums;
     }
     .product-table tr:hover td { background: #fafbfd; }
-    .product-table .name { max-width: 640px; white-space: normal; }
+    .product-table .name {
+      max-width: 640px;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      /* 3行に省略 (どんな長文でも必ず3行に収まる、末尾「…」) */
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
     .product-table .placeholder-cell {
       color: #b5b5c0;
       font-style: italic;
@@ -2529,7 +2540,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.70</span>
+      <span class="version">v0.52.71</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4440,7 +4451,7 @@
             <td class="mgr">${escapeHtml(r.itemCode || '')}</td>
             <td class="img-cell">${imageCellHtml(r.imageUrl)}</td>
             <td class="col-discount${discClass}">${discLabel}</td>
-            <td class="name">${escapeHtml(r.name || '')}</td>
+            <td class="name" title="${escapeHtml(r.name || '')}">${escapeHtml(r.name || '')}</td>
           </tr>`;
         }).join('');
       }
