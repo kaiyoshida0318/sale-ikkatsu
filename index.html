@@ -2440,7 +2440,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.52</span>
+      <span class="version">v0.52.53</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -3872,7 +3872,7 @@
         if (currentOffRate === 'all') {
           // 全体: ①取り込み済みの全商品
           displayRows = baseRows.map(r => ({
-            mgr: r.mgr, itemCode: r.itemCode, name: r.name,
+            mgr: r.mgr, itemCode: r.itemCode, name: r.name, imageUrl: r.imageUrl || '',
             discount: mgrDiscounts[r.mgr] ?? null
           }));
         } else {
@@ -3880,7 +3880,7 @@
           displayRows = baseRows
             .filter(r => mgrDiscounts[r.mgr] === target)
             .map(r => ({
-              mgr: r.mgr, itemCode: r.itemCode, name: r.name,
+              mgr: r.mgr, itemCode: r.itemCode, name: r.name, imageUrl: r.imageUrl || '',
               discount: target
             }));
         }
