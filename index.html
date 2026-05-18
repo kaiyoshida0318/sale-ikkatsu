@@ -2551,7 +2551,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.76</span>
+      <span class="version">v0.52.78</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2679,7 +2679,7 @@
         <div class="tool-panel-header">
           <h2>⑤ 割引率決定</h2>
         </div>
-        <p class="tool-panel-description">10～50％OFFの利益額・利益率を見て割引率を決定していく。</p>
+        <p class="tool-panel-description">商品管理番号ごとに割引率を決定していく。10～50％OFFの利益額・利益率を見て判断する。</p>
 
         <div id="decide-price-status" class="status"></div>
         <div id="decide-price-table-wrap" class="product-table-wrap">
@@ -4515,11 +4515,8 @@
       let hintText;
       const ymLabel = currentYM ? currentYM.replace('/', '年') + '月 ' : '';
       if (displayRows && displayRows.length > 0) {
-        if (currentOffRate === 'all') {
-          hintText = `${ymLabel}のセール参加商品: ${displayRows.length}件`;
-        } else {
-          hintText = `${ymLabel}${currentOffRate}%OFFの商品: ${displayRows.length}件`;
-        }
+        // データあり時は件数表示を出さない (タブのラベルに件数が出ているため)
+        hintText = '';
       } else {
         if (currentOffRate !== 'all') {
           hintText = `${currentOffRate}%OFF に設定された商品はありません。⑤「割引率決定」で各商品に割引率を選んでください。`;
@@ -4533,8 +4530,8 @@
       container.innerHTML = `<table class="product-table">
         <thead>${headHtml}</thead>
         <tbody>${bodyHtml}</tbody>
-      </table>
-      <div class="table-hint">${escapeHtml(hintText)}</div>`;
+      </table>` + (hintText ? `
+      <div class="table-hint">${escapeHtml(hintText)}</div>` : '');
       // 新しい thead が生成されたので、sticky の top 値を再計算する
       if (typeof window._syncStickyTabs === 'function') {
         requestAnimationFrame(() => window._syncStickyTabs());
@@ -5461,6 +5458,8 @@
       const discounts = (data.discounts && typeof data.discounts === 'object') ? data.discounts : {};
       // 商品管理番号 → 商品名 のマップ (① で取り込み時に算出した代表名)
       // 商品管理番号 → 商品コード のマップ (① で commonPrefixByHyphen により算出したSKU共通プレフィクス)
+      // ※ ただし itemCode はアーカイブの値は古いロジックの可能性があるため、
+      //   この直後の rmsRows 走査で集めたSKU群から commonPrefixByHyphen で再計算して上書きする
       const mgrNameMap = {};
       const mgrItemCodeMap = {};
       if (Array.isArray(data.rows)) {
@@ -5469,6 +5468,26 @@
             mgrNameMap[r.mgr] = r.name || '';
             mgrItemCodeMap[r.mgr] = r.itemCode || '';
           }
+        }
+      }
+      // mgrItemCodeMap を rmsRows から新ロジックで再計算 (古い値を上書き)
+      {
+        const mgrToSkus = {};
+        for (let i = 1; i < rmsRows.length; i++) {
+          const rr = rmsRows[i];
+          if (!rr) continue;
+          const m = (rr[iMgr]||'').trim();
+          const s = (rr[iSku]||'').trim();
+          const p = (rr[iPrice]||'').trim();
+          if (!m || !s) continue;
+          // 通常価格空欄行は表に出さないので、コード算出からも除外 (saveProductRowsToArchive と同方針)
+          if (!p) continue;
+          if (!mgrToSkus[m]) mgrToSkus[m] = [];
+          mgrToSkus[m].push(s);
+        }
+        for (const m of Object.keys(mgrToSkus)) {
+          const code = commonPrefixByHyphen(mgrToSkus[m]);
+          if (code) mgrItemCodeMap[m] = code;
         }
       }
 
