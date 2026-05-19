@@ -240,6 +240,123 @@
       padding: 0 4px;
       font-variant-numeric: tabular-nums;
     }
+    /* 全データ削除ボタン (ヘッダー右端、控えめな見た目) */
+    .danger-zone-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #fff;
+      border: 1px solid #e0c4c4;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #a14444;
+      cursor: pointer;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+    .danger-zone-btn:hover {
+      background: #fbeded;
+      border-color: #d89999;
+      color: #8e2929;
+    }
+    .danger-zone-btn:active { transform: translateY(1px); }
+    /* 全データ削除 確認モーダル */
+    .danger-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 16px;
+    }
+    .danger-modal-overlay.is-open { display: flex; }
+    .danger-modal {
+      background: #fff;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 480px;
+      padding: 24px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      font-family: inherit;
+    }
+    .danger-modal h2 {
+      margin: 0 0 12px 0;
+      font-size: 18px;
+      color: #a14444;
+    }
+    .danger-modal p {
+      margin: 0 0 12px 0;
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--text);
+    }
+    .danger-modal .danger-warning-list {
+      margin: 0 0 16px 0;
+      padding-left: 20px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .danger-modal .danger-warning-list li { margin-bottom: 4px; }
+    .danger-modal label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+    .danger-modal input[type="text"] {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+      box-sizing: border-box;
+      margin-bottom: 16px;
+    }
+    .danger-modal input[type="text"]:focus {
+      outline: none;
+      border-color: #a14444;
+      box-shadow: 0 0 0 2px rgba(161, 68, 68, 0.15);
+    }
+    .danger-modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+    .danger-modal-actions button {
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      border: 1px solid transparent;
+    }
+    .danger-modal-cancel {
+      background: #f0f0f2;
+      color: var(--text);
+      border-color: var(--border);
+    }
+    .danger-modal-cancel:hover { background: #e6e6e9; }
+    .danger-modal-confirm {
+      background: #a14444;
+      color: #fff;
+      border-color: #a14444;
+    }
+    .danger-modal-confirm:hover:not(:disabled) {
+      background: #8e2929;
+      border-color: #8e2929;
+    }
+    .danger-modal-confirm:disabled {
+      background: #d8b4b4;
+      border-color: #d8b4b4;
+      cursor: not-allowed;
+    }
     /* Pythonランタイム状態表示 */
     .py-status {
       display: inline-flex;
@@ -2551,14 +2668,33 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.78</span>
+      <span class="version">v0.52.79</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
         <button type="button" id="fs-up" title="大きく">A+</button>
       </div>
+      <button type="button" id="btn-clear-all-data" class="danger-zone-btn" title="保存されている全データを削除します">🗑 全データ削除</button>
     </div>
   </header>
+
+  <!-- 全データ削除 確認モーダル -->
+  <div id="clear-all-modal" class="danger-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="clear-all-modal-title">
+    <div class="danger-modal">
+      <h2 id="clear-all-modal-title">⚠️ 全データを削除しますか?</h2>
+      <p>このツールに保存されている全てのデータが完全に削除されます。この操作は<b>取り消せません</b>。</p>
+      <ul class="danger-warning-list">
+        <li>全てのセール年月のデータ (商品リスト、割引率、編集内容、タイトル等)</li>
+        <li>原価設定、ワークフロー進捗、列幅、表示設定</li>
+      </ul>
+      <label for="clear-all-confirm-input">確認のため <b>DELETE</b> と入力してください</label>
+      <input type="text" id="clear-all-confirm-input" autocomplete="off" placeholder="DELETE">
+      <div class="danger-modal-actions">
+        <button type="button" id="clear-all-cancel" class="danger-modal-cancel">キャンセル</button>
+        <button type="button" id="clear-all-confirm" class="danger-modal-confirm" disabled>削除する</button>
+      </div>
+    </div>
+  </div>
 
   <nav class="main-tabs-bar" role="tablist">
     <button type="button" class="main-tab active" data-main-tab="products" role="tab">
@@ -4392,6 +4528,87 @@
         if (btn.dataset.dlBound === '1') return;
         btn.dataset.dlBound = '1';
         btn.addEventListener('click', () => handleTopImageDlClick(btn));
+      });
+    }
+
+    // ---- 全データ削除モーダル ----
+    // ヘッダーの「全データ削除」ボタンクリックで確認モーダルを開く。
+    // 「DELETE」と正確に入力された場合のみ「削除する」ボタンが有効になる。
+    // 削除対象: localStorage 内の sale-ikkatsu-* で始まる全キー
+    //          (他サイト/他ツールのキーは触らない)
+    function bindClearAllDataModal() {
+      const openBtn = document.getElementById('btn-clear-all-data');
+      const modal = document.getElementById('clear-all-modal');
+      const input = document.getElementById('clear-all-confirm-input');
+      const cancelBtn = document.getElementById('clear-all-cancel');
+      const confirmBtn = document.getElementById('clear-all-confirm');
+      if (!openBtn || !modal || !input || !cancelBtn || !confirmBtn) return;
+      if (openBtn.dataset.bound === '1') return;
+      openBtn.dataset.bound = '1';
+
+      const openModal = () => {
+        input.value = '';
+        confirmBtn.disabled = true;
+        modal.classList.add('is-open');
+        // 少し遅らせて focus (アニメーション後)
+        setTimeout(() => input.focus(), 50);
+      };
+      const closeModal = () => {
+        modal.classList.remove('is-open');
+        input.value = '';
+        confirmBtn.disabled = true;
+      };
+
+      openBtn.addEventListener('click', openModal);
+      cancelBtn.addEventListener('click', closeModal);
+
+      // オーバーレイのクリックでも閉じる (モーダル本体は除外)
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+      });
+
+      // ESCで閉じる
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.classList.contains('is-open')) closeModal();
+      });
+
+      // 入力監視: 「DELETE」と一致したときだけ確定可能
+      input.addEventListener('input', () => {
+        confirmBtn.disabled = (input.value !== 'DELETE');
+      });
+      // Enterキーで確定 (入力一致時のみ)
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !confirmBtn.disabled) {
+          e.preventDefault();
+          confirmBtn.click();
+        }
+      });
+
+      // 削除実行
+      confirmBtn.addEventListener('click', () => {
+        if (input.value !== 'DELETE') return;
+        try {
+          // sale-ikkatsu-* キーを全削除
+          const keysToRemove = [];
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.indexOf('sale-ikkatsu-') === 0) keysToRemove.push(k);
+          }
+          for (const k of keysToRemove) localStorage.removeItem(k);
+          // sessionStorage も念のため同様にクリア (もし使われていれば)
+          try {
+            const sKeysToRemove = [];
+            for (let i = 0; i < sessionStorage.length; i++) {
+              const k = sessionStorage.key(i);
+              if (k && k.indexOf('sale-ikkatsu-') === 0) sKeysToRemove.push(k);
+            }
+            for (const k of sKeysToRemove) sessionStorage.removeItem(k);
+          } catch (e) { /* sessionStorage 使えない環境は無視 */ }
+          // リロードして初期状態に
+          window.location.reload();
+        } catch (e) {
+          alert('削除中にエラーが発生しました: ' + (e.message || e));
+        }
       });
     }
 
@@ -8224,6 +8441,7 @@
     renderProductTable();
     if (typeof renderWorkflow === "function") renderWorkflow();
     if (typeof bindTopImageDlButtons === "function") bindTopImageDlButtons();
+    if (typeof bindClearAllDataModal === "function") bindClearAllDataModal();
 
     // ⑤画面: ホイール振り分け
     //   - .product-group-table-wrap.is-scrollable 上 (=10行超のテーブル): ネイティブ任せ (内部縦スクロール)
