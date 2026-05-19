@@ -988,14 +988,21 @@
       color: #fff;
       border-color: #2d6cb8;
     }
-    /* 現在開いているサブビューのボタン (各ブロック色の濃色版 + 影で強調) */
-    .workflow-block.block-prep .wf-btn.is-current,
-    .workflow-block.block-prep .wf-btn.is-current.is-done {
-      background: #1b4a85;
-      color: #fff;
+    /* 現在開いているサブビューのボタン: 中の塗りは通常のまま、枠線だけ濃くする */
+    .workflow-block.block-prep .wf-btn.is-current {
       border-color: #1b4a85;
-      box-shadow: 0 0 0 2px rgba(28, 75, 138, 0.35);
-      font-weight: 700;
+      border-width: 3px;
+      padding: 9px 11px; /* border幅増分を相殺してサイズ維持 */
+      box-shadow: 0 0 0 2px rgba(28, 75, 138, 0.30);
+    }
+    /* is-current と is-done が両立: 塗りつぶしはそのまま、さらに濃い外枠で「現在開いている」も示す */
+    .workflow-block.block-prep .wf-btn.is-current.is-done {
+      background: #2d6cb8;
+      color: #fff;
+      border-color: #0e2f5e;
+      border-width: 3px;
+      padding: 9px 11px;
+      box-shadow: 0 0 0 2px rgba(14, 47, 94, 0.40);
     }
 
     /* ブロック2: セール当日 (オレンジ系) */
@@ -1019,13 +1026,19 @@
       color: #fff;
       border-color: #d36916;
     }
-    .workflow-block.block-day .wf-btn.is-current,
-    .workflow-block.block-day .wf-btn.is-current.is-done {
-      background: #a14a0a;
-      color: #fff;
+    .workflow-block.block-day .wf-btn.is-current {
       border-color: #a14a0a;
-      box-shadow: 0 0 0 2px rgba(161, 77, 10, 0.35);
-      font-weight: 700;
+      border-width: 3px;
+      padding: 9px 11px;
+      box-shadow: 0 0 0 2px rgba(161, 77, 10, 0.30);
+    }
+    .workflow-block.block-day .wf-btn.is-current.is-done {
+      background: #d36916;
+      color: #fff;
+      border-color: #6e3306;
+      border-width: 3px;
+      padding: 9px 11px;
+      box-shadow: 0 0 0 2px rgba(110, 51, 6, 0.40);
     }
 
     /* ブロック3: セール後 (緑系) */
@@ -1049,13 +1062,19 @@
       color: #fff;
       border-color: #2a8a45;
     }
-    .workflow-block.block-after .wf-btn.is-current,
-    .workflow-block.block-after .wf-btn.is-current.is-done {
-      background: #1a5e2c;
-      color: #fff;
+    .workflow-block.block-after .wf-btn.is-current {
       border-color: #1a5e2c;
-      box-shadow: 0 0 0 2px rgba(22, 93, 40, 0.35);
-      font-weight: 700;
+      border-width: 3px;
+      padding: 9px 11px;
+      box-shadow: 0 0 0 2px rgba(22, 93, 40, 0.30);
+    }
+    .workflow-block.block-after .wf-btn.is-current.is-done {
+      background: #2a8a45;
+      color: #fff;
+      border-color: #0f3a1a;
+      border-width: 3px;
+      padding: 9px 11px;
+      box-shadow: 0 0 0 2px rgba(15, 58, 26, 0.40);
     }
 
     /* セール期間アーカイブセレクタ */
@@ -2594,7 +2613,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.82</span>
+      <span class="version">v0.52.83</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
