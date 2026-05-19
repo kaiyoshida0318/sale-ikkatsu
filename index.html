@@ -833,15 +833,19 @@
 
     /* セール作業フロー (3ブロック) */
     /* 共通エリア: 全サブビュー上に表示。セール参加商品タブだけ非表示。 */
-    /* サブビューの内容幅 (table-layout) に引きずられないよう max-width を固定。
-       下のサブビュー内容との間に区切り線を入れて地続き感を絶つ。 */
+    /* サブビューの内容幅 (table-layout) や main の flex 化に引きずられないよう、
+       width を完全固定。親が flex でも block でも中央寄せ。 */
     #workflow-shared {
       display: block;
-      max-width: 1280px;
+      width: 1280px;
+      max-width: 100%; /* 画面幅 < 1280px のときだけ縮む */
+      flex: 0 0 auto;  /* 親が flex のとき shrink/grow させない */
+      align-self: center; /* 親が flex column のとき中央寄せ */
       margin: 0 auto;
       padding-bottom: 24px;
       border-bottom: 1px solid var(--border);
       margin-bottom: 24px;
+      box-sizing: border-box;
     }
     body[data-view="products"] #workflow-shared { display: none; }
     /* workflow 画面そのもの (3ブロックのみ表示) のときは区切り線・下マージン不要 */
@@ -2605,7 +2609,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.84</span>
+      <span class="version">v0.52.85</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
