@@ -1533,6 +1533,29 @@
     body[data-view="decide-price"] .tool-panel-header h2 {
       font-size: 18px;
     }
+    /* v0.52.105: tool-panel-header(sticky, top=--top-bar-h) と
+       sub-header-row(sticky, top=--top-bar-h + 48px) の間の 12px の隙間を埋める
+       sticky帯。スクロール時に背景色で隙間を隠す + 「バリエ・手数料」ボタンを
+       表ヘッダーのバリエ4列の真上に絶対配置するための土台にもする。 */
+    body[data-view="decide-price"] .decide-sticky-strip {
+      position: sticky;
+      top: calc(var(--top-bar-h, 130px) + 36px);
+      z-index: 29;
+      height: 12px;
+      background: var(--bg);
+      margin: 0;
+      padding: 0;
+      /* ボタンを absolute で配置するためのコンテキスト */
+    }
+    /* 「バリエ・手数料」ボタン本体: stripを基準に absolute 配置。
+       JSで left を v4列の中心に合わせる。top はstripの中央に置いてサブヘッダー上端と重ねる。 */
+    body[data-view="decide-price"] .decide-sticky-strip .fee-toggle-floating {
+      position: absolute;
+      top: -4px; /* stripの上端から少し上に出す ≒ tool-panel-headerの下端寄りに */
+      left: 0;
+      z-index: 32; /* sub-header-row の上に重ねる */
+      display: none; /* JSで配置完了後に inline-flex 化 */
+    }
     body[data-view="decide-price"] .tool-panel-description {
       margin: 0 0 8px 0;
       padding: 8px 12px;
@@ -2707,7 +2730,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.104</span>
+      <span class="version">v0.52.105</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2848,6 +2871,9 @@
       <div id="tool-decide-price" class="tool-panel">
         <div class="tool-panel-header">
           <h2>④ 割引率決定</h2>
+        </div>
+        <div class="decide-sticky-strip">
+          <button type="button" id="btn-toggle-fee-floating" class="fee-toggle fee-toggle-floating" title="バリエ・手数料列を表示／非表示">＋ バリエ・手数料</button>
         </div>
         <p class="tool-panel-description">商品管理番号ごとに割引率を決定していく。10～50％OFFの利益額・利益率を見て判断する。</p>
 
@@ -8246,7 +8272,7 @@
           const width = c.resizable ? (colWidths[c.key] || c.defaultWidth) : null;
           const style = width ? ` style="width:${width}px;min-width:${width}px;max-width:${width}px;"` : '';
           const handle = c.resizable ? `<div class="col-resize-handle" data-resize-col="${c.key}"></div>` : '';
-          return `<th class="${cls}"${style}>${escapeHtml(c.label)}${handle}</th>`;
+          return `<th class="${cls}" data-key="${escapeHtml(c.key)}"${style}>${escapeHtml(c.label)}${handle}</th>`;
         }).join('')}</tr>`;
       }
 
@@ -8346,7 +8372,6 @@
 
       container.innerHTML = `
         <div class="decide-toolbar">
-          <button type="button" id="btn-toggle-fee" class="fee-toggle" title="${escapeHtml(toggleTitle)}">${escapeHtml(toggleLabel)}</button>
           <span class="decide-stats">${result.stats.output_rows}件 (除外: ${result.stats.excluded_no_price} / 原価未取得: ${result.stats.cost_not_found})</span>
         </div>
         <div class="mgr-tabs" role="tablist">${tabsHtml}</div>
@@ -8355,6 +8380,14 @@
         </div>
         ${warnHtml}
       `;
+
+      // 浮遊型「バリエ・手数料」ボタンのラベル/タイトル更新 (sticky-strip 内)
+      // ※ ボタン本体は静的HTML(#btn-toggle-fee-floating) に置き、ここでは表示状態のみ反映
+      const _floatBtn = document.getElementById('btn-toggle-fee-floating');
+      if (_floatBtn) {
+        _floatBtn.textContent = toggleLabel;
+        _floatBtn.title = toggleTitle;
+      }
 
       // アクティブタブ以外の商品グループを隠す
       applyMgrTabVisibility();
@@ -8370,12 +8403,6 @@
           });
           applyMgrTabVisibility();
         });
-      });
-
-      const tg = document.getElementById('btn-toggle-fee');
-      if (tg) tg.addEventListener('click', () => {
-        _decideShowFee = !_decideShowFee;
-        renderDecidePriceTable();
       });
 
       // 編集可能セルのイベント
@@ -8421,7 +8448,77 @@
           if (mgr) updateMgrTabDiscColor(mgr, newVal);
         });
       });
+
+      // 浮遊型「バリエ・手数料」ボタンを v4列の真上に配置
+      // (DOM 反映後に呼ぶため rAF を挟む)
+      if (typeof window._positionFeeToggleFloating === 'function') {
+        requestAnimationFrame(() => window._positionFeeToggleFloating());
+      }
     }
+
+    // v0.52.105 浮遊型「バリエ・手数料」ボタン:
+    // - 静的HTML(#btn-toggle-fee-floating)に対し、初回1度だけ click listener を付与
+    // - 表描画後・リサイズ時に、表ヘッダー「バリエ4」セル真上に絶対配置
+    // - 表描画時に「バリエ4」列が表示されていれば inline-flex で見せ、無ければ hidden
+    (function bindFeeToggleFloating(){
+      const btn = document.getElementById('btn-toggle-fee-floating');
+      if (!btn) return;
+      btn.addEventListener('click', () => {
+        if (typeof _decideShowFee !== 'undefined') {
+          _decideShowFee = !_decideShowFee;
+          if (typeof renderDecidePriceTable === 'function') renderDecidePriceTable();
+        }
+      });
+
+      function positionFloating() {
+        const strip = document.querySelector('.decide-sticky-strip');
+        if (!strip) return;
+        const container = document.getElementById('decide-price-table-container');
+        if (!container) { btn.style.display = 'none'; return; }
+        // アクティブ(表示中)の product-group 内の sub-header-row の v4 列を狙う
+        const groups = container.querySelectorAll('.product-group');
+        let v4th = null;
+        for (const g of groups) {
+          if (g.getAttribute('data-hidden') === 'true') continue;
+          const t = g.querySelector('tr.sub-header-row th[data-key="v4"]');
+          if (t) { v4th = t; break; }
+        }
+        // 非表示時(_decideShowFee=false) は v4列が無くなるので、見える v1 列にフォールバック
+        // (バリエ列群が全て隠れた状態でも、ボタンの位置は表のどこかしらの上にしておく)
+        if (!v4th) {
+          for (const g of groups) {
+            if (g.getAttribute('data-hidden') === 'true') continue;
+            const t = g.querySelector('tr.sub-header-row th[data-key="v1"]')
+                   || g.querySelector('tr.sub-header-row th[data-key="feeL"]')
+                   || g.querySelector('tr.sub-header-row th[data-key="off10p"]');
+            if (t) { v4th = t; break; }
+          }
+        }
+        if (!v4th) { btn.style.display = 'none'; return; }
+        const sRect = strip.getBoundingClientRect();
+        const tRect = v4th.getBoundingClientRect();
+        // stripの左端を基準に、v4列セルの中心と ボタンの中心を合わせる
+        btn.style.display = 'inline-flex';
+        const btnWidth = btn.offsetWidth || 120;
+        const targetCenter = tRect.left + tRect.width / 2;
+        let leftPx = targetCenter - sRect.left - btnWidth / 2;
+        // 画面端ではみ出さないようクランプ (stripの幅範囲内に収める)
+        const stripWidth = sRect.width;
+        if (leftPx < 0) leftPx = 0;
+        if (leftPx + btnWidth > stripWidth) leftPx = Math.max(0, stripWidth - btnWidth);
+        btn.style.left = leftPx + 'px';
+      }
+      window._positionFeeToggleFloating = positionFloating;
+
+      // ウィンドウリサイズ・スクロール時にも再配置
+      // (列幅リサイズや、表ヘッダーが横方向にずれるケースに対応)
+      window.addEventListener('resize', () => {
+        requestAnimationFrame(positionFloating);
+      });
+      // ※ スクロール時は v4列の x座標は変わらない (sticky な thead 内で left は固定) ので
+      //    通常はスクロール時の再計算は不要。ただし mgr-tabs 切替で active group が変わると
+      //    DOMの可視性が変わるため、applyMgrTabVisibility 末尾でも呼ぶ。
+    })();
 
     // 商品管理番号タブの表示切替: アクティブ以外を hidden に
     function applyMgrTabVisibility() {
@@ -8435,6 +8532,10 @@
           g.setAttribute('data-hidden', 'true');
         }
       });
+      // アクティブグループが切り替わると v4列の DOM位置も変わるため再配置
+      if (typeof window._positionFeeToggleFloating === 'function') {
+        requestAnimationFrame(() => window._positionFeeToggleFloating());
+      }
     }
 
     // 商品管理番号タブの割引色クラスを切り替え
