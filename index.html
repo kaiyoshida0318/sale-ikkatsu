@@ -1430,45 +1430,31 @@
       flex-wrap: wrap;
     }
     .decide-stats { font-size: 12px; color: var(--muted); }
-    /* ⑤画面: タイトル+ツールバーは固定、groups-scrollだけスクロールエリア */
-    body[data-view="decide-price"] {
-      overflow: hidden !important;
-    }
+
+    /* ④割引率決定 (v0.52.90〜):
+       旧 flex chain (固定高さ + 内部スクロール) を廃止し、
+       ドキュメント全体のスクロール + sticky で構築。
+       - main は通常のブロック (max-width 100%、自由な高さ)
+       - 3ブロックエリアと表は普通にページに並ぶ
+       - tool-panel-header (= ④割引率決定 見出し) はメインタブバー直下に sticky
+       - 表ヘッダー行 (thead th) は見出しの下に sticky
+       - groups-scroll の内部スクロールは無効化 (ドキュメント全体スクロールに統一) */
     body[data-view="decide-price"] main {
-      margin-top: 4px;
-      margin-bottom: 0;
-      /* 画面高さからヘッダー + メインタブ + margin-top を引く */
-      height: calc(100vh - var(--top-bar-h, 130px) - 4px) !important;
-      display: flex !important;
-      flex-direction: column !important;
-      overflow: hidden !important;
+      /* グローバルに max-width: 100% が効くのは維持。flex 化はしない */
     }
-    /* main → #app → #tool-decide-price の flex chain を通す */
-    body[data-view="decide-price"] main > #app {
-      flex: 1 1 auto !important;
-      display: flex !important;
-      flex-direction: column !important;
-      min-height: 0 !important;
-      overflow: hidden !important;
-    }
-    /* tool-panel自体を flex chain に組み込む */
-    body[data-view="decide-price"] #tool-decide-price.tool-panel.active {
-      display: flex !important;
-      flex: 1 1 auto !important;
-      flex-direction: column !important;
-      min-height: 0 !important;
-    }
-    /* ⑤画面 特殊スタイル */
     body[data-view="decide-price"] .tool-panel-header {
-      margin-bottom: 2px;
-      flex-shrink: 0;
+      position: sticky;
+      top: var(--top-bar-h, 130px);
+      z-index: 30;
+      background: var(--bg);
+      padding: 8px 0 4px;
+      margin-bottom: 0;
     }
     body[data-view="decide-price"] .tool-panel-header h2 {
       font-size: 18px;
     }
     body[data-view="decide-price"] .tool-panel-description {
-      flex-shrink: 0;
-      margin-bottom: 8px;
+      margin: 0 0 8px 0;
       padding: 8px 12px;
       font-size: 13px;
       line-height: 1.6;
@@ -1481,33 +1467,27 @@
     body[data-view="decide-price"] #decide-price-status {
       margin-top: 0;
       min-height: 0;
-      flex-shrink: 0;
     }
+    /* 表のラッパー: 内部スクロールを切る (ドキュメント全体でスクロール) */
     body[data-view="decide-price"] .product-table-wrap {
       padding: 0;
       border: 0;
       background: transparent;
-      flex: 1 1 auto !important;
-      display: flex !important;
-      flex-direction: column !important;
-      min-height: 0 !important;
+      overflow: visible;
     }
     body[data-view="decide-price"] #decide-price-table-container {
-      flex: 1 1 auto !important;
-      display: flex !important;
-      flex-direction: column !important;
-      min-height: 0 !important;
+      /* flex 解除 */
     }
-    /* groups-scroll が残り全部の縦領域を占有 */
+    /* groups-scroll は内部スクロール無し (ページ全体でスクロール) */
     body[data-view="decide-price"] .groups-scroll {
-      flex: 1 1 auto !important;
-      min-height: 0 !important;
-      overflow-y: auto !important;
+      overflow: visible !important;
+      max-height: none !important;
     }
     body[data-view="decide-price"] .decide-toolbar {
       padding: 0 2px 2px;
-      flex-shrink: 0;
     }
+    /* 商品管理番号タブ (mgr-tabs) も見出しの下に sticky で固定すると便利だが、
+       今回の要件は「タブバー + 見出しまで止める」なので mgr-tabs は通常スクロール */
 
     /* ⑤画面 商品管理番号タブ (グレー基調、割引率に応じて色が変わる) */
     .mgr-tabs {
@@ -2115,13 +2095,18 @@
     }
     /* サブヘッダー行 (グループ毎に再表示される列ヘッダー)
        スクロールコンテナ内で sticky にして、グループに入ると上端に固定、
-       別グループの sub-header-row が来ると押し上げて切り替わる */
+       別グループの sub-header-row が来ると押し上げて切り替わる
+       ※ v0.52.90〜 decide-price はドキュメントスクロール化したため、top の基準も viewport */
     .product-table.decide-table tr.sub-header-row th {
       position: sticky;
       top: 0;
       z-index: 3;
       font-weight: 700;
       color: #fff;
+    }
+    /* decide-price 画面: メインタブバー + tool-panel-header の下に sticky させる */
+    body[data-view="decide-price"] .product-table.decide-table tr.sub-header-row th {
+      top: calc(var(--top-bar-h, 130px) + 50px);
     }
     /* 編集可能セル */
     .product-table.decide-table td.editable {
@@ -2635,7 +2620,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.89</span>
+      <span class="version">v0.52.90</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -8727,27 +8712,11 @@
     if (typeof restoreAllStatusMessages === "function") restoreAllStatusMessages();
 
     // ⑤画面: ホイール振り分け
-    //   - .product-group-table-wrap.is-scrollable 上 (=10行超のテーブル): ネイティブ任せ (内部縦スクロール)
-    //   - それ以外 (タブ/タイトル/ツールバー/グループヘッダー/短い表/グループ間): .groups-scroll を動かす
-    (function bindDecideWheelForward() {
-      const panel = document.getElementById('tool-decide-price');
-      if (!panel) return;
-      panel.addEventListener('wheel', (e) => {
-        if (document.body.getAttribute('data-view') !== 'decide-price') return;
-        const scrollEl = document.querySelector('.groups-scroll');
-        if (!scrollEl) return;
-        // 内部スクロール可能なテーブル上ならネイティブ任せ
-        const scrollableWrap = e.target.closest && e.target.closest('.product-group-table-wrap.is-scrollable');
-        if (scrollableWrap) return;
-        // 横方向ホイール (shift+ホイール等) は table-wrap 上ならネイティブ (横スクロール)
-        if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
-          const tableWrap = e.target.closest && e.target.closest('.product-group-table-wrap');
-          if (tableWrap) return;
-        }
-        e.preventDefault();
-        scrollEl.scrollTop += e.deltaY;
-      }, { passive: false });
-    })();
+    // v0.52.90〜 decide-price をドキュメントスクロール化したため、このホイール転送は不要に。
+    // .groups-scroll の内部スクロールが無効になっているので、wheelイベントはネイティブ任せでOK。
+    // 念のため、内部の長い表 (.product-group-table-wrap.is-scrollable) の横スクロールが
+    // 機能するよう、何もしない (デフォルト挙動を維持)。
+    // (function bindDecideWheelForward() { ... })(); // 廃止
 
     // F5(リロード)前のビューを復元 (デフォルト: products)
     (function restoreLastView() {
