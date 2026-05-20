@@ -2785,7 +2785,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.114</span>
+      <span class="version">v0.52.115</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -5311,6 +5311,82 @@
     }
 
     // 取り込み結果を currentYM の rows に保存
+    // v0.52.115: 既存の CSV (Base64 / Shift_JIS) と新規の CSVテキストをマージして、
+    //  マージ後の Shift_JIS バイト列 (Uint8Array) を返す。
+    //  ・ヘッダーは新規CSVのものを採用
+    //  ・データ行は keyColName (例: 'システム連携用SKU番号' / '商品コード' / 'セット商品コード') をキーに重複排除
+    //    既存・新規両方にあるキー → 新規で更新
+    //    既存のみ → そのまま残す
+    //    新規のみ → 末尾に追加
+    //  ・列構成が違う場合(ヘッダー名集合が異なる)はマージせず新規を返す
+    //  ・keyColName は「完全一致 or 部分一致(includes)」のどちらかでヘッダー検索:
+    //     第3引数 keyMatchMode='partial' (デフォルト) で includes、'exact' で完全一致
+    function mergeCsvBytesByKey(existingB64, newCsvText, keyColName, keyMatchMode) {
+      keyMatchMode = keyMatchMode || 'partial';
+      // 既存CSVなし → 新規をそのまま Shift_JIS 化して返す
+      if (!existingB64) {
+        return encodeShiftJIS(newCsvText);
+      }
+      let existingRows, newRows;
+      try {
+        const existingText = decodeShiftJIS(b642u8(existingB64));
+        existingRows = parseCsvText(existingText);
+        newRows = parseCsvText(newCsvText);
+      } catch (e) {
+        return encodeShiftJIS(newCsvText);
+      }
+      if (newRows.length < 2) return b642u8(existingB64);
+      if (existingRows.length < 2) return encodeShiftJIS(newCsvText);
+      const newHeader = newRows[0];
+      const existingHeader = existingRows[0];
+      const sameHeader = existingHeader.length === newHeader.length
+        && existingHeader.every((h, i) => h === newHeader[i]);
+      if (!sameHeader) return encodeShiftJIS(newCsvText);
+      // キー列のインデックス取得
+      const idxKey = newHeader.findIndex(h => {
+        if (!h) return false;
+        if (keyMatchMode === 'exact') return h.trim() === keyColName;
+        return h.indexOf(keyColName) >= 0;
+      });
+      if (idxKey < 0) return encodeShiftJIS(newCsvText);
+      // 新規 → キーマップ
+      const newKeyRows = new Map();
+      for (let i = 1; i < newRows.length; i++) {
+        const r = newRows[i];
+        if (!r || r.length === 0) continue;
+        const k = (r[idxKey] || '').trim();
+        if (!k) continue;
+        newKeyRows.set(k, r);
+      }
+      const mergedDataRows = [];
+      const handled = new Set();
+      for (let i = 1; i < existingRows.length; i++) {
+        const r = existingRows[i];
+        if (!r || r.length === 0) continue;
+        const k = (r[idxKey] || '').trim();
+        if (!k) { mergedDataRows.push(r); continue; }
+        if (newKeyRows.has(k)) {
+          mergedDataRows.push(newKeyRows.get(k));
+          handled.add(k);
+        } else {
+          mergedDataRows.push(r);
+        }
+      }
+      for (let i = 1; i < newRows.length; i++) {
+        const r = newRows[i];
+        if (!r || r.length === 0) continue;
+        const k = (r[idxKey] || '').trim();
+        if (!k) continue;
+        if (!handled.has(k)) mergedDataRows.push(r);
+      }
+      const mergedText = rowsToCsvText(newHeader, mergedDataRows);
+      return encodeShiftJIS(mergedText);
+    }
+    // 旧呼出名の互換ラッパー(① RMS CSV 用、SKU番号キー)
+    function mergeRmsCsvBytes(existingB64, newCsvText) {
+      return mergeCsvBytesByKey(existingB64, newCsvText, 'システム連携用SKU番号', 'partial');
+    }
+
     function saveProductRowsToArchive(productRows) {
       // 現在の年月: archive選択 or 開始日時から
       let ym = currentYM || getCurrentYM();
@@ -5321,7 +5397,35 @@
       if (!archive[ym]) {
         archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
       }
-      archive[ym].rows = productRows;
+      // v0.52.115: 同月で①を追加取り込みした場合のマージ
+      //  - 既存 archive[ym].rows と 新規 productRows を mgr(商品管理番号) キーでマージ
+      //  - 既存にあって新規にない mgr は そのまま残す (消さない)
+      //  - 既存にあって新規にもある mgr は 新規データで更新
+      //  - 新規にしかない mgr は 末尾に追加
+      const existingRows = Array.isArray(archive[ym].rows) ? archive[ym].rows : [];
+      const newByMgr = new Map();
+      for (const r of productRows) {
+        if (r && r.mgr) newByMgr.set(r.mgr, r);
+      }
+      const mergedRows = [];
+      const handledMgrs = new Set();
+      // 既存の順序を保ちつつ、新規にも同じ mgr があれば 更新版を入れる
+      for (const r of existingRows) {
+        if (!r || !r.mgr) { mergedRows.push(r); continue; }
+        if (newByMgr.has(r.mgr)) {
+          mergedRows.push(newByMgr.get(r.mgr));
+          handledMgrs.add(r.mgr);
+        } else {
+          mergedRows.push(r); // 新規にない → そのまま残す
+        }
+      }
+      // 既存になかった新規mgrは末尾に追加
+      for (const r of productRows) {
+        if (r && r.mgr && !handledMgrs.has(r.mgr)) {
+          mergedRows.push(r);
+        }
+      }
+      archive[ym].rows = mergedRows;
       // 開始/終了日時も最新を反映 (空でなければ)
       const period = getCurrentPeriod();
       if (period.startDt) archive[ym].startDt = period.startDt;
@@ -5330,6 +5434,8 @@
       currentYM = ym;
       localStorage.setItem(SALE_ARCHIVE_CURRENT, ym);
       refreshArchiveSelect();
+      // 取り込み件数 (新規追加+更新の合計、=productRowsの長さ) を返す
+      return { mergedCount: mergedRows.length, addedOrUpdated: productRows.length };
     }
 
     // フォーム送信ハンドラ
@@ -5446,12 +5552,14 @@
         }
         saveProductRowsToArchive(productRows);
         // RMSバイト列もアーカイブに保存(⑤ セール価格決定の表構築や ④ の検索用CSV作成で再利用)
+        // v0.52.115: 同月で①を追加取り込みした場合、SKU単位でマージ (既存SKUは更新、新規SKUは追加)
         try {
           const ym = currentYM || getCurrentYM();
           if (ym) {
             const archive = loadArchive();
             if (!archive[ym]) archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
-            archive[ym].rmsCsvB64 = ab2b64(buf);
+            const mergedBytes = mergeRmsCsvBytes(archive[ym].rmsCsvB64, text);
+            archive[ym].rmsCsvB64 = ab2b64(mergedBytes);
             saveArchive(archive);
           }
         } catch (err) {
@@ -5709,11 +5817,15 @@
             const archive = loadArchive();
             if (!archive[ym]) archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
             if (_costPendingFiles.single) {
-              archive[ym].nonSetCsvB64 = ab2b64(_costPendingFiles.single.buf);
+              // v0.52.115: 既存と SKU(商品コード)キーでマージ
+              const mergedSingle = mergeCsvBytesByKey(archive[ym].nonSetCsvB64, _costPendingFiles.single.text, '商品コード', 'exact');
+              archive[ym].nonSetCsvB64 = ab2b64(mergedSingle);
               archive[ym].nonSetCsvName = _costPendingFiles.single.name;
             }
             if (_costPendingFiles.set) {
-              archive[ym].setItemCsvB64 = ab2b64(_costPendingFiles.set.buf);
+              // v0.52.115: 既存と セット商品コード キーでマージ
+              const mergedSet = mergeCsvBytesByKey(archive[ym].setItemCsvB64, _costPendingFiles.set.text, 'セット商品コード', 'exact');
+              archive[ym].setItemCsvB64 = ab2b64(mergedSet);
               archive[ym].setItemCsvName = _costPendingFiles.set.name;
             }
             saveArchive(archive);
@@ -5869,11 +5981,14 @@
         }
         setCostSetComponentStatus('<span class="spinner"></span>CSVを読み込み中...', '');
         const buf = await input.files[0].arrayBuffer();
+        const newCsvText = decodeShiftJIS(buf);
         const ym = currentYM || getCurrentYM();
         if (!ym) throw new Error('セール期間(開始日時)を先に入力してください');
         const archive = loadArchive();
         if (!archive[ym]) archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
-        archive[ym].setComponentCsvB64 = ab2b64(buf);
+        // v0.52.115: 既存と 商品コード キーでマージ
+        const mergedComp = mergeCsvBytesByKey(archive[ym].setComponentCsvB64, newCsvText, '商品コード', 'exact');
+        archive[ym].setComponentCsvB64 = ab2b64(mergedComp);
         archive[ym].setComponentCsvName = input.files[0].name;
         saveArchive(archive);
         // 取り込み完了 → 送料自動計算を即座に走らせる (Q3: 既存値も上書き)
