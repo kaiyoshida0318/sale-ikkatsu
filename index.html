@@ -2787,7 +2787,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.116</span>
+      <span class="version">v0.52.117</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -3786,10 +3786,39 @@
     });
 
     // メインタブのクリック
+    // v0.52.117: Ctrl+クリック / Cmd+クリック / 中クリックで別タブ起動
+    //  - 通常クリックは従来通り(同タブ内で表示切替)
+    //  - 修飾キーや中クリックは window.open('?view=xxx', '_blank') で新タブを開く
+    function _openViewInNewTab(viewId) {
+      try {
+        const url = new URL(location.href);
+        url.searchParams.set('view', viewId);
+        // hash(#) を持っていれば クリア (URL 整理)
+        url.hash = '';
+        window.open(url.toString(), '_blank', 'noopener');
+      } catch (e) {
+        // フォールバック (URLが構築できない環境)
+        try { window.open('?view=' + encodeURIComponent(viewId), '_blank', 'noopener'); } catch(_) {}
+      }
+    }
     document.querySelectorAll('.main-tab[data-main-tab]').forEach(tab => {
-      tab.addEventListener('click', () => {
+      tab.addEventListener('click', (e) => {
+        const viewId = tab.getAttribute('data-main-tab');
+        if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) {
+          // 修飾キー or 中クリック → 新タブで開く
+          e.preventDefault();
+          _openViewInNewTab(viewId);
+          return;
+        }
         _inProgressBtnId = null; // タブ切替で進行中外枠は消す
-        showView(tab.getAttribute('data-main-tab'));
+        showView(viewId);
+      });
+      // 中クリック (mousedown の button===1) もキャッチ
+      tab.addEventListener('auxclick', (e) => {
+        if (e.button === 1) {
+          e.preventDefault();
+          _openViewInNewTab(tab.getAttribute('data-main-tab'));
+        }
       });
     });
 
@@ -3799,15 +3828,31 @@
     });
 
     // ロゴクリック → セール参加商品タブへ(最新月の表)
+    // v0.52.117: Ctrl/Cmd+クリック・中クリックでセール参加商品を別タブ起動
     const logoHome = document.getElementById('logo-home');
     if (logoHome) {
-      logoHome.addEventListener('click', () => {
+      logoHome.addEventListener('click', (e) => {
+        if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) {
+          e.preventDefault();
+          _openViewInNewTab('products');
+          return;
+        }
         _inProgressBtnId = null;
         showView('products');
+      });
+      logoHome.addEventListener('auxclick', (e) => {
+        if (e.button === 1) {
+          e.preventDefault();
+          _openViewInNewTab('products');
+        }
       });
       logoHome.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
+          if (e.ctrlKey || e.metaKey) {
+            _openViewInNewTab('products');
+            return;
+          }
           _inProgressBtnId = null;
           showView('products');
         }
@@ -9438,12 +9483,26 @@
     // (function bindDecideWheelForward() { ... })(); // 廃止
 
     // F5(リロード)前のビューを復元 (デフォルト: products)
+    // v0.52.117: URLパラメータ ?view=xxx があれば最優先 (Ctrl+クリック別タブ起動の戻り先)
     (function restoreLastView() {
       let target = 'products';
+      // ① URLパラメータ ?view=xxx を最優先
       try {
-        const saved = localStorage.getItem(LAST_VIEW_KEY);
-        if (saved && VALID_VIEWS.includes(saved)) target = saved;
-      } catch (e) {}
+        const params = new URLSearchParams(location.search);
+        const v = params.get('view');
+        if (v && VALID_VIEWS.includes(v)) {
+          target = v;
+        } else {
+          // ② localStorage の前回ビュー
+          const saved = localStorage.getItem(LAST_VIEW_KEY);
+          if (saved && VALID_VIEWS.includes(saved)) target = saved;
+        }
+      } catch (e) {
+        try {
+          const saved = localStorage.getItem(LAST_VIEW_KEY);
+          if (saved && VALID_VIEWS.includes(saved)) target = saved;
+        } catch (_) {}
+      }
       // URLハッシュは pushState 由来の残骸なので一旦消す
       if (location.hash) {
         try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
