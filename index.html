@@ -1497,7 +1497,11 @@
     }
     body[data-view="decide-price"] .tool-panel-header {
       position: sticky;
-      top: var(--top-bar-h, 130px);
+      /* main-tabs-bar は position:sticky;top:0 で画面上端に張り付くので、
+         tool-panel-header はその直下 (= main-tabs の高さ位置) に固定する。
+         var(--top-bar-h) はヘッダー込みの高さ (ヘッダーが見えてる時の合計値) で、
+         スクロール後にヘッダーが隠れた状態とズレるため使わない。 */
+      top: var(--main-tabs-h, 50px);
       z-index: 30;
       background: var(--bg);
       padding: 8px 0 4px;
@@ -2157,9 +2161,11 @@
       font-weight: 700;
       color: #fff;
     }
-    /* decide-price 画面: メインタブバー + tool-panel-header の下に sticky させる */
+    /* decide-price 画面: メインタブバー + tool-panel-header の下に sticky させる
+       基準は --main-tabs-h (メインタブバーの高さ、画面上端からの位置) + tool-panel-header の高さ
+       tool-panel-header の概算高さ: padding 8+4 + h2 font-size 18px * line-height 1.3 ≒ 36px → 安全側で 48px */
     body[data-view="decide-price"] .product-table.decide-table tr.sub-header-row th {
-      top: calc(var(--top-bar-h, 130px) + 50px);
+      top: calc(var(--main-tabs-h, 50px) + 48px);
     }
     /* 編集可能セル */
     .product-table.decide-table td.editable {
@@ -2673,7 +2679,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.92</span>
+      <span class="version">v0.52.93</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
