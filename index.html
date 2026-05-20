@@ -2794,7 +2794,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.118</span>
+      <span class="version">v0.52.119</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -6763,20 +6763,28 @@
       return { groups, reason: null };
     }
 
-    // 文字数カウント (半角スペースは0.5、それ以外は1)
+    // v0.52.119: 文字数カウントを楽天規定に合わせる
+    //   - 半角文字 (ASCII 0x00-0x7F + 半角カナ 0xFF61-0xFF9F) = 0.5 文字
+    //   - 全角文字 (それ以外) = 1 文字
+    //   - 最後に Math.floor で切り捨て (楽天の商品名文字数制限 127 に準拠)
+    //   例: 半角39 + 全角101 → 0.5*39 + 101 = 120.5 → floor → 120文字
     function countSsTitleChars(s) {
       if (!s) return 0;
-      let n = 0;
+      let halfCnt = 0;
+      let fullCnt = 0;
       for (const ch of String(s)) {
-        if (ch === ' ') n += 0.5;
-        else n += 1;
+        const c = ch.codePointAt(0);
+        if (c <= 0x7F || (c >= 0xFF61 && c <= 0xFF9F)) {
+          halfCnt++;
+        } else {
+          fullCnt++;
+        }
       }
-      return n;
+      return Math.floor(halfCnt * 0.5 + fullCnt);
     }
-    // 表示用フォーマット: 整数なら "12"、0.5刻みなら "12.5"
+    // 表示用フォーマット: 切り捨て済み整数なのでそのまま
     function fmtSsTitleCount(n) {
-      if (Number.isInteger(n)) return String(n);
-      return n.toFixed(1);
+      return String(n);
     }
     const SS_TITLE_LIMIT = 127;
 
