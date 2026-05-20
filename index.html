@@ -2098,9 +2098,11 @@
     }
     /* v0.52.110: product-group-header を 1段の flex に
        [前へ矢印] [画像] [商品名] [割引率] [次へ矢印] + 浮遊(バリエ・手数料ボタン)
-       v0.52.113: position:relative にして浮遊ボタンの絶対配置基準にする */
+       v0.52.113: position:relative にして浮遊ボタンの絶対配置基準にする
+       v0.52.116: padding-bottom を増やし、バリエ・手数料ボタン用の専用スペース行を確保。
+                  ボタンは枠内に収まるので表ヘッダーには被らない。 */
     .product-group-header {
-      padding: 10px 14px;
+      padding: 10px 14px 38px;
       border: 1px solid #d8d8de;
       border-bottom: 2px solid #b5b5c0;
       display: flex;
@@ -2120,14 +2122,14 @@
     .group-header-namecol .group-name {
       width: 100%;
     }
-    /* バリエ・手数料ボタン: product-group-header の下端(=表ヘッダーの真上)に絶対配置
-       JSで left を v4列の中央に合わせる(下記 #btn-toggle-fee-floating の制御は廃止し、
-       fee-toggle-floating クラスの DOM 要素を JS が見つけて配置)。 */
+    /* バリエ・手数料ボタン: product-group-header 内の下部スペース(padding-bottomの中)に
+       absolute 配置。JSで left を v4列の中央に合わせる。
+       v0.52.116: bottom を正値にして 枠内に収め、表ヘッダーに被らせない。 */
     .fee-toggle-floating {
       position: absolute;
-      bottom: -12px; /* product-group-header の下端から少しはみ出して表ヘッダー上に重なる */
+      bottom: 6px;
       left: 0;
-      z-index: 32; /* 表ヘッダー(z-index:2-3) の上 */
+      z-index: 26;
       display: inline-flex;
       align-items: center;
       gap: 4px;
@@ -2141,7 +2143,7 @@
       cursor: pointer;
       font-family: inherit;
       white-space: nowrap;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
     }
     /* 前後ナビ矢印 (左右端) */
     .mgr-nav-btn {
@@ -2785,7 +2787,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.115</span>
+      <span class="version">v0.52.116</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
