@@ -2080,6 +2080,18 @@
       font-style: italic;
       pointer-events: none;
     }
+    /* v0.52.121: 割引率不一致のセール用タイトルセル — 赤背景でエラー表示 */
+    .dt-table td.dt-col-ss.has-disc-mismatch {
+      background-color: #fde7e7 !important;
+      box-shadow: inset 0 0 0 2px #d83838 !important;
+    }
+    .dt-table td.dt-col-ss.has-disc-mismatch:hover {
+      background-color: #fcdada !important;
+    }
+    .dt-table td.dt-col-ss.has-disc-mismatch:focus {
+      background-color: #fff8f8 !important;
+      box-shadow: inset 0 0 0 2px #d83838 !important;
+    }
     /* 範囲選択中の見た目 (Excel風) */
     .dt-table td.editable.is-range-selected {
       background-color: #d6e4f7 !important;
@@ -2808,7 +2820,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.120</span>
+      <span class="version">v0.52.121</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -3899,7 +3911,13 @@
     if (savedType === 'super-sale' || savedType === 'marathon') {
       saleTypeEl.value = savedType;
     }
-    saleTypeEl.addEventListener('change', updateSaleTypeColor);
+    saleTypeEl.addEventListener('change', () => {
+      updateSaleTypeColor();
+      // v0.52.121: ⑤画面表示中なら、新しいセール種別で割引率不一致を再評価
+      if (document.body.getAttribute('data-view') === 'decide-title') {
+        if (typeof renderDecideTitleTable === 'function') renderDecideTitleTable();
+      }
+    });
     updateSaleTypeColor();
 
     // セール期間 永続化＋分割ブロック入力 (年/月/日/時/分)
@@ -6802,6 +6820,58 @@
     }
     const SS_TITLE_LIMIT = 127;
 
+    // v0.52.121: セール用タイトル内から「スーパーSALEで◯%OFF」または
+    //            「お買い物マラソンで◯%OFF」フレーズの割引率(◯)を抽出する。
+    //   ・ヘッダーの「セール種別」選択(saleTypeEl.value: 'super-sale' / 'marathon')に連動。
+    //   ・全角数字(０-９)・半角数字(0-9) 両対応、%/％ 両対応、間の空白/区切り文字も許容。
+    //   ・見つかれば数値 (例: 30)、見つからなければ null。
+    function extractSaleDiscountFromTitle(title, saleType) {
+      if (!title) return null;
+      // タイトル中の数字を半角化したコピー文字列を作る (元タイトルは変更しない)
+      // ％ → % に統一、全角数字 → 半角数字に置換
+      const normalized = String(title)
+        .replace(/[\uFF10-\uFF19]/g, ch => {
+          const c = ch.codePointAt(0);
+          return String.fromCharCode(c - 0xFF10 + 0x30); // 全角数字→半角数字
+        })
+        .replace(/[%%]/g, '%');
+      // セール種別に応じてキーワードを決定
+      const keyword = (saleType === 'marathon') ? 'お買い物マラソン' : 'スーパーSALE';
+      // 大文字小文字を意識せず探す (SALE / sale の揺れ対応)。
+      // 「スーパーSALEで30%OFF」のような形を許容: 「キーワード」のあと「で」「で最大」等、数字、%OFF
+      // 正規表現で柔軟に拾う
+      // 例: 「スーパーSALEで30%OFF」「スーパーSALEで最大30%OFF」「スーパーSALEで 30% OFF」
+      // → キーワード直後から数字直前までの間に任意文字(0-10文字)を許容する
+      const re = new RegExp(
+        keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[^\\d%]{0,10}(\\d{1,3})\\s*%\\s*(?:OFF|off|オフ)?',
+        'i'
+      );
+      const m = normalized.match(re);
+      if (m) {
+        const v = parseInt(m[1], 10);
+        if (v >= 0 && v <= 100) return v;
+      }
+      return null;
+    }
+
+    // v0.52.121: 現在のセール種別を取得 (ヘッダーの選択値)
+    function getCurrentSaleType() {
+      const el = document.getElementById('sale-type');
+      if (el && (el.value === 'super-sale' || el.value === 'marathon')) return el.value;
+      return 'super-sale';
+    }
+
+    // v0.52.121: 割引率の不一致判定 (true=不一致でエラー / false=OK or 判定対象外)
+    //   ・割引率列が未選択 (null/undefined) → false (チェックしない)
+    //   ・タイトル中に該当フレーズが見つからない → false (チェックしない)
+    //   ・フレーズが見つかり、数値が割引率列と不一致 → true
+    function isSsTitleDiscountMismatch(ssTitle, discount, saleType) {
+      if (discount !== 10 && discount !== 20 && discount !== 30 && discount !== 50) return false;
+      const v = extractSaleDiscountFromTitle(ssTitle, saleType || getCurrentSaleType());
+      if (v === null) return false; // フレーズなし = チェックしない
+      return v !== discount;
+    }
+
     // ============================================================
     // ⑪⑫⑬ 共通: 全件完了バッジの表示更新
     // ------------------------------------------------------------
@@ -7292,6 +7362,7 @@
         return;
       }
       // 表本体
+      const _curSaleType = getCurrentSaleType();
       const rowsHtml = groups.map(g => {
         const disc = g.discount;
         const discClass = (disc === 10 || disc === 20 || disc === 30 || disc === 50) ? ` dt-disc-${disc}` : ' dt-disc-none';
@@ -7299,12 +7370,18 @@
         const cnt = countSsTitleChars(g.ssTitle);
         const cntOver = cnt > SS_TITLE_LIMIT;
         const cntClass = cntOver ? ' is-over' : '';
+        // v0.52.121: タイトル内の「○○SALEで◯%OFF」と割引率列の値の不一致チェック
+        const mismatch = isSsTitleDiscountMismatch(g.ssTitle, disc, _curSaleType);
+        const ssMismatchClass = mismatch ? ' has-disc-mismatch' : '';
+        const ssTitle = mismatch
+          ? `タイトル内の割引率がセール用に選択した割引率(${disc}%)と一致しません`
+          : '';
         return `<tr data-mgr="${escapeHtml(g.mgr)}">
           <td class="dt-col-mgr">${escapeHtml(g.mgr)}</td>
           <td class="dt-col-img">${imageCellHtml(g.imageUrl)}</td>
           <td class="dt-col-disc${discClass}">${discLabel}</td>
           <td class="dt-col-name editable" contenteditable="true" data-sku="${escapeHtml(g.sku)}" data-field="name" data-mgr="${escapeHtml(g.mgr)}">${escapeHtml(g.name)}</td>
-          <td class="dt-col-ss editable" contenteditable="true" data-sku="${escapeHtml(g.sku)}" data-field="ssTitle" data-mgr="${escapeHtml(g.mgr)}">${escapeHtml(g.ssTitle)}</td>
+          <td class="dt-col-ss editable${ssMismatchClass}" contenteditable="true" data-sku="${escapeHtml(g.sku)}" data-field="ssTitle" data-mgr="${escapeHtml(g.mgr)}" title="${escapeHtml(ssTitle)}">${escapeHtml(g.ssTitle)}</td>
           <td class="dt-col-count${cntClass}" data-count-for-sku="${escapeHtml(g.sku)}"><span class="dt-count-num">${fmtSsTitleCount(cnt)}</span><span class="dt-count-sep">/</span><span class="dt-count-max">${SS_TITLE_LIMIT}</span></td>
         </tr>`;
       }).join('');
@@ -7362,10 +7439,29 @@
             const sku = cell.getAttribute('data-sku');
             const countCell = container.querySelector(`td.dt-col-count[data-count-for-sku="${cssEscape(sku)}"]`);
             if (!countCell) return;
-            const n = countSsTitleChars(cell.textContent);
+            const text = cell.textContent;
+            const n = countSsTitleChars(text);
             const numEl = countCell.querySelector('.dt-count-num');
             if (numEl) numEl.textContent = fmtSsTitleCount(n);
             countCell.classList.toggle('is-over', n > SS_TITLE_LIMIT);
+            // v0.52.121: 割引率不一致のリアルタイム判定
+            // 同じ行の dt-col-disc から割引率を取得 (クラス dt-disc-XX より)
+            const tr = cell.closest('tr');
+            let disc = null;
+            if (tr) {
+              const discCell = tr.querySelector('.dt-col-disc');
+              if (discCell) {
+                const dm = discCell.className.match(/dt-disc-(\d+)/);
+                if (dm) disc = parseInt(dm[1], 10);
+              }
+            }
+            const mm = isSsTitleDiscountMismatch(text, disc, getCurrentSaleType());
+            cell.classList.toggle('has-disc-mismatch', mm);
+            if (mm) {
+              cell.setAttribute('title', `タイトル内の割引率がセール用に選択した割引率(${disc}%)と一致しません`);
+            } else {
+              cell.removeAttribute('title');
+            }
           });
         }
         // 編集中のセルに「複数行」テキストが貼り付けられたら、矩形ペーストに切り替える
