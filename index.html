@@ -1850,6 +1850,26 @@
       display: flex;
       align-items: center;
       gap: 12px;
+      /* ⑤画面: メインタブバー直下に sticky 固定 (④ と同じ方式) */
+      position: sticky;
+      top: var(--main-tabs-h, 50px);
+      z-index: 30;
+      background: var(--bg);
+      padding: 8px 0 4px;
+      margin-bottom: 0;
+    }
+    /* ⑤画面: 表のラッパー overflow-x:auto がスクロールコンテキストを作って
+       thead の sticky が表内に閉じ込められるのを防ぐため、viewport 基準にする
+       (外側 #decide-title-table-wrap も内側 .dt-table-wrap も両方 visible に) */
+    body[data-view="decide-title"] #decide-title-table-wrap,
+    body[data-view="decide-title"] .dt-table-wrap {
+      overflow: visible;
+    }
+    /* ⑤画面: 表ヘッダーを tool-panel-header の下に sticky */
+    body[data-view="decide-title"] .dt-table thead th {
+      position: sticky;
+      top: calc(var(--main-tabs-h, 50px) + 48px);
+      z-index: 28;
     }
     /* テーブル本体 */
     .dt-table-wrap {
@@ -2679,7 +2699,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.93</span>
+      <span class="version">v0.52.95</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
