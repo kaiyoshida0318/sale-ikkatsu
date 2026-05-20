@@ -2434,78 +2434,73 @@
       0%, 100% { box-shadow: 0 0 0 4px rgba(34,168,87,0.18), 0 0 12px rgba(34,168,87,0.55); }
       50%      { box-shadow: 0 0 0 6px rgba(34,168,87,0.10), 0 0 22px rgba(34,168,87,0.85); }
     }
-    /* ⑪⑫⑬ サブビューの tool-panel-header を flex 化 (バッジを右に押し出す) */
-    body[data-view="sku-record"] .tool-panel-header,
-    body[data-view="ad-delete"] .tool-panel-header,
-    body[data-view="ad-restore"] .tool-panel-header {
+    /* ⑩審査落ちSKU倉庫入れ (sku-record) サブビュー: 見出しを sticky 化
+       (セール後② 審査落ちSKU倉庫出し sku-restore は除外 — ユーザー要件) */
+    body[data-view="sku-record"] .tool-panel-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: sticky;
+      top: var(--top-bar-h, 130px);
+      z-index: 30;
+      background: var(--bg);
+      padding: 8px 0 4px;
+      margin-bottom: 0;
+    }
+    /* セール後② sku-restore は tool-panel-header の flex 化のみ (sticky は外す) */
+    body[data-view="sku-restore"] .tool-panel-header {
       display: flex;
       align-items: center;
       gap: 12px;
     }
 
-    /* ⑫⑬ (広告削除/広告復活)
-       flex chain 方式で「上部ブロックは固定・表エリアだけスクロール」を実現
-       ⑤画面と同じパターン: body自体はスクロールしない、表内部だけスクロール対象
-       ※ ⑪は手順カード+記録表の構成のため、ここから外して通常bodyスクロールで運用 */
-    body[data-view="ad-delete"],
-    body[data-view="ad-restore"] {
-      overflow: hidden !important;
-    }
-    body[data-view="ad-delete"] main,
-    body[data-view="ad-restore"] main {
-      margin-top: 4px;
-      margin-bottom: 0;
-      height: calc(100vh - var(--top-bar-h, 130px) - 4px) !important;
-      display: flex !important;
-      flex-direction: column !important;
-      overflow: hidden !important;
-    }
-    body[data-view="ad-delete"] main > #app,
-    body[data-view="ad-restore"] main > #app {
-      flex: 1 1 auto !important;
-      display: flex !important;
-      flex-direction: column !important;
-      min-height: 0 !important;
-      overflow: hidden !important;
-    }
-    body[data-view="ad-delete"] #tool-ad-delete.tool-panel.active,
-    body[data-view="ad-restore"] #tool-ad-restore.tool-panel.active {
-      display: flex !important;
-      flex: 1 1 auto !important;
-      flex-direction: column !important;
-      min-height: 0 !important;
-    }
-    /* ⑫⑬ 上部のH2見出し: flex-shrink:0 で固定領域 */
+    /* ⑪広告削除 (ad-delete) / セール後① 広告復活 (ad-restore) サブビュー
+       両方とも同じ振る舞い:
+       - 3ブロックエリアと見出し・説明文は普通にドキュメントスクロール(上に流れる)
+       - tool-panel-header (見出し) はメインタブバー直下に sticky 固定
+       - 表だけ max-height で内部スクロール → 表ヘッダーは表内部 sticky で固定 */
     body[data-view="ad-delete"] .tool-panel-header,
     body[data-view="ad-restore"] .tool-panel-header {
       display: flex;
       align-items: center;
       gap: 12px;
-      flex-shrink: 0;
+      position: sticky;
+      top: var(--top-bar-h, 130px);
+      z-index: 30;
+      background: var(--bg);
+      padding: 8px 0 4px;
       margin-bottom: 0;
-      padding: 12px 0 8px;
     }
-    /* ⑫⑬ 説明文: flex-shrink:0 で固定領域 */
     body[data-view="ad-delete"] .tool-panel-description,
     body[data-view="ad-restore"] .tool-panel-description {
-      flex-shrink: 0;
       margin: 0 0 14px;
     }
-    /* ⑫⑬ 表コンテナ: 残り高さいっぱい、内部スクロール */
     body[data-view="ad-delete"] #ad-delete-table-container,
     body[data-view="ad-restore"] #ad-restore-table-container {
-      flex: 1 1 auto;
-      min-height: 0;
-      display: flex;
-      flex-direction: column;
+      /* デフォルト */
     }
-    /* 表ラッパー: 内部スクロールコンテナ */
+    /* 表ラッパー: 表本体だけ内部スクロール
+       max-height = 画面高さ - (上端 sticky 領域 + 見出し領域 + 余白)
+       見出しは sticky なので、画面上端に張り付いている時の余裕として 50px、
+       上端の sticky 要素(top-bar)で 130px の合計 180px を引いて、表が画面いっぱい使えるように
+       min-height: 表のコンテンツが少なくても画面下まで使う領域を確保し、
+       ドキュメント全体のスクロールが効くようにする (3ブロックを上に流すため) */
     body[data-view="ad-delete"] .ad-table-wrap,
     body[data-view="ad-restore"] .ad-table-wrap {
-      flex: 1 1 auto;
-      min-height: 0;
+      max-height: calc(100vh - var(--top-bar-h, 130px) - 70px);
+      min-height: calc(100vh - var(--top-bar-h, 130px) - 70px);
       overflow-y: auto;
       overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    /* 表ヘッダーを表内部の上端に sticky (ad-table-wrap 内基準なので top:0 でOK) */
+    body[data-view="ad-delete"] .ad-table thead th,
+    body[data-view="ad-restore"] .ad-table thead th {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: #f4f5f8;
     }
     /* ⑪ 倉庫入れSKU記録 */
     .sr-table-wrap {
@@ -2541,15 +2536,15 @@
       text-align: center;
     }
     /* ⑪⑭(sku-record/sku-restore) は通常bodyスクロールなので、
-       表ヘッダーはメインタブバーの直下 (--top-bar-h の位置) で固定する */
+       表ヘッダーは tool-panel-header + sku-record-card>h2 の下に固定する
+       積み重ね: viewport_top(0) → メインタブバー(top-bar-h) → tool-panel-header(+48px)
+                → sku-record-card>h2(+sku-card-h2-h) → sr-table thead */
     body[data-view="sku-record"] .sr-table thead th,
     body[data-view="sku-restore"] .sr-table thead th {
-      top: calc(var(--top-bar-h, 130px) + var(--sku-card-h2-h, 0px));
+      top: calc(var(--top-bar-h, 130px) + 48px + var(--sku-card-h2-h, 0px));
     }
     /* ⑪⑭の「2. 倉庫入れSKU記録表」カードの h2 も sticky 化、
-       表ヘッダーと一緒に固定する。
-       カードのpadding-topを0にして「通常位置と sticky位置のズレ」を回避し、
-       h2自身がpaddingで上余白を確保する形 */
+       tool-panel-header の直下に積む */
     body[data-view="sku-record"] .sku-record-card,
     body[data-view="sku-restore"] .sku-record-card {
       padding-top: 0;
@@ -2558,8 +2553,8 @@
     body[data-view="sku-record"] .sku-record-card > h2,
     body[data-view="sku-restore"] .sku-record-card > h2 {
       position: sticky;
-      top: var(--top-bar-h, 130px);
-      z-index: 41;
+      top: calc(var(--top-bar-h, 130px) + 48px);
+      z-index: 29;
       background: var(--card);
       margin: 0 -22px 0;
       padding: 18px 22px 18px;
@@ -2744,7 +2739,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.99</span>
+      <span class="version">v0.52.101</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
