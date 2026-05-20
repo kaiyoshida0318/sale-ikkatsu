@@ -304,6 +304,25 @@
       color: var(--muted);
       line-height: 1.65;
     }
+    /* v0.52.123: ⑥ 未選択件数バッジ (割引率未選択の商品数) */
+    .unselected-count {
+      display: none; /* JSで件数取得後に表示 */
+      margin-left: 8px;
+      padding: 2px 10px;
+      background: #fff0ee;
+      color: #d83838;
+      border: 1px solid #f0c0c0;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .unselected-count.is-zero {
+      background: #effbe9;
+      color: #2a8a45;
+      border-color: #c4e5b8;
+    }
+    .unselected-count.is-active { display: inline-block; }
     .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -2820,7 +2839,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.121</span>
+      <span class="version">v0.52.123</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -3001,7 +3020,7 @@
           <p class="card-lead">
             すでに取り込み済みのデータと、⑤で選んだ割引率・⑥で入力したセール用タイトルから、
             RMSアップ用のCSVを生成してダウンロードします。<br>
-            割引率が <b>未選択</b> の商品はスキップされます。
+            割引率が <b>未選択</b> の商品はスキップされます。<span id="dl-rms-unselected-count" class="unselected-count"></span>
           </p>
           <div class="actions">
             <button type="button" id="btn-dl-rms-csv" class="dl-ready">CSVをダウンロード</button>
@@ -3739,6 +3758,8 @@
       // dl-rms-csv サブビューを開くときは保管エリアを再描画
       if (viewId === 'dl-rms-csv') {
         if (typeof window._renderNormalItemArchive === 'function') window._renderNormalItemArchive();
+        // v0.52.123: 割引率未選択商品の件数バッジ更新
+        if (typeof window._updateDlRmsUnselectedCount === 'function') window._updateDlRmsUnselectedCount();
       }
       // sku-record サブビュー (⑪) を開くときは表を再描画
       if (viewId === 'sku-record') {
@@ -6795,6 +6816,44 @@
       return { groups, reason: null };
     }
 
+    // v0.52.123: ⑥画面用 — 割引率が未選択の商品数を集計
+    //  返り値: { unselected, total } (商品管理番号単位の件数)
+    function countDlRmsUnselected() {
+      try {
+        const { groups } = buildDecideTitleGroups();
+        if (!Array.isArray(groups)) return { unselected: 0, total: 0 };
+        const total = groups.length;
+        const unselected = groups.filter(g => {
+          const d = g.discount;
+          return d !== 10 && d !== 20 && d !== 30 && d !== 50;
+        }).length;
+        return { unselected, total };
+      } catch (e) {
+        return { unselected: 0, total: 0 };
+      }
+    }
+
+    // v0.52.123: ⑥画面 「未選択 N件」バッジを更新
+    window._updateDlRmsUnselectedCount = function _updateDlRmsUnselectedCount() {
+      const el = document.getElementById('dl-rms-unselected-count');
+      if (!el) return;
+      const { unselected, total } = countDlRmsUnselected();
+      el.classList.remove('is-zero');
+      if (total === 0) {
+        // 対象データなし → バッジ非表示
+        el.classList.remove('is-active');
+        el.textContent = '';
+        return;
+      }
+      el.classList.add('is-active');
+      if (unselected === 0) {
+        el.classList.add('is-zero');
+        el.textContent = '未選択 0件';
+      } else {
+        el.textContent = `未選択 ${unselected}件`;
+      }
+    };
+
     // v0.52.119: 文字数カウントを楽天規定に合わせる
     //   - 半角文字 (ASCII 0x00-0x7F + 半角カナ 0xFF61-0xFF9F) = 0.5 文字
     //   - 全角文字 (それ以外) = 1 文字
@@ -6828,13 +6887,13 @@
     function extractSaleDiscountFromTitle(title, saleType) {
       if (!title) return null;
       // タイトル中の数字を半角化したコピー文字列を作る (元タイトルは変更しない)
-      // ％ → % に統一、全角数字 → 半角数字に置換
+      // ％ → % に統一 (全角％ U+FF05 → 半角%)、全角数字 → 半角数字に置換
       const normalized = String(title)
         .replace(/[\uFF10-\uFF19]/g, ch => {
           const c = ch.codePointAt(0);
           return String.fromCharCode(c - 0xFF10 + 0x30); // 全角数字→半角数字
         })
-        .replace(/[%%]/g, '%');
+        .replace(/\uFF05/g, '%'); // 全角％を半角%へ
       // セール種別に応じてキーワードを決定
       const keyword = (saleType === 'marathon') ? 'お買い物マラソン' : 'スーパーSALE';
       // 大文字小文字を意識せず探す (SALE / sale の揺れ対応)。
