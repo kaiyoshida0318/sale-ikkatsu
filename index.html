@@ -528,7 +528,7 @@
       color: var(--brand);
     }
 
-    /* ② 原価特定-NE-単一orセット商品仕訳 用レイアウト */
+    /* ② 原価特定-NE-単一orセット商品仕分け 用レイアウト */
     /* 単一商品/セット商品 説明+画像の横並びコンテナ */
     .cost-search-row {
       display: grid;
@@ -2736,7 +2736,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.96</span>
+      <span class="version">v0.52.97</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -3012,7 +3012,7 @@
       <!-- サブビュー: ② 原価特定 NE-セット商品コード -->
       <div id="tool-cost-set-item" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>② 原価特定-NE-単一orセット商品仕訳</h2>
+          <h2>② 原価特定-NE-単一orセット商品仕分け</h2>
         </div>
         <p class="tool-panel-description">セール開始準備①のデータからはその商品が単一商品なのかセット商品なのかを判別することができない。<br>
         ここでは、ネクストエンジンでの検索を通すことでそれを特定していく。</p>
@@ -3053,9 +3053,9 @@
         </div>
 
         <div class="card">
-          <h2>2. CSVファイルのセット</h2>
+          <h2>2. CSVファイルのアップロード</h2>
           <p style="margin: 0 0 14px 0; font-size: 13px; color: var(--muted);">
-            1.で抽出した2つのデータをセットする。
+            1.で抽出した2つのCSVをそれぞれアップロードします。
           </p>
 
           <div class="cost-upload-row">
@@ -4873,7 +4873,7 @@
         className: 'block-prep',
         buttons: [
           { id: 'prep-add-products', label: '参加商品追加', action: 'open-add-products' },
-          { id: 'prep-cost-set-item', label: '原価特定-NE-単一orセット商品仕訳', action: 'open-cost-set-item' },
+          { id: 'prep-cost-set-item', label: '原価特定-NE-単一orセット商品仕分け', action: 'open-cost-set-item' },
           { id: 'prep-cost-set-component', label: '原価特定-NE-セット構成物原価特定', action: 'open-cost-set-component' },
           { id: 'prep-decide-price', label: '割引率決定', action: 'open-decide-price' },
           { id: 'prep-decide-title', label: 'セール用タイトル決定', action: 'open-decide-title' },
@@ -5465,7 +5465,7 @@
       }
     }
 
-    // ---- 新② (v0.52.88〜) 原価特定-NE-単一orセット商品仕訳 ----
+    // ---- 新② (v0.52.88〜) 原価特定-NE-単一orセット商品仕分け ----
     // セクション1: 単一商品CSVのファイル選択(NE「商品検索」結果)
     // セクション2: セット商品CSVのファイル選択(NE「セット商品検索」結果)
     // セクション3: SKU数チェック → 一致時のみ取り込み可
