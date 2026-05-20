@@ -560,12 +560,51 @@
       border-radius: 6px;
       padding: 6px;
       text-align: center;
+      /* ホバー時に拡大画像をはみ出して表示するため、相対配置にして
+         拡大画像が他要素の上に重なれるようにする */
+      position: relative;
+      cursor: zoom-in;
     }
     .cost-search-img {
       max-width: 100%;
       height: auto;
       display: block;
       border-radius: 4px;
+      transition: opacity .15s;
+    }
+    /* ホバー時: 拡大画像をオーバーレイ表示 */
+    .cost-search-img-wrap:hover {
+      z-index: 100;
+    }
+    .cost-search-img-wrap:hover .cost-search-img {
+      /* 元画像はそのまま表示位置を保ち、上に拡大画像を被せる */
+      opacity: 0.5;
+    }
+    /* 拡大画像 (擬似要素ではなく実画像を別表示する方が拡大率自由度が高いので、
+       同じ画像を img.cost-search-img-large として並列表示し、デフォルトでは hidden、
+       wrap:hover で表示) */
+    .cost-search-img-large {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(1);
+      max-width: none;
+      width: 200%;
+      max-height: 90vh;
+      height: auto;
+      border: 2px solid var(--brand);
+      border-radius: 6px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.35);
+      background: #fff;
+      pointer-events: none;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity .15s, visibility .15s;
+      z-index: 200;
+    }
+    .cost-search-img-wrap:hover .cost-search-img-large {
+      opacity: 1;
+      visibility: visible;
     }
     /* アップロード2つの横並び */
     .cost-upload-row {
@@ -1497,11 +1536,10 @@
     }
     body[data-view="decide-price"] .tool-panel-header {
       position: sticky;
-      /* main-tabs-bar は position:sticky;top:0 で画面上端に張り付くので、
-         tool-panel-header はその直下 (= main-tabs の高さ位置) に固定する。
-         var(--top-bar-h) はヘッダー込みの高さ (ヘッダーが見えてる時の合計値) で、
-         スクロール後にヘッダーが隠れた状態とズレるため使わない。 */
-      top: var(--main-tabs-h, 50px);
+      /* main-tabs-bar は JSで top: header_height に設定されているため、スクロール後は
+         viewport の top: var(--top-bar-h) (= ヘッダー高さ + タブ高さ = タブの下端) で
+         sticky 固定される。tool-panel-header はそのすぐ下に固定したい。 */
+      top: var(--top-bar-h, 130px);
       z-index: 30;
       background: var(--bg);
       padding: 8px 0 4px;
@@ -1852,7 +1890,7 @@
       gap: 12px;
       /* ⑤画面: メインタブバー直下に sticky 固定 (④ と同じ方式) */
       position: sticky;
-      top: var(--main-tabs-h, 50px);
+      top: var(--top-bar-h, 130px);
       z-index: 30;
       background: var(--bg);
       padding: 8px 0 4px;
@@ -1868,7 +1906,7 @@
     /* ⑤画面: 表ヘッダーを tool-panel-header の下に sticky */
     body[data-view="decide-title"] .dt-table thead th {
       position: sticky;
-      top: calc(var(--main-tabs-h, 50px) + 48px);
+      top: calc(var(--top-bar-h, 130px) + 48px);
       z-index: 28;
     }
     /* テーブル本体 */
@@ -2181,11 +2219,10 @@
       font-weight: 700;
       color: #fff;
     }
-    /* decide-price 画面: メインタブバー + tool-panel-header の下に sticky させる
-       基準は --main-tabs-h (メインタブバーの高さ、画面上端からの位置) + tool-panel-header の高さ
+    /* decide-price 画面: メインタブバー (--top-bar-h位置に固定) + tool-panel-header の下に sticky させる
        tool-panel-header の概算高さ: padding 8+4 + h2 font-size 18px * line-height 1.3 ≒ 36px → 安全側で 48px */
     body[data-view="decide-price"] .product-table.decide-table tr.sub-header-row th {
-      top: calc(var(--main-tabs-h, 50px) + 48px);
+      top: calc(var(--top-bar-h, 130px) + 48px);
     }
     /* 編集可能セル */
     .product-table.decide-table td.editable {
@@ -2699,7 +2736,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.95</span>
+      <span class="version">v0.52.96</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -3559,6 +3596,19 @@
         }
         // SKU数チェック表示も更新
         if (typeof updateCostSkuCheck === 'function') updateCostSkuCheck();
+        // 画像ホバー拡大: 各 .cost-search-img-wrap 内の元画像をクローンして
+        // cost-search-img-large クラスで追加 (一度だけ実行)
+        document.querySelectorAll('.cost-search-img-wrap').forEach(wrap => {
+          if (wrap.dataset.zoomReady === '1') return;
+          const orig = wrap.querySelector('.cost-search-img');
+          if (!orig) return;
+          const clone = orig.cloneNode(true);
+          clone.classList.remove('cost-search-img');
+          clone.classList.add('cost-search-img-large');
+          clone.removeAttribute('loading');
+          wrap.appendChild(clone);
+          wrap.dataset.zoomReady = '1';
+        });
       }
       if (viewId === 'cost-set-component') {
         if (typeof restoreStatusMessage === 'function') restoreStatusMessage('cost-set-component-status');
