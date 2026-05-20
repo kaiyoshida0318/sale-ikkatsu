@@ -832,17 +832,14 @@
     .btn-mini .plus { font-size: 15px; font-weight: 700; line-height: 1; }
 
     /* セール作業フロー (3ブロック) */
-    /* 共通エリア: 全サブビュー上に表示。セール参加商品タブだけ非表示。 */
-    /* サブビューの内容幅 (table-layout) や main の flex 化に引きずられないよう、
-       width を完全固定。親が flex でも block でも中央寄せ。 */
+    /* 共通エリア: 全サブビュー上に表示。セール参加商品タブだけ非表示。
+       <main> の外に出すことで、サブビューごとに <main> の max-width が変化しても
+       3ブロックの幅は影響を受けず常に固定 (1280px) で表示される。 */
     #workflow-shared {
       display: block;
-      width: 1280px;
-      max-width: 100%; /* 画面幅 < 1280px のときだけ縮む */
-      flex: 0 0 auto;  /* 親が flex のとき shrink/grow させない */
-      align-self: center; /* 親が flex column のとき中央寄せ */
+      max-width: 1280px;
       margin: 0 auto;
-      padding-bottom: 24px;
+      padding: 0 16px 24px;
       border-bottom: 1px solid var(--border);
       margin-bottom: 24px;
       box-sizing: border-box;
@@ -943,7 +940,10 @@
       min-height: 56px;
     }
     .wf-btn:hover:not(.is-done) { filter: brightness(0.97); }
-    .wf-btn:active { transform: translateY(1px); }
+    /* :active の transform はサイズ/位置変動の原因になるため無効化
+       (全 button 共通の button:active { transform: translateY(1px) } も上書き) */
+    .wf-btn:active,
+    .wf-btn:active:not(:disabled) { transform: none; }
     .wf-btn {
       cursor: default;
     }
@@ -2620,7 +2620,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.90</span>
+      <span class="version">v0.52.91</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2658,17 +2658,19 @@
     </button>
   </nav>
 
+  <!-- 全サブビュー共通の作業フロー (3ブロック)
+       <main> の外に出すことで、サブビューごとに <main> の max-width が変化しても
+       3ブロックの幅は影響を受けず常に同じサイズに保たれる。
+       セール参加商品タブでは display:none で非表示。 -->
+  <div id="workflow-shared">
+    <div class="workflow-toolbar">
+      <button type="button" id="btn-clear-checks" class="secondary">全てのチェックを外す</button>
+    </div>
+    <div class="workflow" id="workflow"></div>
+  </div>
+
   <main>
     <div id="app">
-      <!-- 全サブビュー共通の作業フロー (3ブロック)。
-           セール参加商品タブでは非表示。ワークフロー画面 / サブビュー画面では常時表示。 -->
-      <div id="workflow-shared">
-        <div class="workflow-toolbar">
-          <button type="button" id="btn-clear-checks" class="secondary">全てのチェックを外す</button>
-        </div>
-        <div class="workflow" id="workflow"></div>
-      </div>
-
       <!-- メインタブ: セール参加商品 (デフォルト表示) -->
       <div id="tool-products" class="tool-panel active">
         <div class="archive-selector-bar">
