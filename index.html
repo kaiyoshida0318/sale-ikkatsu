@@ -1113,6 +1113,32 @@
       color: var(--muted);
       font-variant-numeric: tabular-nums;
     }
+    /* セール期間ごとの参加商品全削除ボタン (右寄せ、控えめな赤系) */
+    .clear-month-btn {
+      margin-left: auto;
+      background: #fff;
+      border: 1px solid #e0c4c4;
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #a14444;
+      cursor: pointer;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+    .clear-month-btn:hover:not(:disabled) {
+      background: #fbeded;
+      border-color: #d89999;
+      color: #8e2929;
+    }
+    .clear-month-btn:active:not(:disabled) { transform: translateY(1px); }
+    .clear-month-btn:disabled {
+      color: #c0c0c8;
+      border-color: #e6e6ec;
+      background: #f7f7f9;
+      cursor: not-allowed;
+    }
 
     /* サブタブ(OFF率切替) */
     .tabs {
@@ -2609,7 +2635,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.85</span>
+      <span class="version">v0.52.87</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2665,6 +2691,7 @@
           <select id="archive-select" class="archive-select">
             <option value="">（履歴なし）</option>
           </select>
+          <button type="button" id="btn-clear-month-products" class="clear-month-btn" title="このセール期間の参加商品・原価データ・進捗を全て削除します(開始/終了日時は残ります)">この月の参加商品を全削除</button>
         </div>
 
         <div class="tabs" role="tablist">
@@ -3450,6 +3477,21 @@
       const mt = document.querySelector(`.main-tab[data-main-tab="${activeMainTab}"]`);
       if (mt) mt.classList.add('active');
 
+      // 取り込み完了メッセージの復元 (①参加商品追加, ②③④原価特定)
+      // success として永続化されたメッセージがあれば該当 status DOM に再表示する
+      if (viewId === 'add-products') {
+        if (typeof restoreStatusMessage === 'function') restoreStatusMessage('add-products-status');
+      }
+      if (viewId === 'cost-set-item') {
+        if (typeof restoreStatusMessage === 'function') restoreStatusMessage('cost-set-item-status');
+      }
+      if (viewId === 'cost-set-component') {
+        if (typeof restoreStatusMessage === 'function') restoreStatusMessage('cost-set-component-status');
+      }
+      if (viewId === 'cost-non-set') {
+        if (typeof restoreStatusMessage === 'function') restoreStatusMessage('cost-non-set-status');
+      }
+
       // products タブを開くときは最新の年月に切り替えて再描画
       if (viewId === 'products') {
         const archive = loadArchive();
@@ -4041,7 +4083,84 @@
       if (typeof renderUploadOriginalArchive === "function") renderUploadOriginalArchive();
       if (typeof renderSkuRestoreTable === "function") renderSkuRestoreTable();
       if (typeof renderTopImageDlButtons === "function") renderTopImageDlButtons();
+      // 取り込み完了ステータスも年月別に管理しているので再復元
+      if (typeof restoreAllStatusMessages === "function") restoreAllStatusMessages();
     });
+
+    // ---- 月単位の参加商品+派生データ全削除 ----
+    // セール参加商品タブ上部の「この月の参加商品を全削除」ボタン
+    // 削除対象: 該当年月の archive エントリの中で startDt / endDt 以外を全リセット
+    //   (商品データ、RMS/NEセット商品/NE構成物/非セットCSV、割引率、編集セル、
+    //    タイトル、ワークフロー進捗、ステータスメッセージ、その他全部)
+    // 残るもの: startDt, endDt (セール期間そのものは履歴に残す)
+    function clearMonthProducts(ym) {
+      if (!ym) return false;
+      const archive = loadArchive();
+      const data = archive[ym];
+      if (!data) return false;
+      const startDt = data.startDt || '';
+      const endDt = data.endDt || '';
+      // 完全に作り直す (開始/終了日時のみ保持)
+      archive[ym] = {
+        rows: [],
+        titles: {},
+        startDt: startDt,
+        endDt: endDt,
+        workflow: {}
+      };
+      saveArchive(archive);
+      return true;
+    }
+
+    // ボタンクリック→確認→削除→画面更新
+    (function bindClearMonthButton() {
+      const btn = document.getElementById('btn-clear-month-products');
+      if (!btn) return;
+      // 月が選ばれていなければ無効化
+      const updateBtnState = () => {
+        const ym = currentYM || (typeof getCurrentYM === 'function' ? getCurrentYM() : null);
+        btn.disabled = !ym;
+      };
+      updateBtnState();
+      // archive-select 変更時にも状態更新
+      const sel = document.getElementById('archive-select');
+      if (sel) sel.addEventListener('change', updateBtnState);
+      btn.addEventListener('click', () => {
+        const ym = currentYM || (typeof getCurrentYM === 'function' ? getCurrentYM() : null);
+        if (!ym) return;
+        const ymLabel = ym.replace('/', '年') + '月';
+        const message =
+          `${ymLabel} の参加商品データを全て削除します。\n\n` +
+          `▼ 削除されるもの\n` +
+          `・参加商品リスト (商品管理番号・SKU・商品名・画像)\n` +
+          `・RMSデータCSV / NEセット商品CSV / NE構成物CSV / 非セットCSV\n` +
+          `・割引率・編集内容・セール用タイトル\n` +
+          `・ワークフロー進捗 (チェック状態)\n` +
+          `・取り込み完了メッセージ\n\n` +
+          `▼ 残るもの\n` +
+          `・セール開始日時 / 終了日時\n\n` +
+          `この操作は取り消せません。本当に削除しますか?`;
+        if (!confirm(message)) return;
+        const ok = clearMonthProducts(ym);
+        if (!ok) {
+          alert('削除に失敗しました。');
+          return;
+        }
+        // 画面更新 (archive-select 変更時と同じリフレッシュ群を呼ぶ)
+        updateArchivePeriodLabel();
+        renderProductTable();
+        if (typeof renderWorkflow === "function") renderWorkflow();
+        if (typeof window._renderNormalItemArchive === "function") window._renderNormalItemArchive();
+        if (typeof renderDecideTitleTable === "function") renderDecideTitleTable();
+        if (typeof renderSkuRecordTable === "function") renderSkuRecordTable();
+        if (typeof renderAdDeleteTable === "function") renderAdDeleteTable();
+        if (typeof renderAdRestoreTable === "function") renderAdRestoreTable();
+        if (typeof renderUploadOriginalArchive === "function") renderUploadOriginalArchive();
+        if (typeof renderSkuRestoreTable === "function") renderSkuRestoreTable();
+        if (typeof renderTopImageDlButtons === "function") renderTopImageDlButtons();
+        if (typeof restoreAllStatusMessages === "function") restoreAllStatusMessages();
+      });
+    })();
 
     // ⑬サムネイル変更 / セール後③サムネイル戻し の DLボタン末尾に
     // 「(該当商品数)」を付与する。商品管理番号単位で各割引率(10/20/30/50)の件数を集計。
@@ -5041,11 +5160,80 @@
     }
 
     // フォーム送信ハンドラ
+    // ---- 取り込み完了ステータスの永続化 ----
+    // 各サブビュー (①参加商品追加, ②③④原価特定 等) の取り込み成功メッセージを
+    // archive[ym].savedStatusMessages に保存し、サブビュー再表示時/リロード時にも残るようにする。
+    // - 永続化するのは success のみ (エラー・読み込み中は揮発)
+    // - 年月ごとに独立管理 (別年月のメッセージは引きずらない)
+    // - キー: 各 status DOM の id ('add-products-status' / 'cost-set-item-status' 等)
+    function saveStatusMessage(statusElId, msg, kind) {
+      const ym = currentYM || (typeof getCurrentYM === 'function' ? getCurrentYM() : null);
+      if (!ym) return;
+      try {
+        const archive = loadArchive();
+        if (!archive[ym]) return;
+        if (!archive[ym].savedStatusMessages) archive[ym].savedStatusMessages = {};
+        archive[ym].savedStatusMessages[statusElId] = { msg, kind: kind || 'success' };
+        saveArchive(archive);
+      } catch (e) { /* 失敗しても本機能は阻害しない */ }
+    }
+    function clearStatusMessage(statusElId) {
+      const ym = currentYM || (typeof getCurrentYM === 'function' ? getCurrentYM() : null);
+      if (!ym) return;
+      try {
+        const archive = loadArchive();
+        if (!archive[ym] || !archive[ym].savedStatusMessages) return;
+        delete archive[ym].savedStatusMessages[statusElId];
+        saveArchive(archive);
+      } catch (e) {}
+    }
+    // 指定の status DOM に、永続化された取り込み完了メッセージがあれば表示する。
+    function restoreStatusMessage(statusElId) {
+      const el = document.getElementById(statusElId);
+      if (!el) return;
+      const ym = currentYM || (typeof getCurrentYM === 'function' ? getCurrentYM() : null);
+      if (!ym) {
+        el.className = 'status';
+        el.innerHTML = '';
+        return;
+      }
+      try {
+        const archive = loadArchive();
+        const saved = archive[ym] && archive[ym].savedStatusMessages && archive[ym].savedStatusMessages[statusElId];
+        if (saved && saved.msg) {
+          el.className = 'status' + (saved.kind ? ' ' + saved.kind : '');
+          el.innerHTML = saved.msg;
+        } else {
+          el.className = 'status';
+          el.innerHTML = '';
+        }
+      } catch (e) {
+        el.className = 'status';
+        el.innerHTML = '';
+      }
+    }
+    // 全サブビューのステータスを一括復元 (年月切替時に呼ぶ)
+    function restoreAllStatusMessages() {
+      const ids = [
+        'add-products-status',
+        'cost-set-item-status',
+        'cost-set-component-status',
+        'cost-non-set-status',
+      ];
+      ids.forEach(restoreStatusMessage);
+    }
+
     function setAddProductsStatus(msg, kind) {
       const el = document.getElementById('add-products-status');
       if (!el) return;
       el.className = 'status' + (kind ? ' ' + kind : '');
       el.innerHTML = msg;
+      // success のみ永続化、それ以外(エラー/読み込み中)は揮発させつつ既存の永続値もクリア
+      if (kind === 'success') {
+        saveStatusMessage('add-products-status', msg, 'success');
+      } else if (kind === 'error') {
+        clearStatusMessage('add-products-status');
+      }
     }
 
     // ArrayBuffer → Base64 (localStorage保存用)
@@ -5115,6 +5303,8 @@
       if (!el) return;
       el.className = 'status' + (kind ? ' ' + kind : '');
       el.innerHTML = msg;
+      if (kind === 'success') saveStatusMessage('cost-set-item-status', msg, 'success');
+      else if (kind === 'error') clearStatusMessage('cost-set-item-status');
     }
 
     document.getElementById('cost-set-item-form').addEventListener('submit', async (e) => {
@@ -5154,6 +5344,8 @@
       if (!el) return;
       el.className = 'status' + (kind ? ' ' + kind : '');
       el.innerHTML = msg;
+      if (kind === 'success') saveStatusMessage('cost-set-component-status', msg, 'success');
+      else if (kind === 'error') clearStatusMessage('cost-set-component-status');
     }
     function setDlSearchListStatus(msg, kind) {
       const el = document.getElementById('dl-search-list-status');
@@ -5298,6 +5490,8 @@
       if (!el) return;
       el.className = 'status' + (kind ? ' ' + kind : '');
       el.innerHTML = msg;
+      if (kind === 'success') saveStatusMessage('cost-non-set-status', msg, 'success');
+      else if (kind === 'error') clearStatusMessage('cost-non-set-status');
     }
     function setDlNonSetListStatus(msg, kind) {
       const el = document.getElementById('dl-nonset-list-status');
@@ -8314,6 +8508,7 @@
     renderProductTable();
     if (typeof renderWorkflow === "function") renderWorkflow();
     if (typeof bindTopImageDlButtons === "function") bindTopImageDlButtons();
+    if (typeof restoreAllStatusMessages === "function") restoreAllStatusMessages();
 
     // ⑤画面: ホイール振り分け
     //   - .product-group-table-wrap.is-scrollable 上 (=10行超のテーブル): ネイティブ任せ (内部縦スクロール)
