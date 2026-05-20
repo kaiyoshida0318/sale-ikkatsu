@@ -2635,7 +2635,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.87</span>
+      <span class="version">v0.52.88</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2909,38 +2909,56 @@
       <!-- サブビュー: ② 原価特定 NE-セット商品コード -->
       <div id="tool-cost-set-item" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>② 原価特定-NE-セット商品コード</h2>
+          <h2>② 原価特定-NE-単一orセット商品仕訳</h2>
         </div>
         <p class="tool-panel-description">割引率を決定するために必要となる原価情報を収集する。<br>
-        ここではセット商品の情報をネクストエンジンから抽出し、SALE一括内に取り込んでいく。</p>
+        セール参加商品を「単一商品」と「セット商品」に仕訳けて、それぞれネクストエンジンから抽出したCSVをアップロードしていく。</p>
 
         <div class="card">
-          <h2>1. CSVファイルの作成</h2>
+          <h2>1. 単一商品特定&アップロード</h2>
           <ol class="howto-list">
-            <li>セール開始準備①でアップした<b>RMSデータCSV</b>の「<b>システム連携用SKU番号</b>」列をコピー</li>
-            <li>ネクストエンジンの「セット商品検索」を開く</li>
-            <li>「複数コード」欄にコピーしたSKU番号を貼り付け → 検索</li>
+            <li>セール開始準備①でアップした<b>RMSデータCSV</b>から、<b>単一商品</b>のSKU番号をコピー</li>
+            <li>ネクストエンジンの「<b>商品検索</b>」を開く</li>
+            <li>「複数コード」欄に貼り付け → 検索</li>
             <li>検索結果の一覧を<b>ダウンロード</b>(CSV)</li>
           </ol>
+          <div class="file-input" data-target="cost-single" style="margin-top: 12px;">
+            <label>NE-単一商品 CSV</label>
+            <div class="desc">ネクストエンジン「商品検索」のダウンロード結果</div>
+            <input type="file" id="cost-single-input" name="cost_single" accept=".csv" />
+            <div class="filename"></div>
+          </div>
+          <div id="cost-single-status" class="status" style="margin-top: 10px;"></div>
         </div>
 
         <div class="card">
-          <h2>2. 作成ファイルのアップロード</h2>
-          <form id="cost-set-item-form">
-            <div class="grid">
-              <div class="file-input" data-target="cost-set-item" style="grid-column: 1 / -1;">
-                <label>NE-セット商品コード CSV</label>
-                <div class="desc">ネクストエンジン「セット商品検索」のダウンロード結果</div>
-                <input type="file" name="cost_set_item" accept=".csv" required />
-                <div class="filename"></div>
-              </div>
-            </div>
+          <h2>2. セット商品特定&アップロード</h2>
+          <ol class="howto-list">
+            <li>セール開始準備①でアップした<b>RMSデータCSV</b>から、<b>セット商品</b>のSKU番号をコピー</li>
+            <li>ネクストエンジンの「<b>セット商品検索</b>」を開く</li>
+            <li>「複数コード」欄に貼り付け → 検索</li>
+            <li>検索結果の一覧を<b>ダウンロード</b>(CSV)</li>
+          </ol>
+          <div class="file-input" data-target="cost-set" style="margin-top: 12px;">
+            <label>NE-セット商品 CSV</label>
+            <div class="desc">ネクストエンジン「セット商品検索」のダウンロード結果</div>
+            <input type="file" id="cost-set-input" name="cost_set" accept=".csv" />
+            <div class="filename"></div>
+          </div>
+          <div id="cost-set-status" class="status" style="margin-top: 10px;"></div>
+        </div>
 
-            <div class="actions">
-              <button type="submit" id="btn-cost-set-item-upload">取り込む</button>
-            </div>
-            <div id="cost-set-item-status" class="status"></div>
-          </form>
+        <div class="card">
+          <h2>3. SKU数チェック&取り込み</h2>
+          <p style="margin: 0 0 12px 0; font-size: 13px; color: var(--muted);">
+            単一商品CSVの<b>商品コード</b>と、セット商品CSVの<b>セット商品コード</b>の合計が、
+            セール開始準備①の<b>システム連携用SKU番号</b>の総数と一致したら取り込み可能になります。
+          </p>
+          <div id="cost-sku-check" class="status" aria-live="polite"></div>
+          <div class="actions" style="margin-top: 12px;">
+            <button type="button" id="btn-cost-import" disabled>取り込む</button>
+          </div>
+          <div id="cost-import-status" class="status" style="margin-top: 10px;"></div>
         </div>
       </div>
 
@@ -2995,55 +3013,6 @@
       </div>
 
       <!-- サブビュー: ④ 原価特定-NE-セット無しコード -->
-      <div id="tool-cost-non-set" class="tool-panel">
-        <div class="tool-panel-header">
-          <h2>④ 原価特定-NE-セット無しコード</h2>
-        </div>
-        <p class="tool-panel-description">割引率を決定するために必要となる原価情報を収集する。<br>
-        ここでは、セットのない単一商品をネクストエンジンで検索して原価を特定し、SALE一括内に取り込んでいく。</p>
-
-        <div class="card">
-          <h2>1. 検索用ファイルのダウンロード(SALE一括内から)</h2>
-          <div class="howto-list" style="padding-left: 0;">
-            セール開始準備①で取り込んだ <b>RMSデータCSV</b> から、「<b>バリエーション項目キー2</b>」以降が空欄の行 (=セット無しの単品候補) の SKU を抽出した検索用CSVをダウンロードします。<br>
-            <span style="color: var(--muted); font-size: 12px;">※ヘッダー「商品コード」付き・重複は1件にまとめ</span>
-          </div>
-          <div class="actions" style="margin-top: 12px;">
-            <button type="button" id="btn-dl-nonset-list" class="secondary">検索用CSVをダウンロード</button>
-          </div>
-          <div id="dl-nonset-list-status" class="status"></div>
-        </div>
-
-        <div class="card">
-          <h2>2. CSVファイルの作成</h2>
-          <ol class="howto-list">
-            <li>上の「検索用CSVをダウンロード」で取得したファイルの<b>商品コード (システム連携用SKU番号)</b>をコピー</li>
-            <li>ネクストエンジンの「<b>商品検索</b>」を開く</li>
-            <li>「複数コード」欄に貼り付け → 検索</li>
-            <li>検索結果の一覧を<b>ダウンロード</b>(CSV)</li>
-          </ol>
-        </div>
-
-        <div class="card">
-          <h2>3. 作成ファイルのアップロード</h2>
-          <form id="cost-non-set-form">
-            <div class="grid">
-              <div class="file-input" data-target="cost-non-set" style="grid-column: 1 / -1;">
-                <label>NE-セット無しコード CSV</label>
-                <div class="desc">ネクストエンジン「商品検索」のダウンロード結果</div>
-                <input type="file" name="cost_non_set" accept=".csv" required />
-                <div class="filename"></div>
-              </div>
-            </div>
-
-            <div class="actions">
-              <button type="submit" id="btn-cost-non-set-upload">取り込む</button>
-            </div>
-            <div id="cost-non-set-status" class="status"></div>
-          </form>
-        </div>
-      </div>
-
       <!-- サブビュー: ⑨ RMSにアップロード -->
       <div id="tool-upload-rms" class="tool-panel">
         <div class="tool-panel-header">
@@ -3452,11 +3421,14 @@
     })();
 
     // ---- UI制御 ----
-    // メインタブ(products, workflow) ⇄ サブビュー(add-products, decide-price, cost-set-item, cost-set-component, cost-non-set) の切替
+    // メインタブ(products, workflow) ⇄ サブビュー(add-products, decide-price, cost-set-item, cost-set-component) の切替
+    // ※旧 cost-non-set は v0.52.88 で廃止(②のセクション1=単一商品 に統合)
+    // ※サブビュー間は forward/back で履歴を残す。同一サブビュー間は履歴に積まない。
+    // 履歴に積まれた viewId は、ブラウザ戻る/進むで復元される。
+    const VALID_VIEWS = ['products','workflow','add-products','decide-price','decide-title','dl-rms-csv','make-rms-csv','cost-set-item','cost-set-component','upload-rms','rms-event','sku-record','ad-delete','ad-restore','upload-original','sku-restore','thumb-change','sp-banner','top-image-back'];
     // ブラウザ/マウスの「戻る」でサブビューから戻れるよう、サブビュー遷移時は history.pushState する
     let _suppressPushState = false; // popstate由来の呼び出しでは積まない
     const MAIN_TABS = ['products', 'workflow'];
-    const VALID_VIEWS = ['products','workflow','add-products','decide-price','decide-title','dl-rms-csv','make-rms-csv','cost-set-item','cost-set-component','cost-non-set','upload-rms','rms-event','sku-record','ad-delete','ad-restore','upload-original','sku-restore','thumb-change','sp-banner','top-image-back'];
     const LAST_VIEW_KEY = 'sale-ikkatsu-last-view';
     // 直近のメインタブ(サブビューから戻る時の戻り先)
     let _lastMainTab = 'products';
@@ -3483,13 +3455,17 @@
         if (typeof restoreStatusMessage === 'function') restoreStatusMessage('add-products-status');
       }
       if (viewId === 'cost-set-item') {
-        if (typeof restoreStatusMessage === 'function') restoreStatusMessage('cost-set-item-status');
+        // 新②(v0.52.88〜): セクション1=単一商品 / セクション2=セット商品 / セクション3=取り込み結果
+        if (typeof restoreStatusMessage === 'function') {
+          restoreStatusMessage('cost-single-status');
+          restoreStatusMessage('cost-set-status');
+          restoreStatusMessage('cost-import-status');
+        }
+        // SKU数チェック表示も更新
+        if (typeof updateCostSkuCheck === 'function') updateCostSkuCheck();
       }
       if (viewId === 'cost-set-component') {
         if (typeof restoreStatusMessage === 'function') restoreStatusMessage('cost-set-component-status');
-      }
-      if (viewId === 'cost-non-set') {
-        if (typeof restoreStatusMessage === 'function') restoreStatusMessage('cost-non-set-status');
       }
 
       // products タブを開くときは最新の年月に切り替えて再描画
@@ -3548,7 +3524,7 @@
       }
       // make-rms-csv サブビュー: 状態はメモリ内のスロットに保持されているので特に再描画不要
       // 検索用DLボタンの活性/非活性更新
-      if (viewId === 'cost-set-component' || viewId === 'cost-non-set') {
+      if (viewId === 'cost-set-component') {
         if (typeof updateSearchDlButtons === 'function') updateSearchDlButtons();
       }
 
@@ -4751,9 +4727,8 @@
         className: 'block-prep',
         buttons: [
           { id: 'prep-add-products', label: '参加商品追加', action: 'open-add-products' },
-          { id: 'prep-cost-set-item', label: '原価特定-NE-セット商品コード', action: 'open-cost-set-item' },
+          { id: 'prep-cost-set-item', label: '原価特定-NE-単一orセット商品仕訳', action: 'open-cost-set-item' },
           { id: 'prep-cost-set-component', label: '原価特定-NE-セット構成物コード', action: 'open-cost-set-component' },
-          { id: 'prep-cost-non-set', label: '原価特定-NE-セット無しコード', action: 'open-cost-non-set' },
           { id: 'prep-decide-price', label: '割引率決定', action: 'open-decide-price' },
           { id: 'prep-decide-title', label: 'セール用タイトル決定', action: 'open-decide-title' },
           { id: 'prep-dl-rms-csv', label: 'RMSアップ用素材ダウンロード', action: 'open-dl-rms-csv' },
@@ -5216,9 +5191,10 @@
     function restoreAllStatusMessages() {
       const ids = [
         'add-products-status',
-        'cost-set-item-status',
+        'cost-single-status',     // 新②: 単一商品アップロード
+        'cost-set-status',        // 新②: セット商品アップロード
+        'cost-import-status',     // 新②: 取り込み結果
         'cost-set-component-status',
-        'cost-non-set-status',
       ];
       ids.forEach(restoreStatusMessage);
     }
@@ -5307,36 +5283,265 @@
       else if (kind === 'error') clearStatusMessage('cost-set-item-status');
     }
 
-    document.getElementById('cost-set-item-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const btn = document.getElementById('btn-cost-set-item-upload');
-      btn.disabled = true;
-      try {
-        const input = e.target.elements['cost_set_item'];
-        if (!input.files || !input.files[0]) {
-          throw new Error('CSVファイルを選択してください');
-        }
-        setCostSetItemStatus('<span class="spinner"></span>CSVを読み込み中...', '');
-        const buf = await input.files[0].arrayBuffer();
-        // 年月別アーカイブに保存 (バイト列のみ・後の処理は今後実装)
-        const ym = currentYM || getCurrentYM();
-        if (!ym) throw new Error('セール期間(開始日時)を先に入力してください');
-        const archive = loadArchive();
-        if (!archive[ym]) archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
-        archive[ym].setItemCsvB64 = ab2b64(buf);
-        archive[ym].setItemCsvName = input.files[0].name;
-        saveArchive(archive);
-        setCostSetItemStatus(
-          `✅ 「${input.files[0].name}」を取り込みました (${(buf.byteLength/1024).toFixed(1)} KB)。`,
-          'success'
-        );
-      } catch (err) {
-        setCostSetItemStatus('❌ エラー: ' + err.message, 'error');
-        console.error(err);
-      } finally {
-        btn.disabled = false;
+    // 旧②(cost-set-item-form)のリスナー登録 - 新UIでは存在しないが、後方互換のため null check で安全化
+    {
+      const _oldForm = document.getElementById('cost-set-item-form');
+      if (_oldForm) {
+        _oldForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const btn = document.getElementById('btn-cost-set-item-upload');
+          if (btn) btn.disabled = true;
+          try {
+            const input = e.target.elements['cost_set_item'];
+            if (!input.files || !input.files[0]) {
+              throw new Error('CSVファイルを選択してください');
+            }
+            setCostSetItemStatus('<span class="spinner"></span>CSVを読み込み中...', '');
+            const buf = await input.files[0].arrayBuffer();
+            const ym = currentYM || getCurrentYM();
+            if (!ym) throw new Error('セール期間(開始日時)を先に入力してください');
+            const archive = loadArchive();
+            if (!archive[ym]) archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
+            archive[ym].setItemCsvB64 = ab2b64(buf);
+            archive[ym].setItemCsvName = input.files[0].name;
+            saveArchive(archive);
+            setCostSetItemStatus(
+              `✅ 「${input.files[0].name}」を取り込みました (${(buf.byteLength/1024).toFixed(1)} KB)。`,
+              'success'
+            );
+          } catch (err) {
+            setCostSetItemStatus('❌ エラー: ' + err.message, 'error');
+            console.error(err);
+          } finally {
+            if (btn) btn.disabled = false;
+          }
+        });
       }
-    });
+    }
+
+    // ---- 新② (v0.52.88〜) 原価特定-NE-単一orセット商品仕訳 ----
+    // セクション1: 単一商品CSVのファイル選択(NE「商品検索」結果)
+    // セクション2: セット商品CSVのファイル選択(NE「セット商品検索」結果)
+    // セクション3: SKU数チェック → 一致時のみ取り込み可
+    //
+    // 一時保持: ファイル選択時点では archive に書かず、メモリ内に保持。
+    //          [取り込む] ボタン押下で SKU数チェックを通れば archive に保存。
+    // 保存先: archive[ym].nonSetCsvB64 / nonSetCsvName (単一商品)
+    //         archive[ym].setItemCsvB64 / setItemCsvName (セット商品)
+    //   ※キー名は旧UIと同じ。ステップ2で整理する。
+    function setCostSingleStatus(msg, kind) {
+      const el = document.getElementById('cost-single-status');
+      if (!el) return;
+      el.className = 'status' + (kind ? ' ' + kind : '');
+      el.innerHTML = msg;
+      if (kind === 'success') saveStatusMessage('cost-single-status', msg, 'success');
+      else if (kind === 'error') clearStatusMessage('cost-single-status');
+    }
+    function setCostSetStatus(msg, kind) {
+      const el = document.getElementById('cost-set-status');
+      if (!el) return;
+      el.className = 'status' + (kind ? ' ' + kind : '');
+      el.innerHTML = msg;
+      if (kind === 'success') saveStatusMessage('cost-set-status', msg, 'success');
+      else if (kind === 'error') clearStatusMessage('cost-set-status');
+    }
+    function setCostImportStatus(msg, kind) {
+      const el = document.getElementById('cost-import-status');
+      if (!el) return;
+      el.className = 'status' + (kind ? ' ' + kind : '');
+      el.innerHTML = msg;
+      if (kind === 'success') saveStatusMessage('cost-import-status', msg, 'success');
+      else if (kind === 'error') clearStatusMessage('cost-import-status');
+    }
+
+    // メモリ内に未保存のファイルを保持 (ページ更新するとリセット、これは仕様)
+    const _costPendingFiles = { single: null, set: null };
+
+    // CSVの指定列のユニーク値数を取得 (ヘッダー名で列特定)
+    function countUniqueValuesInColumn(csvText, columnName) {
+      try {
+        const rows = parseCsvText(csvText);
+        if (rows.length < 2) return 0;
+        const header = rows[0];
+        let idx = header.findIndex(h => h && h.trim() === columnName);
+        if (idx < 0) idx = header.findIndex(h => h && h.indexOf(columnName) >= 0);
+        if (idx < 0) return 0;
+        const seen = new Set();
+        for (let i = 1; i < rows.length; i++) {
+          const r = rows[i];
+          if (!r) continue;
+          const v = (r[idx] || '').trim();
+          if (v) seen.add(v);
+        }
+        return seen.size;
+      } catch (e) { return 0; }
+    }
+
+    // RMSデータCSVから「システム連携用SKU番号」のユニーク数を取得
+    function getRmsSkuCount(ym) {
+      try {
+        const archive = loadArchive();
+        const data = archive[ym];
+        if (!data || !data.rmsCsvB64) return 0;
+        const text = decodeShiftJIS(b642u8(data.rmsCsvB64));
+        return countUniqueValuesInColumn(text, 'システム連携用SKU番号');
+      } catch (e) { return 0; }
+    }
+    function getSingleSkuCount(text) {
+      return countUniqueValuesInColumn(text, '商品コード');
+    }
+    function getSetSkuCount(text) {
+      return countUniqueValuesInColumn(text, 'セット商品コード');
+    }
+
+    // SKU数チェック表示と[取り込む]ボタンの有効/無効更新
+    function updateCostSkuCheck() {
+      const checkEl = document.getElementById('cost-sku-check');
+      const btn = document.getElementById('btn-cost-import');
+      if (!checkEl || !btn) return;
+      const ym = currentYM || (typeof getCurrentYM === 'function' ? getCurrentYM() : null);
+      if (!ym) {
+        checkEl.className = 'status';
+        checkEl.innerHTML = '<span style="color: var(--muted);">セール期間を選択してください。</span>';
+        btn.disabled = true;
+        return;
+      }
+      const rmsCount = getRmsSkuCount(ym);
+      if (rmsCount === 0) {
+        checkEl.className = 'status';
+        checkEl.innerHTML = '<span style="color: var(--muted);">① 参加商品追加でRMSデータCSVを先に取り込んでください。</span>';
+        btn.disabled = true;
+        return;
+      }
+      // 単一商品 / セット商品 のテキスト取得 (メモリ優先、なければアーカイブから)
+      let singleText = null, singleSrc = '';
+      if (_costPendingFiles.single) {
+        singleText = _costPendingFiles.single.text; singleSrc = '(未保存)';
+      } else {
+        try {
+          const data = (loadArchive())[ym];
+          if (data && data.nonSetCsvB64) {
+            singleText = decodeShiftJIS(b642u8(data.nonSetCsvB64));
+            singleSrc = '(保存済み)';
+          }
+        } catch (e) {}
+      }
+      let setText = null, setSrc = '';
+      if (_costPendingFiles.set) {
+        setText = _costPendingFiles.set.text; setSrc = '(未保存)';
+      } else {
+        try {
+          const data = (loadArchive())[ym];
+          if (data && data.setItemCsvB64) {
+            setText = decodeShiftJIS(b642u8(data.setItemCsvB64));
+            setSrc = '(保存済み)';
+          }
+        } catch (e) {}
+      }
+      const singleCount = singleText ? getSingleSkuCount(singleText) : 0;
+      const setCount = setText ? getSetSkuCount(setText) : 0;
+      const sum = singleCount + setCount;
+      const lines = [];
+      lines.push(`<div>① RMS-CSV システム連携用SKU番号: <b>${rmsCount}</b> 件</div>`);
+      lines.push(`<div>1. 単一商品 ${singleSrc}: <b>${singleCount}</b> 件</div>`);
+      lines.push(`<div>2. セット商品 ${setSrc}: <b>${setCount}</b> 件</div>`);
+      lines.push(`<div style="margin-top:6px;">合計 (1+2): <b>${sum}</b> / 期待値: <b>${rmsCount}</b></div>`);
+      if (!singleText && !setText) {
+        checkEl.className = 'status';
+        checkEl.innerHTML = lines.join('') + '<div style="margin-top:6px; color: var(--muted);">単一・セットのいずれかのCSVを選択してください。</div>';
+        btn.disabled = true;
+      } else if (sum === rmsCount) {
+        checkEl.className = 'status success';
+        checkEl.innerHTML = lines.join('') + '<div style="margin-top:6px;">✅ 一致しています。取り込み可能です。</div>';
+        btn.disabled = false;
+      } else {
+        checkEl.className = 'status error';
+        const diff = sum - rmsCount;
+        const msg = diff > 0 ? `合計が期待値より <b>${diff}</b> 件多い` : `合計が期待値より <b>${-diff}</b> 件少ない`;
+        checkEl.innerHTML = lines.join('') + `<div style="margin-top:6px;">❌ ${msg}ため、取り込めません。CSVを確認してください。</div>`;
+        btn.disabled = true;
+      }
+    }
+
+    // ファイル選択ハンドラ (単一)
+    {
+      const input = document.getElementById('cost-single-input');
+      if (input) {
+        input.addEventListener('change', async () => {
+          const file = input.files && input.files[0];
+          if (!file) { _costPendingFiles.single = null; updateCostSkuCheck(); return; }
+          try {
+            const buf = await file.arrayBuffer();
+            const text = decodeShiftJIS(buf);
+            _costPendingFiles.single = { file, buf, text, name: file.name };
+            setCostSingleStatus(`📄 「${file.name}」を選択 (${(buf.byteLength/1024).toFixed(1)} KB) - SKU数: ${getSingleSkuCount(text)}件`, '');
+            updateCostSkuCheck();
+          } catch (err) {
+            _costPendingFiles.single = null;
+            setCostSingleStatus('❌ エラー: ' + err.message, 'error');
+            updateCostSkuCheck();
+          }
+        });
+      }
+    }
+    // ファイル選択ハンドラ (セット)
+    {
+      const input = document.getElementById('cost-set-input');
+      if (input) {
+        input.addEventListener('change', async () => {
+          const file = input.files && input.files[0];
+          if (!file) { _costPendingFiles.set = null; updateCostSkuCheck(); return; }
+          try {
+            const buf = await file.arrayBuffer();
+            const text = decodeShiftJIS(buf);
+            _costPendingFiles.set = { file, buf, text, name: file.name };
+            setCostSetStatus(`📄 「${file.name}」を選択 (${(buf.byteLength/1024).toFixed(1)} KB) - セット数: ${getSetSkuCount(text)}件`, '');
+            updateCostSkuCheck();
+          } catch (err) {
+            _costPendingFiles.set = null;
+            setCostSetStatus('❌ エラー: ' + err.message, 'error');
+            updateCostSkuCheck();
+          }
+        });
+      }
+    }
+    // [取り込む] ボタン: SKU数一致時のみ archive に保存
+    {
+      const btn = document.getElementById('btn-cost-import');
+      if (btn) {
+        btn.addEventListener('click', () => {
+          try {
+            const ym = currentYM || getCurrentYM();
+            if (!ym) throw new Error('セール期間(開始日時)が未入力です');
+            const archive = loadArchive();
+            if (!archive[ym]) archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
+            if (_costPendingFiles.single) {
+              archive[ym].nonSetCsvB64 = ab2b64(_costPendingFiles.single.buf);
+              archive[ym].nonSetCsvName = _costPendingFiles.single.name;
+            }
+            if (_costPendingFiles.set) {
+              archive[ym].setItemCsvB64 = ab2b64(_costPendingFiles.set.buf);
+              archive[ym].setItemCsvName = _costPendingFiles.set.name;
+            }
+            saveArchive(archive);
+            if (_costPendingFiles.single) {
+              setCostSingleStatus(`✅ 「${_costPendingFiles.single.name}」を取り込みました (${(_costPendingFiles.single.buf.byteLength/1024).toFixed(1)} KB)。`, 'success');
+            }
+            if (_costPendingFiles.set) {
+              setCostSetStatus(`✅ 「${_costPendingFiles.set.name}」を取り込みました (${(_costPendingFiles.set.buf.byteLength/1024).toFixed(1)} KB)。`, 'success');
+            }
+            const total = (_costPendingFiles.single ? 1 : 0) + (_costPendingFiles.set ? 1 : 0);
+            setCostImportStatus(`✅ ${total}件のCSVをSALE一括内に取り込みました。`, 'success');
+            _costPendingFiles.single = null;
+            _costPendingFiles.set = null;
+            updateCostSkuCheck();
+          } catch (err) {
+            setCostImportStatus('❌ エラー: ' + err.message, 'error');
+            console.error(err);
+          }
+        });
+      }
+    }
 
     // ---- ③ 原価特定 NE-セット構成物コード: 検索用CSV作成 + アップロード ----
     function setCostSetComponentStatus(msg, kind) {
@@ -5535,74 +5740,85 @@
     }
 
     // 検索用CSVをダウンロード (RMSデータからセット無し単品SKUを抽出)
-    document.getElementById('btn-dl-nonset-list').addEventListener('click', () => {
-      try {
-        setDlNonSetListStatus('', '');
-        const ym = currentYM || getCurrentYM();
-        if (!ym) throw new Error('セール期間(開始日時)が未入力です');
-        const archive = loadArchive();
-        const data = archive[ym];
-        if (!data || !data.rmsCsvB64) {
-          throw new Error('① のRMSデータCSVが未取り込みです');
-        }
-        const buf = b642u8(data.rmsCsvB64);
-        const text = decodeShiftJIS(buf);
-        const codes = extractNonSetSkusFromRms(text);
-        if (codes.length === 0) {
-          throw new Error('セット無しの単品候補(バリエ2以降が空欄)が見つかりませんでした');
-        }
-        // CSV組み立て (ヘッダー「商品コード」+ 縦並び、UTF-8 BOM付きでExcel互換)
-        const csvLines = ['商品コード'].concat(codes);
-        const csvText = csvLines.join('\r\n') + '\r\n';
-        const BOM = '\ufeff';
-        const blob = new Blob([BOM + csvText], { type: 'text/csv;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        const now = new Date();
-        const ts = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
-        a.download = `検索用_セット無しコード一覧_${ts}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        setDlNonSetListStatus(`✅ ${codes.length}件のSKUをダウンロードしました`, 'success');
-      } catch (err) {
-        setDlNonSetListStatus('❌ エラー: ' + err.message, 'error');
-        console.error(err);
+    // 旧④で使用されていたボタン。新②(v0.52.88〜)では廃止されたが、関数 extractNonSetSkusFromRms 等は
+    // 後から再利用される可能性があるため、null check で安全化して残置。
+    {
+      const _oldBtn = document.getElementById('btn-dl-nonset-list');
+      if (_oldBtn) {
+        _oldBtn.addEventListener('click', () => {
+          try {
+            setDlNonSetListStatus('', '');
+            const ym = currentYM || getCurrentYM();
+            if (!ym) throw new Error('セール期間(開始日時)が未入力です');
+            const archive = loadArchive();
+            const data = archive[ym];
+            if (!data || !data.rmsCsvB64) {
+              throw new Error('① のRMSデータCSVが未取り込みです');
+            }
+            const buf = b642u8(data.rmsCsvB64);
+            const text = decodeShiftJIS(buf);
+            const codes = extractNonSetSkusFromRms(text);
+            if (codes.length === 0) {
+              throw new Error('セット無しの単品候補(バリエ2以降が空欄)が見つかりませんでした');
+            }
+            const csvLines = ['商品コード'].concat(codes);
+            const csvText = csvLines.join('\r\n') + '\r\n';
+            const BOM = '\ufeff';
+            const blob = new Blob([BOM + csvText], { type: 'text/csv;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const now = new Date();
+            const ts = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+            a.download = `検索用_セット無しコード一覧_${ts}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            setDlNonSetListStatus(`✅ ${codes.length}件のSKUをダウンロードしました`, 'success');
+          } catch (err) {
+            setDlNonSetListStatus('❌ エラー: ' + err.message, 'error');
+            console.error(err);
+          }
+        });
       }
-    });
+    }
 
-    // ④ アップロード
-    document.getElementById('cost-non-set-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const btn = document.getElementById('btn-cost-non-set-upload');
-      btn.disabled = true;
-      try {
-        const input = e.target.elements['cost_non_set'];
-        if (!input.files || !input.files[0]) {
-          throw new Error('CSVファイルを選択してください');
-        }
-        setCostNonSetStatus('<span class="spinner"></span>CSVを読み込み中...', '');
-        const buf = await input.files[0].arrayBuffer();
-        const ym = currentYM || getCurrentYM();
-        if (!ym) throw new Error('セール期間(開始日時)を先に入力してください');
-        const archive = loadArchive();
-        if (!archive[ym]) archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
-        archive[ym].nonSetCsvB64 = ab2b64(buf);
-        archive[ym].nonSetCsvName = input.files[0].name;
-        saveArchive(archive);
-        setCostNonSetStatus(
-          `✅ 「${input.files[0].name}」を取り込みました (${(buf.byteLength/1024).toFixed(1)} KB)。`,
-          'success'
-        );
-      } catch (err) {
-        setCostNonSetStatus('❌ エラー: ' + err.message, 'error');
-        console.error(err);
-      } finally {
-        btn.disabled = false;
+    // 旧④ (cost-non-set-form) のリスナー登録 - 新UIでは存在しないが、後方互換のため null check で安全化
+    {
+      const _oldForm = document.getElementById('cost-non-set-form');
+      if (_oldForm) {
+        _oldForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const btn = document.getElementById('btn-cost-non-set-upload');
+          if (btn) btn.disabled = true;
+          try {
+            const input = e.target.elements['cost_non_set'];
+            if (!input.files || !input.files[0]) {
+              throw new Error('CSVファイルを選択してください');
+            }
+            setCostNonSetStatus('<span class="spinner"></span>CSVを読み込み中...', '');
+            const buf = await input.files[0].arrayBuffer();
+            const ym = currentYM || getCurrentYM();
+            if (!ym) throw new Error('セール期間(開始日時)を先に入力してください');
+            const archive = loadArchive();
+            if (!archive[ym]) archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
+            archive[ym].nonSetCsvB64 = ab2b64(buf);
+            archive[ym].nonSetCsvName = input.files[0].name;
+            saveArchive(archive);
+            setCostNonSetStatus(
+              `✅ 「${input.files[0].name}」を取り込みました (${(buf.byteLength/1024).toFixed(1)} KB)。`,
+              'success'
+            );
+          } catch (err) {
+            setCostNonSetStatus('❌ エラー: ' + err.message, 'error');
+            console.error(err);
+          } finally {
+            if (btn) btn.disabled = false;
+          }
+        });
       }
-    });
+    }
 
     // ---- セール価格決定: ①〜④のCSVから表を構築・表示 ----
     // 入力: アーカイブの rmsCsvB64 / setItemCsvB64 / setComponentCsvB64 / nonSetCsvB64
