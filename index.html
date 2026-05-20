@@ -2635,7 +2635,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.88</span>
+      <span class="version">v0.52.89</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -2767,7 +2767,7 @@
       <!-- サブビュー: セール価格決定 (作成済みの計算結果を表で表示) -->
       <div id="tool-decide-price" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>⑤ 割引率決定</h2>
+          <h2>④ 割引率決定</h2>
         </div>
         <p class="tool-panel-description">商品管理番号ごとに割引率を決定していく。10～50％OFFの利益額・利益率を見て判断する。</p>
 
@@ -2785,7 +2785,7 @@
       <!-- サブビュー: ⑥ セール用タイトル決定 -->
       <div id="tool-decide-title" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>⑥ セール用タイトル決定</h2>
+          <h2>⑤ セール用タイトル決定</h2>
         </div>
         <p class="tool-panel-description">セール用のタイトルを記入していく。<br>
         スーパーSALEであれば先頭を「【スーパーSALEで◯％OFF】」のようにする。文字数は <b>127文字以内</b>。</p>
@@ -2803,7 +2803,7 @@
       <!-- サブビュー: ⑦ RMSアップ用素材ダウンロード -->
       <div id="tool-dl-rms-csv" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>⑦ RMSアップ用素材ダウンロード</h2>
+          <h2>⑥ RMSアップ用素材ダウンロード</h2>
         </div>
         <p class="tool-panel-description">RMSアップ用ファイルの生成材料となる2つのファイルを用意していく。<br>
         RMSからダウンロードしたファイルに関しては、セール後に使用するためこのページで保管しておく。</p>
@@ -2861,9 +2861,9 @@
       <!-- サブビュー: ⑧ RMSアップ用CSV作成 -->
       <div id="tool-make-rms-csv" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>⑧ RMSアップ用CSV作成</h2>
+          <h2>⑦ RMSアップ用CSV作成</h2>
         </div>
-        <p class="tool-panel-description">セール開始準備⑦で用意した2つのファイルをアップロードして組み合わせることで、RMSにアップするセールバージョンのCSVファイルを作成する。</p>
+        <p class="tool-panel-description">セール開始準備⑥で用意した2つのファイルをアップロードして組み合わせることで、RMSにアップするセールバージョンのCSVファイルを作成する。</p>
 
         <div class="card">
           <h2>1. 2つのファイルをアップロード</h2>
@@ -2968,12 +2968,12 @@
           <h2>③ 原価特定-NE-セット構成物コード</h2>
         </div>
         <p class="tool-panel-description">割引率を決定するために必要となる原価情報を収集する。<br>
-        ②でネクストエンジンからダウンロードしたデータには、セット商品を構成している商品の個別原価が現れない。そのため、ここではそれらの構成物をネクストエンジンで検索し直し個別の原価を特定していく。</p>
+        ②の2でネクストエンジンからダウンロードしたセット商品データには、セット商品を構成している商品の個別原価が現れない。そのため、ここではそれらの構成物をネクストエンジンで検索し直し個別の原価を特定していく。</p>
 
         <div class="card">
           <h2>1. 検索用ファイルのダウンロード(SALE一括内から)</h2>
           <div class="howto-list" style="padding-left: 0;">
-            セール開始準備②で取り込んだ<b>NE-セット商品コードCSV</b>から、商品コードを抽出した検索用CSVをダウンロードします。<br>
+            セール開始準備<b>②の2</b>でアップしたセット商品CSVから、商品コードを抽出した検索用CSVをダウンロードします。<br>
             <span style="color: var(--muted); font-size: 12px;">※「<code>"</code>」は除去・重複は1件にまとめ・ヘッダー「商品コード」付き</span>
           </div>
           <div class="actions" style="margin-top: 12px;">
@@ -3016,9 +3016,9 @@
       <!-- サブビュー: ⑨ RMSにアップロード -->
       <div id="tool-upload-rms" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>⑨ RMS-完成CSVアップロード</h2>
+          <h2>⑧ RMS-完成CSVアップロード</h2>
         </div>
-        <p class="tool-panel-description">セール開始準備⑧で作成した「normal-item-sale」ファイルをRMSにアップロードしていく。<br>
+        <p class="tool-panel-description">セール開始準備⑦で作成した「normal-item-sale」ファイルをRMSにアップロードしていく。<br>
         アップロードにはWinSCPを使用する。</p>
 
         <div class="card">
@@ -3057,7 +3057,7 @@
       <!-- サブビュー: ⑩ RMSイベント申請 -->
       <div id="tool-rms-event" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>⑩ RMSイベント申請</h2>
+          <h2>⑨ RMSイベント申請</h2>
         </div>
         <p class="tool-panel-description">RMSへの反映が確認できたらセールの申請を行う。</p>
 
@@ -3074,7 +3074,7 @@
       <!-- サブビュー: ⑪ 倉庫入れSKU記録 -->
       <div id="tool-sku-record" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>⑪ 審査落ちSKU倉庫入れ</h2>
+          <h2>⑩ 審査落ちSKU倉庫入れ</h2>
         </div>
         <p class="tool-panel-description">セール参加可否の審査は商品コード単位ではなく、中のSKU単位で行われる。<br>
         そのため、審査の結果✕が出たSKUがあった場合でも、そのSKUだけを倉庫に入れることで再度審査を受けることができる。<br>
@@ -3100,7 +3100,7 @@
       <!-- サブビュー: ⑫ 広告削除 -->
       <div id="tool-ad-delete" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>⑫ 広告削除</h2>
+          <h2>⑪ 広告削除</h2>
           <span class="check-complete-badge" id="ad-delete-complete-badge"></span>
         </div>
         <p class="tool-panel-description">セール用CSVをRMSにアップした時点で販売停止状態になるため、参加商品のRPP広告は無駄打ちになってしまう。<br>
@@ -3115,7 +3115,7 @@
       <!-- サブビュー: ⑬ サムネイル変更 -->
       <div id="tool-thumb-change" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>⑬ サムネイル変更</h2>
+          <h2>⑫ サムネイル変更</h2>
         </div>
         <p class="tool-panel-description">SALE一括から通常のサムネイルを％ごとにダウンロードし、<br>
         セール用サムネイルをChatGPTで生成していく。</p>
@@ -3135,7 +3135,7 @@
       <!-- サブビュー: ⑭ スマホ上部バナー設置予約 -->
       <div id="tool-sp-banner" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>⑭ スマホ上部バナー設置予約</h2>
+          <h2>⑬ スマホ上部バナー設置予約</h2>
         </div>
         <p class="tool-panel-description">RMSでセール用のスマホ上部バナーの設置予約をする。</p>
 
@@ -3158,7 +3158,7 @@
           <h2>① 広告復活</h2>
           <span class="check-complete-badge" id="ad-restore-complete-badge"></span>
         </div>
-        <p class="tool-panel-description">セール開始準備⑫で除外に入れたセール参加商品のRPP広告を復活させる。</p>
+        <p class="tool-panel-description">セール開始準備⑪で除外に入れたセール参加商品のRPP広告を復活させる。</p>
 
         <div id="ad-restore-status" class="status"></div>
         <div id="ad-restore-table-container">
@@ -3226,7 +3226,7 @@
         <div class="tool-panel-header">
           <h2>② 審査落ちSKU倉庫出し</h2>
         </div>
-        <p class="tool-panel-description">セール開始準備⑪で倉庫に入れたSKUを販売中に戻していく。</p>
+        <p class="tool-panel-description">セール開始準備⑩で倉庫に入れたSKUを販売中に戻していく。</p>
 
         <div class="card">
           <h2>1. 倉庫から出す手順</h2>
