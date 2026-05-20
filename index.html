@@ -1597,6 +1597,17 @@
     body[data-view="decide-price"] .decide-toolbar {
       padding: 0 2px 2px;
     }
+    /* v0.52.107: product-group-header (商品画像 + 商品名 + 割引率ボタン) を sticky 固定
+       - top = tool-panel-header の下端 (--top-bar-h + 48px)
+       - サブヘッダー行 (列ヘッダー) は さらに下に sticky させる必要があるため、
+         この後 sub-header-row の top を再設定 (--mgr-header-h を JS で動的計測) */
+    body[data-view="decide-price"] .product-group .product-group-header {
+      position: sticky;
+      top: calc(var(--top-bar-h, 130px) + 48px);
+      z-index: 25;
+      /* 背景はインラインstyleで bgColor が指定済 (#e8f0fa など)。透けない */
+    }
+    /* 非アクティブ (data-hidden=true) のグループは元々 display:none なので sticky も無効 */
     /* 商品管理番号タブ (mgr-tabs) も見出しの下に sticky で固定すると便利だが、
        今回の要件は「タブバー + 見出しまで止める」なので mgr-tabs は通常スクロール */
 
@@ -2227,9 +2238,11 @@
       color: #fff;
     }
     /* decide-price 画面: メインタブバー (--top-bar-h位置に固定) + tool-panel-header の下に sticky させる
-       tool-panel-header の概算高さ: padding 8+4 + h2 font-size 18px * line-height 1.3 ≒ 36px → 安全側で 48px */
+       tool-panel-header の概算高さ: padding 8+4 + h2 font-size 18px * line-height 1.3 ≒ 36px → 安全側で 48px
+       v0.52.107: さらに product-group-header (画像+商品名+割引率) も sticky 固定したので、
+       その高さ分 (--mgr-header-h, JSで動的計測) も加算する */
     body[data-view="decide-price"] .product-table.decide-table tr.sub-header-row th {
-      top: calc(var(--top-bar-h, 130px) + 48px);
+      top: calc(var(--top-bar-h, 130px) + 48px + var(--mgr-header-h, 72px));
     }
     /* 編集可能セル */
     .product-table.decide-table td.editable {
@@ -2730,7 +2743,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.106</span>
+      <span class="version">v0.52.107</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -8477,6 +8490,8 @@
     // - 静的HTML(#btn-toggle-fee-floating)に対し、初回1度だけ click listener を付与
     // - 表描画後・リサイズ時に、表ヘッダー「バリエ4」セル真上に絶対配置
     // - 表描画時に「バリエ4」列が表示されていれば inline-flex で見せ、無ければ hidden
+    // v0.52.107: product-group-header (画像+商品名+割引率) も sticky 化したため、
+    //   その高さを動的計測して --mgr-header-h カスタムプロパティに反映する処理も同居。
     (function bindFeeToggleFloating(){
       const btn = document.getElementById('btn-toggle-fee-floating');
       if (!btn) return;
@@ -8486,6 +8501,25 @@
           if (typeof renderDecidePriceTable === 'function') renderDecidePriceTable();
         }
       });
+
+      // アクティブな product-group-header の高さを計測して --mgr-header-h に反映
+      // sub-header-row の sticky top は calc(--top-bar-h + 48px + --mgr-header-h) で決まる
+      function measureMgrHeaderHeight() {
+        const container = document.getElementById('decide-price-table-container');
+        if (!container) return;
+        const groups = container.querySelectorAll('.product-group');
+        let header = null;
+        for (const g of groups) {
+          if (g.getAttribute('data-hidden') === 'true') continue;
+          header = g.querySelector('.product-group-header');
+          if (header) break;
+        }
+        if (!header) return;
+        const h = header.getBoundingClientRect().height;
+        if (h > 0) {
+          document.documentElement.style.setProperty('--mgr-header-h', Math.ceil(h) + 'px');
+        }
+      }
 
       function positionFloating() {
         const strip = document.querySelector('.decide-sticky-strip');
@@ -8525,12 +8559,19 @@
         if (leftPx + btnWidth > stripWidth) leftPx = Math.max(0, stripWidth - btnWidth);
         btn.style.left = leftPx + 'px';
       }
-      window._positionFeeToggleFloating = positionFloating;
+
+      // 一連のメトリクス更新をまとめた関数 (表描画後・タブ切替後・リサイズ時に呼ぶ)
+      function updateDecideStickyMetrics() {
+        measureMgrHeaderHeight();
+        positionFloating();
+      }
+
+      window._positionFeeToggleFloating = updateDecideStickyMetrics;
 
       // ウィンドウリサイズ・スクロール時にも再配置
       // (列幅リサイズや、表ヘッダーが横方向にずれるケースに対応)
       window.addEventListener('resize', () => {
-        requestAnimationFrame(positionFloating);
+        requestAnimationFrame(updateDecideStickyMetrics);
       });
       // ※ スクロール時は v4列の x座標は変わらない (sticky な thead 内で left は固定) ので
       //    通常はスクロール時の再計算は不要。ただし mgr-tabs 切替で active group が変わると
