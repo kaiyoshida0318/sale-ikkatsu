@@ -1601,17 +1601,21 @@
       max-height: none !important;
     }
     /* 商品名ヘッダー: groups-scroll コンテナ基準で top:0 sticky
-       v0.52.118: 横スクロール時にも画面に固定するため left:0 でも sticky に。
-                  width は JS で .groups-scroll の clientWidth に合わせて動的に設定
-                  (商品名ヘッダーが横スクロール幅と同じになって左に空きが出る問題を解消) */
+       v0.52.120: 横方向は表全体 (scrollWidth) を覆う背景帯として機能。中身は別途 inner で sticky 化。
+                  width は JS で scrollWidth に合わせて動的設定 (表より広く=表本体が下から透けない) */
     body[data-view="decide-price"] .product-group .product-group-header {
       position: sticky;
       top: 0;
-      left: 0;
       z-index: 25;
-      /* width は JS で動的設定。fallback として 100% */
+      /* width は JS で動的設定 (scrollWidth)。fallback として 100% */
       width: 100%;
       box-sizing: border-box;
+    }
+    /* 中身ラッパー: 左方向にも sticky で固定 (画面の左端に常に張り付く) */
+    body[data-view="decide-price"] .product-group .product-group-header-inner {
+      position: sticky;
+      left: 0;
+      /* width は JS で .groups-scroll の clientWidth に合わせる */
     }
     /* 非アクティブ (data-hidden=true) のグループは元々 display:none なので sticky も無効 */
     /* 商品管理番号タブ (mgr-tabs) は通常配置 */
@@ -2107,15 +2111,25 @@
        [前へ矢印] [画像] [商品名] [割引率] [次へ矢印] + 浮遊(バリエ・手数料ボタン)
        v0.52.113: position:relative にして浮遊ボタンの絶対配置基準にする
        v0.52.116: padding-bottom を増やし、バリエ・手数料ボタン用の専用スペース行を確保。
-                  ボタンは枠内に収まるので表ヘッダーには被らない。 */
+       v0.52.120: 横スクロール時に表が透けて見える問題を解消するため、
+                  外側 product-group-header は背景帯として 表全体の幅 (scrollWidth) に伸ばし、
+                  中身は product-group-header-inner として position:sticky; left:0 で画面に固定。 */
     .product-group-header {
-      padding: 10px 14px 38px;
       border: 1px solid #d8d8de;
       border-bottom: 2px solid #b5b5c0;
+      /* 背景はインライン style で bgColor 指定 */
+      box-sizing: border-box;
+      /* width は JS で scrollWidth に合わせて動的設定 */
+    }
+    .product-group-header-inner {
+      position: sticky;
+      left: 0;
+      padding: 10px 14px 38px;
       display: flex;
       align-items: center;
       gap: 10px;
-      position: relative;
+      box-sizing: border-box;
+      /* width は JS で .groups-scroll の clientWidth に合わせて動的設定 */
     }
     /* 商品名列 (バリエ・手数料ボタンは絶対配置に分離されたため、商品名のみ表示) */
     .group-header-namecol {
@@ -2794,7 +2808,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.119</span>
+      <span class="version">v0.52.120</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -8445,17 +8459,19 @@
           : cur === 50 ? '#faeaea'
           : '#f7f8fc';
         return `<div class="product-group-header" style="background:${bgColor};">
-          <button type="button" class="mgr-nav-btn mgr-nav-prev" data-nav="prev" title="前の商品へ" aria-label="前の商品へ">‹</button>
-          <div class="group-img">${imageCellHtml(imgUrl)}</div>
-          <div class="group-header-namecol">
-            <span class="group-name">${escapeHtml(name)}</span>
+          <div class="product-group-header-inner">
+            <button type="button" class="mgr-nav-btn mgr-nav-prev" data-nav="prev" title="前の商品へ" aria-label="前の商品へ">‹</button>
+            <div class="group-img">${imageCellHtml(imgUrl)}</div>
+            <div class="group-header-namecol">
+              <span class="group-name">${escapeHtml(name)}</span>
+            </div>
+            <div class="group-disc-wrap">
+              <span class="group-disc-label">割引率</span>
+              <div class="discount-grid" data-sku="${escapeHtml(sku)}">${btns}</div>
+            </div>
+            <button type="button" class="mgr-nav-btn mgr-nav-next" data-nav="next" title="次の商品へ" aria-label="次の商品へ">›</button>
+            <button type="button" class="fee-toggle fee-toggle-floating" title="${_decideShowFee ? 'バリエ・手数料列を隠す' : 'バリエ・手数料列を表示'}">${_decideShowFee ? '◀ バリエ・手数料 ▶' : '＋ バリエ・手数料'}</button>
           </div>
-          <div class="group-disc-wrap">
-            <span class="group-disc-label">割引率</span>
-            <div class="discount-grid" data-sku="${escapeHtml(sku)}">${btns}</div>
-          </div>
-          <button type="button" class="mgr-nav-btn mgr-nav-next" data-nav="next" title="次の商品へ" aria-label="次の商品へ">›</button>
-          <button type="button" class="fee-toggle fee-toggle-floating" title="${_decideShowFee ? 'バリエ・手数料列を隠す' : 'バリエ・手数料列を表示'}">${_decideShowFee ? '◀ バリエ・手数料 ▶' : '＋ バリエ・手数料'}</button>
         </div>`;
       }
 
@@ -8728,13 +8744,19 @@
         // product-group-header (アクティブな商品のヘッダー: 画像+名前+割引率+バリエボタン)
         const container = document.getElementById('decide-price-table-container');
         if (container) {
-          // v0.52.118: product-group-header の width を .groups-scroll の clientWidth に合わせる
-          //  (これで横スクロール時もヘッダーは画面いっぱいに広がり、左端からせき止める)
+          //  v0.52.120: 外側 .product-group-header の width = scrollWidth (=表全体の幅、表を完全に覆う)
+          //             内側 .product-group-header-inner の width = clientWidth (=画面可視幅)
+          //  これで「横スクロール時、商品名ヘッダーの背景は表全体をせき止め、
+          //         中身(画像・商品名・矢印など)は左端に張り付いて見える」状態に
           const gs = container.querySelector('.groups-scroll');
           if (gs) {
-            const gsWidth = gs.clientWidth; // スクロールバー幅を除いた可視幅
+            const gsClient = gs.clientWidth;  // スクロールバー幅を除いた可視幅
+            const gsScroll = Math.max(gs.scrollWidth, gsClient); // 表全体の幅
             container.querySelectorAll('.product-group .product-group-header').forEach(h => {
-              h.style.width = gsWidth + 'px';
+              h.style.width = gsScroll + 'px';
+            });
+            container.querySelectorAll('.product-group .product-group-header-inner').forEach(h => {
+              h.style.width = gsClient + 'px';
             });
           }
           const groups = container.querySelectorAll('.product-group');
@@ -8751,26 +8773,27 @@
             if (h > 0) document.documentElement.style.setProperty('--mgr-header-h', Math.ceil(h) + 'px');
           }
           // v0.52.113: 浮遊バリエ・手数料ボタンを v4列の中央真上に配置
+          // v0.52.120: 親は .product-group-header-inner (左端sticky、可視幅) なので、その rect 基準
           if (activeGroup && header) {
-            const btn = header.querySelector('.fee-toggle-floating');
+            const inner = header.querySelector('.product-group-header-inner') || header;
+            const btn = inner.querySelector('.fee-toggle-floating');
             if (btn) {
               const v4th = activeGroup.querySelector('tr.sub-header-row th[data-key="v4"]')
                        || activeGroup.querySelector('tr.sub-header-row th[data-key="v1"]')
                        || activeGroup.querySelector('tr.sub-header-row th[data-key="feeL"]');
               if (v4th) {
-                const hRect = header.getBoundingClientRect();
+                const hRect = inner.getBoundingClientRect();
                 const tRect = v4th.getBoundingClientRect();
                 const btnWidth = btn.offsetWidth || 120;
                 const targetCenter = tRect.left + tRect.width / 2;
                 let leftPx = targetCenter - hRect.left - btnWidth / 2;
-                // header幅からはみ出さないようクランプ
-                const headerWidth = hRect.width;
+                // inner の幅範囲内に収める (画面端ではみ出さないようクランプ)
+                const innerWidth = hRect.width;
                 if (leftPx < 4) leftPx = 4;
-                if (leftPx + btnWidth > headerWidth - 4) leftPx = Math.max(4, headerWidth - btnWidth - 4);
+                if (leftPx + btnWidth > innerWidth - 4) leftPx = Math.max(4, innerWidth - btnWidth - 4);
                 btn.style.left = leftPx + 'px';
                 btn.style.display = 'inline-flex';
               } else {
-                // v4列が見つからない(=表が描画前) → ボタンは中央に
                 btn.style.left = '50%';
                 btn.style.transform = 'translateX(-50%)';
               }
@@ -8806,6 +8829,7 @@
       // - DOMが書き換わると ResizeObserver の対象は外れるため、適宜再アタッチが必要
       // - measureDeferred を window 経由で呼ぶようにし、reattach は別関数で行う
       let _ro = null;
+      let _gsScrollHandler = null;
       function reattachResizeObserver() {
         try {
           if (_ro) { _ro.disconnect(); _ro = null; }
@@ -8829,6 +8853,27 @@
             }
           }
           targets.filter(Boolean).forEach(el => _ro.observe(el));
+          // v0.52.120: groups-scroll の scroll (横スクロール) でもボタン位置を再計算
+          //  (商品名ヘッダーの中身は left:0 sticky で画面に固定だが、ボタンは v4 列追従なので)
+          if (container) {
+            const gs = container.querySelector('.groups-scroll');
+            if (gs) {
+              // 古いハンドラを除去
+              if (_gsScrollHandler) {
+                gs.removeEventListener('scroll', _gsScrollHandler);
+                _gsScrollHandler = null;
+              }
+              let scrollRaf = 0;
+              _gsScrollHandler = () => {
+                if (scrollRaf) return;
+                scrollRaf = requestAnimationFrame(() => {
+                  scrollRaf = 0;
+                  measureDecideStickyHeights();
+                });
+              };
+              gs.addEventListener('scroll', _gsScrollHandler, { passive: true });
+            }
+          }
         } catch(e) { /* 失敗時は無視 */ }
       }
       window._reattachDecideResizeObserver = reattachResizeObserver;
