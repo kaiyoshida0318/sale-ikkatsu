@@ -5679,6 +5679,12 @@
               archive[ym].setItemCsvName = _costPendingFiles.set.name;
             }
             saveArchive(archive);
+            // 取り込み完了 → 送料自動計算を即座に走らせる (Q3: 既存値も上書き)
+            try {
+              if (typeof window._applyAutoShipping === 'function') {
+                window._applyAutoShipping(ym);
+              }
+            } catch (e) { console.error('applyAutoShipping (② import) failed:', e); }
             if (_costPendingFiles.single) {
               setCostSingleStatus(`✅ 「${_costPendingFiles.single.name}」を取り込みました (${(_costPendingFiles.single.buf.byteLength/1024).toFixed(1)} KB)。`, 'success');
             }
@@ -5832,6 +5838,12 @@
         archive[ym].setComponentCsvB64 = ab2b64(buf);
         archive[ym].setComponentCsvName = input.files[0].name;
         saveArchive(archive);
+        // 取り込み完了 → 送料自動計算を即座に走らせる (Q3: 既存値も上書き)
+        try {
+          if (typeof window._applyAutoShipping === 'function') {
+            window._applyAutoShipping(ym);
+          }
+        } catch (e) { console.error('applyAutoShipping (③ import) failed:', e); }
         setCostSetComponentStatus(
           `✅ 「${input.files[0].name}」を取り込みました (${(buf.byteLength/1024).toFixed(1)} KB)。`,
           'success'
@@ -5843,6 +5855,186 @@
         btn.disabled = false;
       }
     });
+
+    // ---- 送料自動計算 (②③取り込み完了時に発火) ----
+    // 仕様:
+    //  - 商品名の先頭「【XXX-NF】」から、ハイフン前のプレフィックス(PKT1/PKT2/NP/TAK 等)を抽出
+    //  - プレフィックス → 送料: { PKT1: 165, PKT2: 182, NP: 198, TAK: 450 }
+    //  - 単一商品 (nonSetCsvB64 の「商品コード」列にSKUがある): その商品名プレフィックスで決定
+    //  - セット商品 (setItemCsvB64 の「セット商品コード」列にSKUがある):
+    //      setItemCsvの「商品コード」列(改行区切り)で構成物コードを取得 →
+    //      setComponentCsvB64 の「商品コード」列でそれぞれの商品名を引き →
+    //      プレフィックス集合の中で最高額を採用
+    //  - 結果は archive[ym].editedCells[sku].ship に文字列で保存 (既存値も上書き)
+    //  - editedCells のキー = ④ 表の setCode = SKU(システム連携用SKU番号 = ne側「商品コード」/「セット商品コード」)
+    (function bindAutoShippingCalc(){
+      const SHIPPING_TABLE = {
+        'PKT1': 165,
+        'PKT2': 182,
+        'NP':   198,
+        'TAK':  450
+      };
+
+      // 商品名 → プレフィックス文字列(例: "PKT2-4F" → "PKT2", "NP-3F" → "NP")
+      // 仕様: 先頭の【】内テキストを取り出し、最初のハイフンの前を返す。
+      // 【】が無い・マッチしない場合は null。
+      function extractPrefix(name) {
+        if (!name) return null;
+        const m = String(name).match(/^[【\[]([^】\]]+)[】\]]/);
+        if (!m) return null;
+        const inner = m[1].trim();
+        // ハイフン(-)の前まで。ハイフン無しなら全体。
+        const idx = inner.indexOf('-');
+        const prefix = (idx >= 0 ? inner.slice(0, idx) : inner).trim();
+        return prefix || null;
+      }
+      // プレフィックス → 送料金額(対応無しは null)
+      function feeOf(prefix) {
+        if (!prefix) return null;
+        return Object.prototype.hasOwnProperty.call(SHIPPING_TABLE, prefix)
+          ? SHIPPING_TABLE[prefix] : null;
+      }
+      // 商品名 → 送料(プレフィックス抽出+定数表引き)
+      function feeFromName(name) {
+        const p = extractPrefix(name);
+        return feeOf(p);
+      }
+
+      // CSVテキスト → ヘッダー名でカラムインデックス取得 (BOM/前後空白除去)
+      function findColIdx(header, names) {
+        if (!Array.isArray(header)) return -1;
+        const norm = s => String(s||'').replace(/^\uFEFF/, '').trim();
+        const targets = (Array.isArray(names) ? names : [names]).map(norm);
+        for (let i = 0; i < header.length; i++) {
+          const h = norm(header[i]);
+          if (targets.includes(h)) return i;
+        }
+        return -1;
+      }
+
+      // 単一商品CSV → { 商品コード: 商品名 }
+      function buildSingleMap(csvText) {
+        const out = {};
+        if (!csvText) return out;
+        let rows;
+        try { rows = parseCsvText(csvText); } catch(e){ return out; }
+        if (!rows || rows.length < 2) return out;
+        const header = rows[0];
+        const iCode = findColIdx(header, '商品コード');
+        const iName = findColIdx(header, '商品名');
+        if (iCode < 0 || iName < 0) return out;
+        for (let i = 1; i < rows.length; i++) {
+          const r = rows[i]; if (!r) continue;
+          const code = (r[iCode]||'').trim();
+          const name = (r[iName]||'').trim();
+          if (code) out[code] = name;
+        }
+        return out;
+      }
+      // セット商品CSV → { セット商品コード: [構成物コード, ...] }
+      function buildSetItemMap(csvText) {
+        const out = {};
+        if (!csvText) return out;
+        let rows;
+        try { rows = parseCsvText(csvText); } catch(e){ return out; }
+        if (!rows || rows.length < 2) return out;
+        const header = rows[0];
+        const iSet = findColIdx(header, 'セット商品コード');
+        const iItem = findColIdx(header, '商品コード');
+        if (iSet < 0 || iItem < 0) return out;
+        for (let i = 1; i < rows.length; i++) {
+          const r = rows[i]; if (!r) continue;
+          const setCode = (r[iSet]||'').trim();
+          const itemBlock = (r[iItem]||'');
+          if (!setCode) continue;
+          // セット内の構成物コードは改行区切りで複数入っている (parseCsvText が "..." 内改行を保持)
+          const items = String(itemBlock).split(/\r\n|\n|\r/)
+            .map(s => s.trim()).filter(Boolean);
+          out[setCode] = items;
+        }
+        return out;
+      }
+      // セット構成物CSV → { 商品コード: 商品名 }
+      function buildComponentMap(csvText) {
+        return buildSingleMap(csvText); // 同じカラム構造
+      }
+
+      // archive[ym] に対して、保存済み3つのCSV(single/setItem/component)から
+      // 各 SKU の送料を計算し、editedCells[sku].ship に文字列で保存する。
+      // - rmsCsvB64 から SKU 一覧を抽出 (システム連携用SKU番号)
+      // - 単一マップにあれば: 商品名プレフィックスで決定
+      // - セットマップにあれば: 構成物コードを component マップで商品名引き → プレフィックス集合 → 最高額
+      // - どちらにも無い or プレフィックス対応無しなら: 計算スキップ(既存値も触らない)
+      // ※ Q3指示「現在入っている商品群もこれに則って送料を入れて」=既存値上書き。
+      //    ただし「自動計算結果が null(対応プレフィックスが無い)」のケースは
+      //    既存の手入力を消す方が害が大きいので保護する。
+      function applyAutoShipping(ym) {
+        if (!ym) return { applied: 0, skipped: 0 };
+        const archive = loadArchive();
+        const data = archive[ym];
+        if (!data || !data.rmsCsvB64) return { applied: 0, skipped: 0 };
+
+        // RMSデータから SKU一覧を取得
+        let rmsRows;
+        try { rmsRows = parseCsvText(decodeShiftJIS(b642u8(data.rmsCsvB64))); }
+        catch(e){ return { applied: 0, skipped: 0 }; }
+        if (!rmsRows || rmsRows.length < 2) return { applied: 0, skipped: 0 };
+        const iSku = findColIdx(rmsRows[0], 'システム連携用SKU番号');
+        if (iSku < 0) return { applied: 0, skipped: 0 };
+
+        // 3つのCSVを復号(無いものは空マップ)
+        const singleText = data.nonSetCsvB64 ? decodeShiftJIS(b642u8(data.nonSetCsvB64)) : null;
+        const setText    = data.setItemCsvB64 ? decodeShiftJIS(b642u8(data.setItemCsvB64)) : null;
+        const compText   = data.setComponentCsvB64 ? decodeShiftJIS(b642u8(data.setComponentCsvB64)) : null;
+        const singleMap = buildSingleMap(singleText);
+        const setItemMap = buildSetItemMap(setText);
+        const componentMap = buildComponentMap(compText);
+
+        if (!data.editedCells) data.editedCells = {};
+        const seen = new Set();
+        let applied = 0, skipped = 0;
+
+        for (let i = 1; i < rmsRows.length; i++) {
+          const r = rmsRows[i]; if (!r) continue;
+          const sku = (r[iSku]||'').trim();
+          if (!sku || seen.has(sku)) continue;
+          seen.add(sku);
+
+          let fee = null;
+          if (Object.prototype.hasOwnProperty.call(singleMap, sku)) {
+            // 単一商品: その商品名プレフィックスで決定
+            fee = feeFromName(singleMap[sku]);
+          } else if (Object.prototype.hasOwnProperty.call(setItemMap, sku)) {
+            // セット商品: 構成物コード群を component マップで商品名引き → プレフィックス集合 → 最高額
+            const items = setItemMap[sku] || [];
+            let maxFee = null;
+            for (const code of items) {
+              const compName = componentMap[code];
+              if (!compName) continue;
+              const f = feeFromName(compName);
+              if (f === null || f === undefined) continue;
+              if (maxFee === null || f > maxFee) maxFee = f;
+            }
+            fee = maxFee;
+          }
+
+          if (fee !== null && fee !== undefined) {
+            if (!data.editedCells[sku]) data.editedCells[sku] = {};
+            data.editedCells[sku].ship = String(fee);
+            applied++;
+          } else {
+            skipped++;
+          }
+        }
+
+        saveArchive(archive);
+        return { applied, skipped };
+      }
+
+      // 公開: 外部から呼べるように window 経由で繋ぐ
+      // (②取り込みボタン listener / ③submit listener が saveArchive 直後にこれを呼ぶ)
+      window._applyAutoShipping = applyAutoShipping;
+    })();
 
     // ---- ④ 原価特定-NE-セット無しコード: 検索用CSV作成 + アップロード ----
     function setCostNonSetStatus(msg, kind) {
