@@ -2730,7 +2730,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.105</span>
+      <span class="version">v0.52.106</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -3625,6 +3625,21 @@
       }
       // decide-price サブビューを開くときは表を再描画
       if (viewId === 'decide-price') {
+        // 既に取り込み済みだが自動送料計算が未走の月に対して、初回1回だけ走らせる
+        // (shippingAutoApplied フラグで重複実行を防止。②③再取り込み時にもフラグはtrueに更新される)
+        try {
+          const ymForShip = (typeof currentYM !== 'undefined' && currentYM) ? currentYM
+                          : (typeof getCurrentYM === 'function' ? getCurrentYM() : null);
+          if (ymForShip && typeof window._applyAutoShipping === 'function') {
+            const arc = (typeof loadArchive === 'function') ? loadArchive() : null;
+            const data = arc && arc[ymForShip];
+            // CSVがどれか1つでも取り込まれていて、まだ自動計算済みフラグが立っていなければ走らせる
+            if (data && !data.shippingAutoApplied
+                && (data.nonSetCsvB64 || data.setItemCsvB64 || data.setComponentCsvB64)) {
+              window._applyAutoShipping(ymForShip);
+            }
+          }
+        } catch (e) { console.error('applyAutoShipping (decide-price open) failed:', e); }
         if (typeof renderDecidePriceTable === 'function') renderDecidePriceTable();
       }
       // decide-title サブビューを開くときも再描画
@@ -6053,6 +6068,8 @@
           }
         }
 
+        // 自動計算済みフラグを立てる (④画面の初回オープン時の重複実行を防ぐ)
+        data.shippingAutoApplied = true;
         saveArchive(archive);
         return { applied, skipped };
       }
