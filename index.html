@@ -355,7 +355,7 @@
       cursor: pointer;
       transition: background .15s, transform .05s;
     }
-    button:hover:not(:disabled) { background: var(--brand-dark); }
+    button:hover:not(:disabled):not(.mgr-tab) { background: var(--brand-dark); }
     button:active { transform: translateY(1px); }
     button:disabled { background: #bbb; cursor: not-allowed; }
     button.secondary {
@@ -1578,6 +1578,14 @@
       overflow: visible !important;
       max-height: none !important;
     }
+    /* product-group-table-wrap (各グループ表のラッパー) も internal scroll context を作らないよう
+       overflow を visible に。これで sub-header-row の position:sticky が viewport 基準で効くようになる。
+       is-scrollable (10行超) の max-height: 60vh も廃止 (ページ全体でスクロール) */
+    body[data-view="decide-price"] .product-group-table-wrap,
+    body[data-view="decide-price"] .product-group-table-wrap.is-scrollable {
+      overflow: visible !important;
+      max-height: none !important;
+    }
     body[data-view="decide-price"] .decide-toolbar {
       padding: 0 2px 2px;
     }
@@ -2736,7 +2744,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.97</span>
+      <span class="version">v0.52.99</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
