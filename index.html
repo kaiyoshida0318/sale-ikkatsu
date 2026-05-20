@@ -1590,19 +1590,21 @@
       padding: 0 2px 2px;
     }
     /* mgr-tabs-area (= stats + mgr-tabs を包む div) を sticky 化。
-       説明文の下に積み上がる。 */
+       説明文の下に積み上がる。
+       v0.52.111: fallback 値を実態に近く (--decide-h-desc 60px, --decide-h-mgr 100px) */
     body[data-view="decide-price"] .mgr-tabs-area {
       position: sticky;
-      top: calc(var(--top-bar-h, 130px) + var(--decide-h-th, 48px) + var(--decide-h-desc, 40px));
+      top: calc(var(--top-bar-h, 130px) + var(--decide-h-th, 48px) + var(--decide-h-desc, 60px));
       z-index: 27;
       background: var(--bg);
       padding-bottom: 2px;
     }
     /* v0.52.107: product-group-header (商品画像 + 商品名 + 割引率ボタン) を sticky 固定
-       v0.52.109: top に説明文・mgr-tabs の高さも加算 */
+       v0.52.109: top に説明文・mgr-tabs の高さも加算
+       v0.52.111: fallback 値を実態に近く調整 */
     body[data-view="decide-price"] .product-group .product-group-header {
       position: sticky;
-      top: calc(var(--top-bar-h, 130px) + var(--decide-h-th, 48px) + var(--decide-h-desc, 40px) + var(--decide-h-mgr, 60px));
+      top: calc(var(--top-bar-h, 130px) + var(--decide-h-th, 48px) + var(--decide-h-desc, 60px) + var(--decide-h-mgr, 100px));
       z-index: 25;
       /* 背景はインラインstyleで bgColor が指定済 (#e8f0fa など)。透けない */
     }
@@ -2303,7 +2305,7 @@
        v0.52.109: 説明文・mgr-tabs・product-group-header の高さを積算した位置に固定する。
        各高さは JS で動的計測し --decide-h-* / --mgr-header-h に反映。 */
     body[data-view="decide-price"] .product-table.decide-table tr.sub-header-row th {
-      top: calc(var(--top-bar-h, 130px) + var(--decide-h-th, 48px) + var(--decide-h-desc, 40px) + var(--decide-h-mgr, 60px) + var(--mgr-header-h, 72px));
+      top: calc(var(--top-bar-h, 130px) + var(--decide-h-th, 48px) + var(--decide-h-desc, 60px) + var(--decide-h-mgr, 100px) + var(--mgr-header-h, 72px));
     }
     /* 編集可能セル */
     .product-table.decide-table td.editable {
@@ -2804,7 +2806,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.110</span>
+      <span class="version">v0.52.111</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -3712,6 +3714,14 @@
           }
         } catch (e) { console.error('applyAutoShipping (decide-price open) failed:', e); }
         if (typeof renderDecidePriceTable === 'function') renderDecidePriceTable();
+        // v0.52.111: パネルが active になった直後の sticky 高さ計測 & ResizeObserver アタッチ
+        // (renderDecidePriceTable 内でも走るが、初回タイミングの保険として明示的に呼ぶ)
+        if (typeof window._positionFeeToggleFloating === 'function') {
+          window._positionFeeToggleFloating();
+        }
+        if (typeof window._reattachDecideResizeObserver === 'function') {
+          window._reattachDecideResizeObserver();
+        }
       }
       // decide-title サブビューを開くときも再描画
       if (viewId === 'decide-title') {
@@ -8576,6 +8586,10 @@
       if (typeof window._positionFeeToggleFloating === 'function') {
         requestAnimationFrame(() => window._positionFeeToggleFloating());
       }
+      // v0.52.111: 動的生成された product-group-header / mgr-tabs-area などに ResizeObserver を再アタッチ
+      if (typeof window._reattachDecideResizeObserver === 'function') {
+        requestAnimationFrame(() => window._reattachDecideResizeObserver());
+      }
     }
 
     // v0.52.108: 商品名ヘッダー (product-group-header) を sticky 化したため、
@@ -8585,11 +8599,15 @@
     // v0.52.109: ④画面の sticky 要素群 (tool-panel-header / tool-panel-description /
     //   mgr-tabs-area / product-group-header) の高さを連動計測して、上から順に top を積み上げる。
     //   ヘッダー隠し時 (--top-bar-h 変化) にも自動追従。
+    // v0.52.111: ResizeObserver で各 sticky 要素のサイズ変化を継続監視し、計測漏れを防止。
     (function bindMgrHeaderMetrics(){
       // ④画面の sticky 要素群の高さを実測し、--decide-h-* / --mgr-header-h に反映
       function measureDecideStickyHeights() {
         const panel = document.getElementById('tool-decide-price');
         if (!panel) return;
+        // ④パネルが非表示 (.tool-panel.active でない) の場合は計測スキップ
+        // (display:none では getBoundingClientRect().height = 0 になり値が壊れる)
+        if (!panel.classList.contains('active')) return;
         // tool-panel-header (見出し)
         const th = panel.querySelector('.tool-panel-header');
         if (th) {
@@ -8624,22 +8642,63 @@
           }
         }
       }
+      // 二重rAFでレイアウト完了を確実に待ってから計測する版
+      function measureDeferred() {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(measureDecideStickyHeights);
+        });
+      }
 
       // 既存の呼び出し点 (renderDecidePriceTable / applyMgrTabVisibility / resize) から
       // この関数経由で発火する。名前は互換性維持のため _positionFeeToggleFloating を残す。
-      window._positionFeeToggleFloating = measureDecideStickyHeights;
+      // 二重rAFで呼んでレイアウト完了後を確実に捉える。
+      window._positionFeeToggleFloating = measureDeferred;
 
       window.addEventListener('resize', () => {
-        requestAnimationFrame(measureDecideStickyHeights);
+        measureDeferred();
       });
       // ヘッダー折りたたみ (--top-bar-h 変化) 時にも sticky 位置が崩れるので、
       // body の data-header-collapsed 変更を MutationObserver で監視
       try {
         const mo = new MutationObserver(() => {
-          requestAnimationFrame(measureDecideStickyHeights);
+          measureDeferred();
         });
         mo.observe(document.body, { attributes: true, attributeFilter: ['data-header-collapsed', 'data-view'] });
       } catch (e) { /* 監視失敗時は無視 */ }
+
+      // ResizeObserver で各sticky要素のサイズ変化を継続監視 (動的生成された要素も追跡)
+      // - DOMが書き換わると ResizeObserver の対象は外れるため、適宜再アタッチが必要
+      // - measureDeferred を window 経由で呼ぶようにし、reattach は別関数で行う
+      let _ro = null;
+      function reattachResizeObserver() {
+        try {
+          if (_ro) { _ro.disconnect(); _ro = null; }
+          if (typeof ResizeObserver === 'undefined') return;
+          _ro = new ResizeObserver(() => { measureDecideStickyHeights(); });
+          const panel = document.getElementById('tool-decide-price');
+          if (!panel) return;
+          const targets = [
+            panel.querySelector('.tool-panel-header'),
+            panel.querySelector('.tool-panel-description'),
+            panel.querySelector('.mgr-tabs-area'),
+          ];
+          // アクティブな product-group-header も対象
+          const container = document.getElementById('decide-price-table-container');
+          if (container) {
+            const groups = container.querySelectorAll('.product-group');
+            for (const g of groups) {
+              if (g.getAttribute('data-hidden') === 'true') continue;
+              const hdr = g.querySelector('.product-group-header');
+              if (hdr) { targets.push(hdr); break; }
+            }
+          }
+          targets.filter(Boolean).forEach(el => _ro.observe(el));
+        } catch(e) { /* 失敗時は無視 */ }
+      }
+      window._reattachDecideResizeObserver = reattachResizeObserver;
+
+      // 初期化時の保険: 一度だけ計測を試みる (画面が ④ でなくとも no-op)
+      measureDeferred();
     })();
 
     // 商品管理番号タブの表示切替: アクティブ以外を hidden に
