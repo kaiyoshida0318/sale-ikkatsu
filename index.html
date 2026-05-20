@@ -1600,11 +1600,18 @@
       overflow: visible !important;
       max-height: none !important;
     }
-    /* 商品名ヘッダー: groups-scroll コンテナ基準で top:0 sticky */
+    /* 商品名ヘッダー: groups-scroll コンテナ基準で top:0 sticky
+       v0.52.118: 横スクロール時にも画面に固定するため left:0 でも sticky に。
+                  width は JS で .groups-scroll の clientWidth に合わせて動的に設定
+                  (商品名ヘッダーが横スクロール幅と同じになって左に空きが出る問題を解消) */
     body[data-view="decide-price"] .product-group .product-group-header {
       position: sticky;
       top: 0;
+      left: 0;
       z-index: 25;
+      /* width は JS で動的設定。fallback として 100% */
+      width: 100%;
+      box-sizing: border-box;
     }
     /* 非アクティブ (data-hidden=true) のグループは元々 display:none なので sticky も無効 */
     /* 商品管理番号タブ (mgr-tabs) は通常配置 */
@@ -2787,7 +2794,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.117</span>
+      <span class="version">v0.52.118</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -8713,6 +8720,15 @@
         // product-group-header (アクティブな商品のヘッダー: 画像+名前+割引率+バリエボタン)
         const container = document.getElementById('decide-price-table-container');
         if (container) {
+          // v0.52.118: product-group-header の width を .groups-scroll の clientWidth に合わせる
+          //  (これで横スクロール時もヘッダーは画面いっぱいに広がり、左端からせき止める)
+          const gs = container.querySelector('.groups-scroll');
+          if (gs) {
+            const gsWidth = gs.clientWidth; // スクロールバー幅を除いた可視幅
+            container.querySelectorAll('.product-group .product-group-header').forEach(h => {
+              h.style.width = gsWidth + 'px';
+            });
+          }
           const groups = container.querySelectorAll('.product-group');
           let header = null;
           let activeGroup = null;
