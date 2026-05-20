@@ -229,7 +229,6 @@
       font-family: inherit;
       min-width: 32px;
     }
-    .font-size-control button:hover { background: #fafafa; }
     .font-size-control button:active { transform: translateY(1px); }
     .font-size-control .pct {
       font-size: 12px;
@@ -355,7 +354,6 @@
       cursor: pointer;
       transition: background .15s, transform .05s;
     }
-    button:hover:not(:disabled):not(.mgr-tab) { background: var(--brand-dark); }
     button:active { transform: translateY(1px); }
     button:disabled { background: #bbb; cursor: not-allowed; }
     button.secondary {
@@ -363,7 +361,6 @@
       color: var(--text);
       border: 1px solid var(--border);
     }
-    button.secondary:hover:not(:disabled) { background: #e4e4ea; }
     /* ダウンロード準備完了ボタン (緑) */
     button.dl-ready {
       background: #1a7c38;
@@ -371,7 +368,6 @@
       border: 1px solid #156330;
       font-weight: 700;
     }
-    button.dl-ready:hover:not(:disabled) { background: #156330; }
     button.dl-ready::before {
       content: "⬇ ";
       font-weight: 700;
@@ -404,10 +400,6 @@
       appearance: none;
       -webkit-appearance: none;
     }
-    .top-image-dl-btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-    }
     .top-image-dl-btn::before {
       content: "⬇";
       font-size: 18px;
@@ -415,13 +407,9 @@
     }
     /* 割引率ごとの色: セール参加商品タブと統一パレット */
     .top-image-dl-btn.disc-10 { border-color: #2d6cb8; color: #2d6cb8; background: #eef4fc; }
-    .top-image-dl-btn.disc-10:hover { background: #dee9f7; }
     .top-image-dl-btn.disc-20 { border-color: #d36916; color: #d36916; background: #fdf1e6; }
-    .top-image-dl-btn.disc-20:hover { background: #fbe2ce; }
     .top-image-dl-btn.disc-30 { border-color: #2a8a45; color: #2a8a45; background: #e8f5ed; }
-    .top-image-dl-btn.disc-30:hover { background: #d3ebdb; }
     .top-image-dl-btn.disc-50 { border-color: #d83838; color: #d83838; background: #fce8e8; }
-    .top-image-dl-btn.disc-50:hover { background: #f8d3d3; }
     /* 該当商品数 0 のとき: 押せない見た目に。色クラス(disc-XX)より後ろなので確実に上書き */
     .top-image-dl-btn.is-disabled,
     .top-image-dl-btn.is-disabled:hover {
@@ -583,10 +571,6 @@
       cursor: pointer;
       font-family: inherit;
     }
-    .cost-search-zoom-btn:hover:not(:disabled) {
-      background: #f0f4fb;
-      border-color: var(--brand);
-    }
     .cost-search-zoom-btn:active { transform: translateY(1px); }
     /* 拡大表示モーダル */
     .img-zoom-modal {
@@ -628,7 +612,6 @@
       padding: 0;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     }
-    .img-zoom-close:hover { background: #fff; }
     /* アップロード2つの横並び */
     .cost-upload-row {
       display: grid;
@@ -760,9 +743,6 @@
       transition: background .15s, transform .05s;
       font-family: inherit;
     }
-    .tool-btn:hover:not(:disabled) {
-      background: #1d4fd8;
-    }
     .tool-btn:active:not(:disabled) { transform: translateY(1px); }
     .tool-btn:disabled {
       opacity: 0.55;
@@ -790,9 +770,7 @@
     .tool-btn.coming-soon {
       background: #ea8c2c;
     }
-    .tool-btn.coming-soon:hover:not(:disabled) { background: #d37820; }
     .tool-btn.variant-green { background: #22a857; }
-    .tool-btn.variant-green:hover:not(:disabled) { background: #1c8f49; }
 
     /* ツール本体（折りたたみ） */
     .tool-panel {
@@ -816,10 +794,6 @@
       color: var(--muted);
       cursor: pointer;
       font-family: inherit;
-    }
-    .back-btn:hover:not(:disabled) {
-      background: #f0f0f2;
-      color: var(--text);
     }
     .tool-panel-header h2 {
       margin: 0;
@@ -901,11 +875,6 @@
       font-family: inherit;
       transition: background .12s, color .12s, border-color .12s;
     }
-    .main-tabs-bar .header-toggle-btn:hover:not(:disabled) {
-      background: #eef0f4;
-      color: var(--text);
-      border-color: #c8ccd5;
-    }
     .main-tabs-bar .header-toggle-btn .icon-chev {
       width: 14px;
       height: 14px;
@@ -942,7 +911,6 @@
       font-family: inherit;
       transition: background .15s, transform .05s;
     }
-    .btn-mini:hover:not(:disabled) { background: #1d4fd8; }
     .btn-mini:active:not(:disabled) { transform: translateY(1px); }
     .btn-mini .plus { font-size: 15px; font-weight: 700; line-height: 1; }
 
@@ -1054,7 +1022,6 @@
       transition: background .15s, color .15s, border-color .15s;
       min-height: 56px;
     }
-    .wf-btn:hover:not(.is-done) { filter: brightness(0.97); }
     /* :active の transform はサイズ/位置変動の原因になるため無効化
        (全 button 共通の button:active { transform: translateY(1px) } も上書き) */
     .wf-btn:active,
@@ -1241,11 +1208,6 @@
       cursor: pointer;
       font-family: inherit;
       white-space: nowrap;
-    }
-    .clear-month-btn:hover:not(:disabled) {
-      background: #fbeded;
-      border-color: #d89999;
-      color: #8e2929;
     }
     .clear-month-btn:active:not(:disabled) { transform: translateY(1px); }
     .clear-month-btn:disabled {
@@ -1858,18 +1820,9 @@
       font-family: inherit;
       transition: background .12s, border-color .12s, color .12s;
     }
-    .archive-file-btn:hover:not(:disabled) {
-      background: #f0f0f2;
-      border-color: #8a929d;
-    }
     .archive-file-btn.danger {
       color: #b94a4a;
       border-color: #d8a9a9;
-    }
-    .archive-file-btn.danger:hover:not(:disabled) {
-      background: #faeaea;
-      border-color: #b94a4a;
-      color: #8b2c2c;
     }
 
     /* ⑥ セール用タイトル決定 */
@@ -2362,10 +2315,6 @@
       font-family: inherit;
       transition: background .1s, color .1s, border-color .1s, box-shadow .1s;
     }
-    .disc-btn:hover:not(.is-selected) {
-      background: #f5f7fa;
-      border-color: #98a4b8;
-    }
     /* 選択中: タブ色に合わせる */
     .disc-btn.is-selected { color: #fff; }
     .disc-btn.disc-10.is-selected { background: #2d6cb8; border-color: #2d6cb8; box-shadow: 0 0 0 2px rgba(45,108,184,0.25); }
@@ -2404,10 +2353,6 @@
       font-family: inherit;
       padding: 0;
       transition: background 0.12s, color 0.12s;
-    }
-    #subview-prevnext .pn-btn:hover {
-      background: #eef0f4;
-      color: var(--text);
     }
     #subview-prevnext .pn-btn.is-hidden {
       visibility: hidden;
@@ -2762,7 +2707,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.103</span>
+      <span class="version">v0.52.104</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -3046,7 +2991,7 @@
         <div class="tool-panel-header">
           <h2>② 原価特定-NE-単一orセット商品仕分け</h2>
         </div>
-        <p class="tool-panel-description">セール開始準備①のデータからはその商品が単一商品なのかセット商品なのかを判別することができない。<br>
+        <p class="tool-panel-description">セール開始準備①でRMSからダウンロードしたデータからは、その商品が単一商品なのかセット商品なのかを判別することができない。<br>
         ここでは、ネクストエンジンでの検索を通すことでそれぞれを特定し、ツール内に情報を取り込んでいく。</p>
 
         <div class="card">
@@ -3154,7 +3099,7 @@
           <ol class="howto-list">
             <li>上の「検索用CSVをダウンロード」で取得したファイルの<b>商品コード</b>をコピー</li>
             <li>ネクストエンジンの「<b>商品検索</b>」を開く</li>
-            <li>「複数コード」欄に貼り付け → 検索</li>
+            <li>「検索する対象を選択」が「商品情報単位で検索」の状態で、商品コード(複数)に貼り付け → 検索</li>
             <li>検索結果の一覧を<b>ダウンロード</b>(CSV)</li>
           </ol>
         </div>
