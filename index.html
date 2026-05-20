@@ -1550,6 +1550,19 @@
       margin-top: 0;
       min-height: 0;
     }
+    /* v0.52.109: 説明文・mgr-tabsエリアも sticky 化して、表ヘッダーまで連続固定する。
+       各要素の高さは JS で動的計測し --decide-h-* に反映、上から順に top を積算する。
+       これにより ヘッダー隠し (--top-bar-h 変化) にも自動追従。 */
+    body[data-view="decide-price"] .tool-panel-description {
+      position: sticky;
+      top: calc(var(--top-bar-h, 130px) + var(--decide-h-th, 48px));
+      z-index: 28;
+      background: var(--bg);
+      margin: 0 0 8px 0;
+      padding: 8px 12px;
+      font-size: 13px;
+      line-height: 1.6;
+    }
     /* 表のラッパー: 内部スクロールを切る (ドキュメント全体でスクロール) */
     body[data-view="decide-price"] .product-table-wrap {
       padding: 0;
@@ -1576,13 +1589,20 @@
     body[data-view="decide-price"] .decide-toolbar {
       padding: 0 2px 2px;
     }
+    /* mgr-tabs-area (= stats + mgr-tabs を包む div) を sticky 化。
+       説明文の下に積み上がる。 */
+    body[data-view="decide-price"] .mgr-tabs-area {
+      position: sticky;
+      top: calc(var(--top-bar-h, 130px) + var(--decide-h-th, 48px) + var(--decide-h-desc, 40px));
+      z-index: 27;
+      background: var(--bg);
+      padding-bottom: 2px;
+    }
     /* v0.52.107: product-group-header (商品画像 + 商品名 + 割引率ボタン) を sticky 固定
-       - top = tool-panel-header の下端 (--top-bar-h + 48px)
-       - サブヘッダー行 (列ヘッダー) は さらに下に sticky させる必要があるため、
-         この後 sub-header-row の top を再設定 (--mgr-header-h を JS で動的計測) */
+       v0.52.109: top に説明文・mgr-tabs の高さも加算 */
     body[data-view="decide-price"] .product-group .product-group-header {
       position: sticky;
-      top: calc(var(--top-bar-h, 130px) + 48px);
+      top: calc(var(--top-bar-h, 130px) + var(--decide-h-th, 48px) + var(--decide-h-desc, 40px) + var(--decide-h-mgr, 60px));
       z-index: 25;
       /* 背景はインラインstyleで bgColor が指定済 (#e8f0fa など)。透けない */
     }
@@ -2077,10 +2097,51 @@
       margin-top: 8px;
       border-top: 4px solid #e2e2e8;
     }
+    /* v0.52.110: product-group-header を 1段の flex に
+       [前へ矢印] [画像] [商品名+バリエ・手数料(縦並び)] [割引率] [次へ矢印]
+       縦は align-items: center で全要素中央寄せ → 割引率4ボタンが縦中央に見える */
     .product-group-header {
       padding: 10px 14px;
       border: 1px solid #d8d8de;
       border-bottom: 2px solid #b5b5c0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    /* 商品名 + バリエ・手数料ボタン を縦に並べる中央列 */
+    .group-header-namecol {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
+    }
+    .group-header-namecol .group-name {
+      width: 100%;
+    }
+    /* 前後ナビ矢印 (左右端) */
+    .mgr-nav-btn {
+      flex-shrink: 0;
+      width: 36px;
+      height: 60px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.7);
+      color: #555;
+      border: 1px solid #c9c9d1;
+      border-radius: 6px;
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1;
+      cursor: pointer;
+      font-family: inherit;
+      padding: 0;
+    }
+    .mgr-nav-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
     }
     /* 各商品のSKU表ラッパー: 縦スクロールは廃止、横のみスクロール可
        全行まるごと表示し、画面全体は .groups-scroll でスクロールする */
@@ -2239,11 +2300,10 @@
       color: #fff;
     }
     /* decide-price 画面: メインタブバー (--top-bar-h位置に固定) + tool-panel-header の下に sticky させる
-       tool-panel-header の概算高さ: padding 8+4 + h2 font-size 18px * line-height 1.3 ≒ 36px → 安全側で 48px
-       v0.52.107: さらに product-group-header (画像+商品名+割引率) も sticky 固定したので、
-       その高さ分 (--mgr-header-h, JSで動的計測) も加算する */
+       v0.52.109: 説明文・mgr-tabs・product-group-header の高さを積算した位置に固定する。
+       各高さは JS で動的計測し --decide-h-* / --mgr-header-h に反映。 */
     body[data-view="decide-price"] .product-table.decide-table tr.sub-header-row th {
-      top: calc(var(--top-bar-h, 130px) + 48px + var(--mgr-header-h, 72px));
+      top: calc(var(--top-bar-h, 130px) + var(--decide-h-th, 48px) + var(--decide-h-desc, 40px) + var(--decide-h-mgr, 60px) + var(--mgr-header-h, 72px));
     }
     /* 編集可能セル */
     .product-table.decide-table td.editable {
@@ -2744,7 +2804,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.108</span>
+      <span class="version">v0.52.110</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -8282,17 +8342,17 @@
           : cur === 50 ? '#faeaea'
           : '#f7f8fc';
         return `<div class="product-group-header" style="background:${bgColor};">
-          <div class="group-header-row1">
-            <div class="group-img">${imageCellHtml(imgUrl)}</div>
+          <button type="button" class="mgr-nav-btn mgr-nav-prev" data-nav="prev" title="前の商品へ" aria-label="前の商品へ">‹</button>
+          <div class="group-img">${imageCellHtml(imgUrl)}</div>
+          <div class="group-header-namecol">
             <span class="group-name">${escapeHtml(name)}</span>
-            <div class="group-disc-wrap">
-              <span class="group-disc-label">割引率</span>
-              <div class="discount-grid" data-sku="${escapeHtml(sku)}">${btns}</div>
-            </div>
-          </div>
-          <div class="group-header-row2">
             <button type="button" class="fee-toggle btn-toggle-fee-inline" title="${_decideShowFee ? 'バリエ・手数料列を隠す' : 'バリエ・手数料列を表示'}">${_decideShowFee ? '◀ バリエ・手数料 ▶' : '＋ バリエ・手数料'}</button>
           </div>
+          <div class="group-disc-wrap">
+            <span class="group-disc-label">割引率</span>
+            <div class="discount-grid" data-sku="${escapeHtml(sku)}">${btns}</div>
+          </div>
+          <button type="button" class="mgr-nav-btn mgr-nav-next" data-nav="next" title="次の商品へ" aria-label="次の商品へ">›</button>
         </div>`;
       }
 
@@ -8402,23 +8462,17 @@
         : '';
 
       container.innerHTML = `
-        <div class="decide-toolbar">
-          <span class="decide-stats">${result.stats.output_rows}件 (除外: ${result.stats.excluded_no_price} / 原価未取得: ${result.stats.cost_not_found})</span>
+        <div class="mgr-tabs-area">
+          <div class="decide-toolbar">
+            <span class="decide-stats">${result.stats.output_rows}件 (除外: ${result.stats.excluded_no_price} / 原価未取得: ${result.stats.cost_not_found})</span>
+          </div>
+          <div class="mgr-tabs" role="tablist">${tabsHtml}</div>
         </div>
-        <div class="mgr-tabs" role="tablist">${tabsHtml}</div>
         <div class="groups-scroll">
           ${groupsHtml}
         </div>
         ${warnHtml}
       `;
-
-      // 浮遊型「バリエ・手数料」ボタンのラベル/タイトル更新 (sticky-strip 内)
-      // ※ ボタン本体は静的HTML(#btn-toggle-fee-floating) に置き、ここでは表示状態のみ反映
-      const _floatBtn = document.getElementById('btn-toggle-fee-floating');
-      if (_floatBtn) {
-        _floatBtn.textContent = toggleLabel;
-        _floatBtn.title = toggleTitle;
-      }
 
       // アクティブタブ以外の商品グループを隠す
       applyMgrTabVisibility();
@@ -8488,6 +8542,36 @@
         });
       });
 
+      // v0.52.110: 商品ヘッダー左右端の前/次ナビ矢印クリック → アクティブmgrを切替
+      container.querySelectorAll('.mgr-nav-btn').forEach(b => {
+        b.addEventListener('click', () => {
+          const dir = b.getAttribute('data-nav'); // 'prev' or 'next'
+          const tabs = Array.from(container.querySelectorAll('.mgr-tab'));
+          if (tabs.length === 0) return;
+          const idx = tabs.findIndex(t => t.getAttribute('data-mgr') === _decideActiveTab);
+          if (idx < 0) return;
+          const nextIdx = dir === 'prev' ? idx - 1 : idx + 1;
+          if (nextIdx < 0 || nextIdx >= tabs.length) return;
+          const newMgr = tabs[nextIdx].getAttribute('data-mgr');
+          _decideActiveTab = newMgr;
+          tabs.forEach(t => t.classList.toggle('is-active', t.getAttribute('data-mgr') === newMgr));
+          applyMgrTabVisibility();
+          // アクティブmgrのタブを画面内に見えるようスクロール(タブが折返し状態でもOK)
+          const at = tabs[nextIdx];
+          if (at && typeof at.scrollIntoView === 'function') {
+            try { at.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch(e){}
+          }
+        });
+      });
+      // 矢印の disabled 制御: 現在のアクティブmgrが先頭/末尾なら対応する矢印を無効化
+      (function updateNavDisabled() {
+        const tabs = Array.from(container.querySelectorAll('.mgr-tab'));
+        const idx = tabs.findIndex(t => t.getAttribute('data-mgr') === _decideActiveTab);
+        const total = tabs.length;
+        container.querySelectorAll('.mgr-nav-prev').forEach(b => { b.disabled = (idx <= 0); });
+        container.querySelectorAll('.mgr-nav-next').forEach(b => { b.disabled = (idx < 0 || idx >= total - 1); });
+      })();
+
       // product-group-header の高さを再計測 (--mgr-header-h 更新 → sub-header-row の sticky 位置)
       if (typeof window._positionFeeToggleFloating === 'function') {
         requestAnimationFrame(() => window._positionFeeToggleFloating());
@@ -8498,32 +8582,64 @@
     //   その高さを動的計測して --mgr-header-h カスタムプロパティに反映する処理。
     //   sub-header-row (表ヘッダー) の sticky top は calc(--top-bar-h + 48px + --mgr-header-h)。
     //   旧浮遊型「バリエ・手数料」ボタンの位置調整ロジックは廃止 (ボタンは商品名ヘッダー直下の通常配置に移行)。
+    // v0.52.109: ④画面の sticky 要素群 (tool-panel-header / tool-panel-description /
+    //   mgr-tabs-area / product-group-header) の高さを連動計測して、上から順に top を積み上げる。
+    //   ヘッダー隠し時 (--top-bar-h 変化) にも自動追従。
     (function bindMgrHeaderMetrics(){
-      // アクティブな product-group-header の高さを計測して --mgr-header-h に反映
-      function measureMgrHeaderHeight() {
-        const container = document.getElementById('decide-price-table-container');
-        if (!container) return;
-        const groups = container.querySelectorAll('.product-group');
-        let header = null;
-        for (const g of groups) {
-          if (g.getAttribute('data-hidden') === 'true') continue;
-          header = g.querySelector('.product-group-header');
-          if (header) break;
+      // ④画面の sticky 要素群の高さを実測し、--decide-h-* / --mgr-header-h に反映
+      function measureDecideStickyHeights() {
+        const panel = document.getElementById('tool-decide-price');
+        if (!panel) return;
+        // tool-panel-header (見出し)
+        const th = panel.querySelector('.tool-panel-header');
+        if (th) {
+          const h = th.getBoundingClientRect().height;
+          if (h > 0) document.documentElement.style.setProperty('--decide-h-th', Math.ceil(h) + 'px');
         }
-        if (!header) return;
-        const h = header.getBoundingClientRect().height;
-        if (h > 0) {
-          document.documentElement.style.setProperty('--mgr-header-h', Math.ceil(h) + 'px');
+        // tool-panel-description (説明文)
+        const desc = panel.querySelector('.tool-panel-description');
+        if (desc) {
+          const h = desc.getBoundingClientRect().height;
+          if (h > 0) document.documentElement.style.setProperty('--decide-h-desc', Math.ceil(h) + 'px');
+        }
+        // mgr-tabs-area (stats + 商品管理番号タブ)
+        const mgrArea = panel.querySelector('.mgr-tabs-area');
+        if (mgrArea) {
+          const h = mgrArea.getBoundingClientRect().height;
+          if (h > 0) document.documentElement.style.setProperty('--decide-h-mgr', Math.ceil(h) + 'px');
+        }
+        // product-group-header (アクティブな商品のヘッダー: 画像+名前+割引率+バリエボタン)
+        const container = document.getElementById('decide-price-table-container');
+        if (container) {
+          const groups = container.querySelectorAll('.product-group');
+          let header = null;
+          for (const g of groups) {
+            if (g.getAttribute('data-hidden') === 'true') continue;
+            header = g.querySelector('.product-group-header');
+            if (header) break;
+          }
+          if (header) {
+            const h = header.getBoundingClientRect().height;
+            if (h > 0) document.documentElement.style.setProperty('--mgr-header-h', Math.ceil(h) + 'px');
+          }
         }
       }
 
       // 既存の呼び出し点 (renderDecidePriceTable / applyMgrTabVisibility / resize) から
       // この関数経由で発火する。名前は互換性維持のため _positionFeeToggleFloating を残す。
-      window._positionFeeToggleFloating = measureMgrHeaderHeight;
+      window._positionFeeToggleFloating = measureDecideStickyHeights;
 
       window.addEventListener('resize', () => {
-        requestAnimationFrame(measureMgrHeaderHeight);
+        requestAnimationFrame(measureDecideStickyHeights);
       });
+      // ヘッダー折りたたみ (--top-bar-h 変化) 時にも sticky 位置が崩れるので、
+      // body の data-header-collapsed 変更を MutationObserver で監視
+      try {
+        const mo = new MutationObserver(() => {
+          requestAnimationFrame(measureDecideStickyHeights);
+        });
+        mo.observe(document.body, { attributes: true, attributeFilter: ['data-header-collapsed', 'data-view'] });
+      } catch (e) { /* 監視失敗時は無視 */ }
     })();
 
     // 商品管理番号タブの表示切替: アクティブ以外を hidden に
@@ -8538,6 +8654,14 @@
           g.setAttribute('data-hidden', 'true');
         }
       });
+      // v0.52.110: アクティブmgrが端なら前/次ナビ矢印を disabled に
+      {
+        const tabs = Array.from(container.querySelectorAll('.mgr-tab'));
+        const idx = tabs.findIndex(t => t.getAttribute('data-mgr') === _decideActiveTab);
+        const total = tabs.length;
+        container.querySelectorAll('.mgr-nav-prev').forEach(b => { b.disabled = (idx <= 0); });
+        container.querySelectorAll('.mgr-nav-next').forEach(b => { b.disabled = (idx < 0 || idx >= total - 1); });
+      }
       // アクティブグループが切り替わると v4列の DOM位置も変わるため再配置
       if (typeof window._positionFeeToggleFloating === 'function') {
         requestAnimationFrame(() => window._positionFeeToggleFloating());
