@@ -392,6 +392,110 @@
       font-weight: 700;
     }
     /* ⑬/セール後③ サムネイル ダウンロードボタン群 */
+    /* v0.52.128: ⑧ 過去のセール参加履歴表 */
+    .thumb-dl-section {
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px dashed #d8d8de;
+    }
+    .thumb-dl-heading {
+      font-size: 15px;
+      margin: 0 0 10px;
+    }
+    .thumb-dl-note {
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--muted);
+    }
+    .thumb-hist-note {
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--muted);
+    }
+    .thumb-hist-legend {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      align-items: center;
+      margin-top: 6px;
+      font-size: 12px;
+    }
+    .thumb-hist-key { font-weight: 700; }
+    .thumb-hist-key-past { color: #2d6cb8; }
+    .thumb-hist-key-now { color: #d83838; }
+    .thumb-hist-key-skip {
+      background: #effbe9;
+      color: #2a8a45;
+      border: 1px solid #c4e5b8;
+      border-radius: 10px;
+      padding: 1px 8px;
+      font-weight: 700;
+    }
+    .thumb-hist-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-top: 8px;
+    }
+    .thumb-hist-table th,
+    .thumb-hist-table td {
+      border: 1px solid #d8d8de;
+      padding: 8px 10px;
+      text-align: center;
+    }
+    .thumb-hist-table th {
+      background: #f2f3f6;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .thumb-hist-mgr { font-family: ui-monospace, monospace; white-space: nowrap; }
+    .thumb-hist-img { width: 90px; }
+    .thumb-hist-badges { white-space: nowrap; }
+    /* 割引率バッジ */
+    .thumb-rate-badge {
+      display: inline-block;
+      min-width: 48px;
+      margin: 2px 3px;
+      padding: 4px 8px;
+      border-radius: 14px;
+      font-size: 12px;
+      font-weight: 700;
+      border: 1.5px solid #d8d8de;
+      color: #aaa;
+      background: #f7f7f9;
+    }
+    /* 過去に出した割引率: 色を付ける (割引率ごとの色) */
+    .thumb-rate-badge.is-past.disc-10 { border-color: #2d6cb8; color: #fff; background: #2d6cb8; }
+    .thumb-rate-badge.is-past.disc-20 { border-color: #d36916; color: #fff; background: #d36916; }
+    .thumb-rate-badge.is-past.disc-30 { border-color: #2a8a45; color: #fff; background: #2a8a45; }
+    .thumb-rate-badge.is-past.disc-50 { border-color: #d83838; color: #fff; background: #d83838; }
+    /* 今回の割引率: 太枠で強調 (★が付く) */
+    .thumb-rate-badge.is-now {
+      box-shadow: 0 0 0 2px #fff, 0 0 0 4px #222;
+    }
+    /* 作成不要バッジ */
+    .thumb-skip-badge {
+      display: inline-block;
+      background: #effbe9;
+      color: #2a8a45;
+      border: 1px solid #c4e5b8;
+      border-radius: 12px;
+      padding: 3px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .thumb-make-badge {
+      display: inline-block;
+      background: #fff6e8;
+      color: #b8741a;
+      border: 1px solid #f0d9b0;
+      border-radius: 12px;
+      padding: 3px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
     .top-image-dl-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -2913,7 +3017,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.127</span>
+      <span class="version">v0.52.129</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -3334,14 +3438,29 @@
         セール用サムネイルをChatGPTで生成していく。</p>
 
         <div class="card">
-          <h2>通常のサムネイルをダウンロード</h2>
-          <div class="top-image-dl-grid">
-            <button type="button" data-rate="10" class="top-image-dl-btn disc-10">10%OFF商品</button>
-            <button type="button" data-rate="20" class="top-image-dl-btn disc-20">20%OFF商品</button>
-            <button type="button" data-rate="30" class="top-image-dl-btn disc-30">30%OFF商品</button>
-            <button type="button" data-rate="50" class="top-image-dl-btn disc-50">50%OFF商品</button>
+          <h2>過去のセール参加履歴 <span class="thumb-hist-note">（過去に同じ割引率で出していれば、セール用サムネイルはRMSに保管済み＝作成不要）</span></h2>
+          <p class="card-lead">
+            今回割引率が決まっている商品について、過去にどの割引率（10/20/30/50%OFF）でセール参加したかを表示します。<br>
+            <span class="thumb-hist-legend">
+              <span class="thumb-hist-key thumb-hist-key-past">■</span> 過去に出した割引率　
+              <span class="thumb-hist-key thumb-hist-key-now">★</span> 今回の割引率　
+              <span class="thumb-hist-key thumb-hist-key-skip">✓作成不要</span> 今回と同じ割引率を過去に出している
+            </span>
+          </p>
+          <div id="thumb-history-container">
+            <div class="empty-state">割引率が決まっている商品がありません。④「割引率決定」で割引率を選んでください。</div>
           </div>
-          <div id="make-thumb-dl-status" class="top-image-dl-status" aria-live="polite"></div>
+
+          <div class="thumb-dl-section">
+            <h3 class="thumb-dl-heading">通常のサムネイルをダウンロード <span class="thumb-dl-note">（「作成不要」を除いた、サムネイル作成が必要な商品のみ）</span></h3>
+            <div class="top-image-dl-grid">
+              <button type="button" data-rate="10" class="top-image-dl-btn disc-10">10%OFF商品</button>
+              <button type="button" data-rate="20" class="top-image-dl-btn disc-20">20%OFF商品</button>
+              <button type="button" data-rate="30" class="top-image-dl-btn disc-30">30%OFF商品</button>
+              <button type="button" data-rate="50" class="top-image-dl-btn disc-50">50%OFF商品</button>
+            </div>
+            <div id="make-thumb-dl-status" class="top-image-dl-status" aria-live="polite"></div>
+          </div>
         </div>
       </div>
 
@@ -3867,6 +3986,10 @@
       // DLボタン末尾の該当商品数を最新化
       if (viewId === 'make-thumb' || viewId === 'top-image-back') {
         if (typeof renderTopImageDlButtons === 'function') renderTopImageDlButtons();
+      }
+      // v0.52.128: ⑧ 過去のセール参加履歴表を描画
+      if (viewId === 'make-thumb') {
+        if (typeof window._renderThumbHistory === 'function') window._renderThumbHistory();
       }
       // make-rms-csv サブビュー: 状態はメモリ内のスロットに保持されているので特に再描画不要
       // 検索用DLボタンの活性/非活性更新
@@ -4669,12 +4792,158 @@
       return result;
     }
 
+    // v0.52.128: ⑧セール用サムネイル作成 — 過去のセール参加履歴表
+    //   ある月の archive データから mgr→割引率(10/20/30/50) のマップを作るヘルパー
+    function getMgrDiscountMapForMonth(ym) {
+      const map = {}; // mgr -> Set of discounts
+      try {
+        const archive = loadArchive();
+        const data = archive[ym];
+        if (!data || !data.rmsCsvB64) return map;
+        const discounts = data.discounts || {};
+        const rmsRows = parseCsvText(decodeShiftJIS(b642u8(data.rmsCsvB64)));
+        if (rmsRows.length < 2) return map;
+        const rh = rmsRows[0];
+        const iMgr = rh.findIndex(x => x && x.indexOf('商品管理番号') >= 0);
+        const iSku = rh.findIndex(x => x && x.indexOf('システム連携用SKU番号') >= 0);
+        if (iMgr < 0 || iSku < 0) return map;
+        // mgr→最初のSKU
+        const mgrToFirstSku = {};
+        for (let i = 1; i < rmsRows.length; i++) {
+          const r = rmsRows[i];
+          if (!r) continue;
+          const mgr = (r[iMgr] || '').trim();
+          const sku = (r[iSku] || '').trim();
+          if (!mgr || !sku) continue;
+          if (!(mgr in mgrToFirstSku)) mgrToFirstSku[mgr] = sku;
+        }
+        for (const mgr of Object.keys(mgrToFirstSku)) {
+          const d = discounts[mgrToFirstSku[mgr]];
+          if (d === 10 || d === 20 || d === 30 || d === 50) {
+            if (!map[mgr]) map[mgr] = new Set();
+            map[mgr].add(d);
+          }
+        }
+      } catch (e) {}
+      return map;
+    }
+
+    // 過去全月(現在月を除く)を走査し、mgr→過去に出した割引率Set を集計
+    function getPastDiscountHistory(currentYmExclude) {
+      const hist = {}; // mgr -> { discounts: Set, months: { d: [ym,...] } }
+      try {
+        const archive = loadArchive();
+        const yms = Object.keys(archive).filter(y => y !== currentYmExclude);
+        // 年月の昇順 (古い順)
+        yms.sort();
+        for (const ym of yms) {
+          const map = getMgrDiscountMapForMonth(ym);
+          for (const mgr of Object.keys(map)) {
+            if (!hist[mgr]) hist[mgr] = { discounts: new Set(), months: {} };
+            for (const d of map[mgr]) {
+              hist[mgr].discounts.add(d);
+              if (!hist[mgr].months[d]) hist[mgr].months[d] = [];
+              hist[mgr].months[d].push(ym);
+            }
+          }
+        }
+      } catch (e) {}
+      return hist;
+    }
+
+    // ⑧ 過去履歴表を描画
+    window._renderThumbHistory = function _renderThumbHistory() {
+      const container = document.getElementById('thumb-history-container');
+      if (!container) return;
+      const ym = currentYM || (typeof getCurrentYM === 'function' ? getCurrentYM() : null);
+      if (!ym) {
+        container.innerHTML = `<div class="empty-state">セール期間が選択されていません。</div>`;
+        return;
+      }
+      // 今回の mgr→割引率 (単一の割引率)
+      const curMap = getMgrDiscountMapForMonth(ym); // mgr -> Set (通常1個)
+      // 今回割引率が決まっている mgr のみ対象
+      const curMgrs = Object.keys(curMap);
+      if (curMgrs.length === 0) {
+        container.innerHTML = `<div class="empty-state">割引率が決まっている商品がありません。④「割引率決定」で割引率を選んでください。</div>`;
+        return;
+      }
+      // 商品名・画像を引くため rows を参照
+      const archive = loadArchive();
+      const data = archive[ym] || {};
+      const rowsArr = Array.isArray(data.rows) ? data.rows : [];
+      const mgrToRow = {};
+      for (const r of rowsArr) { if (r && r.mgr) mgrToRow[r.mgr] = r; }
+      // 過去履歴
+      const pastHist = getPastDiscountHistory(ym);
+      const rates = [10, 20, 30, 50];
+      // 表示順: rows の順序を尊重し、その後 curMap のみのもの
+      const orderedMgrs = [];
+      const seen = new Set();
+      for (const r of rowsArr) {
+        if (r && r.mgr && curMap[r.mgr] && !seen.has(r.mgr)) { orderedMgrs.push(r.mgr); seen.add(r.mgr); }
+      }
+      for (const mgr of curMgrs) { if (!seen.has(mgr)) { orderedMgrs.push(mgr); seen.add(mgr); } }
+
+      const rowsHtml = orderedMgrs.map(mgr => {
+        const row = mgrToRow[mgr] || {};
+        const curSet = curMap[mgr] || new Set();
+        const curDisc = [...curSet][0]; // 通常1個
+        const past = pastHist[mgr] || { discounts: new Set(), months: {} };
+        // 今回の割引率を過去にも出している → 作成不要
+        const skipMaking = curDisc && past.discounts.has(curDisc);
+        const badgesHtml = rates.map(rate => {
+          const isPast = past.discounts.has(rate);
+          const isNow = curDisc === rate;
+          let cls = 'thumb-rate-badge disc-' + rate;
+          if (isPast) cls += ' is-past';
+          if (isNow) cls += ' is-now';
+          // ツールチップ: 過去に出した月
+          const months = (past.months[rate] || []).map(y => y.replace('/', '年') + '月').join(', ');
+          const titleAttr = isPast ? ` title="過去にこの割引率で参加: ${escapeHtml(months)}"` : '';
+          const star = isNow ? '★' : '';
+          return `<span class="${cls}"${titleAttr}>${star}${rate}%</span>`;
+        }).join('');
+        const skipHtml = skipMaking
+          ? `<span class="thumb-skip-badge">✓ 作成不要</span>`
+          : `<span class="thumb-make-badge">要作成</span>`;
+        return `<tr>
+          <td class="thumb-hist-mgr">${escapeHtml(mgr)}</td>
+          <td class="thumb-hist-img">${imageCellHtml(row.imageUrl || '')}</td>
+          <td class="thumb-hist-badges">${badgesHtml}</td>
+          <td class="thumb-hist-skip">${skipHtml}</td>
+        </tr>`;
+      }).join('');
+
+      container.innerHTML = `<table class="thumb-hist-table">
+        <thead>
+          <tr>
+            <th>商品管理番号</th>
+            <th>画像</th>
+            <th>割引率履歴（過去＋今回）</th>
+            <th>サムネ</th>
+          </tr>
+        </thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>`;
+    };
+
     // ⑬/セール後③ のDLボタンのテキスト末尾に「(N)」を付与/更新する。
     // 対象: .top-image-dl-btn (disc-10/20/30/50)。両画面とも同じクラスで描画。
     // 件数0のときは is-disabled クラスでグレー化&クリック不可にする。
     // 進行中 (is-busy) のボタンはテキスト/状態を一切いじらない (DL処理中の表示を保護)。
     function renderTopImageDlButtons() {
-      const counts = getMgrCountByDiscount();
+      // v0.52.129: ⑧(make-thumb)画面では「要作成のみ」の件数、それ以外は全件
+      const isMakeThumb = document.body.getAttribute('data-view') === 'make-thumb';
+      let counts;
+      if (isMakeThumb) {
+        counts = { 10: 0, 20: 0, 30: 0, 50: 0 };
+        [10, 20, 30, 50].forEach(rate => {
+          counts[rate] = getDiscountTargetsForImageDl(rate, true).length;
+        });
+      } else {
+        counts = getMgrCountByDiscount();
+      }
       document.querySelectorAll('.top-image-dl-btn').forEach(btn => {
         if (btn.classList.contains('is-busy') || btn.classList.contains('is-locked')) return;
         let rate = null;
@@ -4745,7 +5014,7 @@
     // 商品コードは row.itemCode を信用せず、RMS-CSVから同一商品管理番号のSKU群を集めて
     // その場で commonPrefixByHyphen で再計算する。これにより過去取り込みデータでも
     // 最新の共通プレフィクスルールが適用される。
-    function getDiscountTargetsForImageDl(rate) {
+    function getDiscountTargetsForImageDl(rate, excludePastSameRate) {
       const targets = [];
       try {
         const ym = currentYM || (typeof getCurrentYM === 'function' ? getCurrentYM() : null);
@@ -4756,6 +5025,8 @@
         const discounts = (data.discounts) || {};
         const baseRows = (data.rows && Array.isArray(data.rows)) ? data.rows : [];
         if (baseRows.length === 0) return targets;
+        // v0.52.129: 過去履歴 (要作成のみに絞る場合に使用)
+        const pastHist = excludePastSameRate ? getPastDiscountHistory(ym) : null;
         // mgr→firstSku マップ + mgr→[sku, sku, ...] マップ
         const text = decodeShiftJIS(b642u8(data.rmsCsvB64));
         const rmsRows = parseCsvText(text);
@@ -4788,6 +5059,10 @@
           const firstSku = mgrToFirstSku[mgr];
           if (!firstSku) continue;
           if (discounts[firstSku] !== rate) continue;
+          // v0.52.129: 過去に同じ割引率で出していたら除外 (=作成不要)
+          if (excludePastSameRate && pastHist && pastHist[mgr] && pastHist[mgr].discounts.has(rate)) {
+            continue;
+          }
           const imageUrl = row.imageUrl || '';
           if (!imageUrl) continue; // 画像URLが取得できなかった商品はスキップ
           // 商品コードはその場で再計算 (row.itemCode は古いロジックの可能性があるため信用しない)
@@ -4939,7 +5214,10 @@
       const rate = parseInt(btn.getAttribute('data-rate') || '0', 10);
       if (![10, 20, 30, 50].includes(rate)) return;
 
-      const targets = getDiscountTargetsForImageDl(rate);
+      // v0.52.129: ⑧(make-thumb)画面では「要作成のみ」(過去に同じ割引率で出した商品を除外)
+      //   セール後③(top-image-back)では従来通り全件
+      const isMakeThumb = document.body.getAttribute('data-view') === 'make-thumb';
+      const targets = getDiscountTargetsForImageDl(rate, isMakeThumb);
       if (targets.length === 0) {
         setTopImageDlStatus(rate + '%OFF商品の画像がありません。', 'error');
         return;
