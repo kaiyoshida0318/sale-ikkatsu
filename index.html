@@ -3017,7 +3017,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.135</span>
+      <span class="version">v0.52.136</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -6062,16 +6062,33 @@
       if (existingRows.length < 2) return encodeShiftJIS(newCsvText);
       const newHeader = newRows[0];
       const existingHeader = existingRows[0];
-      const sameHeader = existingHeader.length === newHeader.length
-        && existingHeader.every((h, i) => h === newHeader[i]);
-      if (!sameHeader) return encodeShiftJIS(newCsvText);
-      // キー列のインデックス取得
-      const idxKey = newHeader.findIndex(h => {
+      // キー列のインデックス取得 (新ヘッダー基準)
+      const findKeyIdx = (header) => header.findIndex(h => {
         if (!h) return false;
         if (keyMatchMode === 'exact') return h.trim() === keyColName;
         return h.indexOf(keyColName) >= 0;
       });
+      const idxKey = findKeyIdx(newHeader);
       if (idxKey < 0) return encodeShiftJIS(newCsvText);
+      const idxKeyExisting = findKeyIdx(existingHeader);
+
+      // v0.52.136: ヘッダーが完全一致するかどうか
+      const sameHeader = existingHeader.length === newHeader.length
+        && existingHeader.every((h, i) => h === newHeader[i]);
+
+      // 既存行を「新ヘッダーの列順」に変換する関数
+      //  - sameHeader なら そのまま
+      //  - 違う場合は 列名でマッピング (新ヘッダーにある列は既存の同名列から値を取り、なければ空)
+      //  これにより「商品番号」列の追加などで列構成が変わっても、既存データを失わずマージできる。
+      let remapExistingRow;
+      if (sameHeader) {
+        remapExistingRow = (r) => r;
+      } else {
+        // 新ヘッダーの各列名 → 既存ヘッダーでのインデックス
+        const colMap = newHeader.map(h => existingHeader.findIndex(eh => eh === h));
+        remapExistingRow = (r) => colMap.map(ei => (ei >= 0 && ei < r.length) ? r[ei] : '');
+      }
+
       // 新規 → キーマップ
       const newKeyRows = new Map();
       for (let i = 1; i < newRows.length; i++) {
@@ -6083,16 +6100,19 @@
       }
       const mergedDataRows = [];
       const handled = new Set();
+      // 既存行 (新ヘッダー列順に変換) を走査
       for (let i = 1; i < existingRows.length; i++) {
-        const r = existingRows[i];
-        if (!r || r.length === 0) continue;
-        const k = (r[idxKey] || '').trim();
+        const r0 = existingRows[i];
+        if (!r0 || r0.length === 0) continue;
+        // 既存のキー値 (既存ヘッダーのキー列インデックスで取得)
+        const k = (idxKeyExisting >= 0 ? (r0[idxKeyExisting] || '') : (r0[idxKey] || '')).trim();
+        const r = remapExistingRow(r0);
         if (!k) { mergedDataRows.push(r); continue; }
         if (newKeyRows.has(k)) {
-          mergedDataRows.push(newKeyRows.get(k));
+          mergedDataRows.push(newKeyRows.get(k)); // 新規で更新
           handled.add(k);
         } else {
-          mergedDataRows.push(r);
+          mergedDataRows.push(r); // 既存のみ → 残す
         }
       }
       for (let i = 1; i < newRows.length; i++) {
