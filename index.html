@@ -2839,7 +2839,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.124</span>
+      <span class="version">v0.52.125</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -3251,11 +3251,31 @@
         </div>
       </div>
 
+      <!-- サブビュー: ⑧ セール用サムネイル作成 (旧⑫サムネイル変更の内容を複製) -->
+      <div id="tool-make-thumb" class="tool-panel">
+        <div class="tool-panel-header">
+          <h2>⑧ セール用サムネイル作成</h2>
+        </div>
+        <p class="tool-panel-description">SALE一括から通常のサムネイルを％ごとにダウンロードし、<br>
+        セール用サムネイルをChatGPTで生成していく。</p>
+
+        <div class="card">
+          <h2>通常のサムネイルをダウンロード</h2>
+          <div class="top-image-dl-grid">
+            <button type="button" data-rate="10" class="top-image-dl-btn disc-10">10%OFF商品</button>
+            <button type="button" data-rate="20" class="top-image-dl-btn disc-20">20%OFF商品</button>
+            <button type="button" data-rate="30" class="top-image-dl-btn disc-30">30%OFF商品</button>
+            <button type="button" data-rate="50" class="top-image-dl-btn disc-50">50%OFF商品</button>
+          </div>
+          <div id="make-thumb-dl-status" class="top-image-dl-status" aria-live="polite"></div>
+        </div>
+      </div>
+
       <!-- サブビュー: ④ 原価特定-NE-セット無しコード -->
       <!-- サブビュー: ⑨ RMSにアップロード -->
       <div id="tool-upload-rms" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>⑧ RMS-完成CSVアップロード</h2>
+          <h2>⑨ RMS-完成CSVアップロード</h2>
         </div>
         <p class="tool-panel-description">セール開始準備⑦で作成した「normal-item-sale」ファイルをRMSにアップロードしていく。<br>
         アップロードにはWinSCPを使用する。</p>
@@ -3296,7 +3316,7 @@
       <!-- サブビュー: ⑩ RMSイベント申請 -->
       <div id="tool-rms-event" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>⑨ RMSイベント申請</h2>
+          <h2>⑩ RMSイベント申請</h2>
         </div>
         <p class="tool-panel-description">RMSへの反映が確認できたらセールの申請を行う。</p>
 
@@ -3313,7 +3333,7 @@
       <!-- サブビュー: ⑪ 倉庫入れSKU記録 -->
       <div id="tool-sku-record" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>⑩ 審査落ちSKU倉庫入れ</h2>
+          <h2>⑪ 審査落ちSKU倉庫入れ</h2>
         </div>
         <p class="tool-panel-description">セール参加可否の審査は商品コード単位ではなく、中のSKU単位で行われる。<br>
         そのため、審査の結果✕が出たSKUがあった場合でも、そのSKUだけを倉庫に入れることで再度審査を受けることができる。<br>
@@ -3339,7 +3359,7 @@
       <!-- サブビュー: ⑫ 広告削除 -->
       <div id="tool-ad-delete" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>⑪ 広告削除</h2>
+          <h2>⑫ 広告削除</h2>
           <span class="check-complete-badge" id="ad-delete-complete-badge"></span>
         </div>
         <p class="tool-panel-description">セール用CSVをRMSにアップした時点で販売停止状態になるため、参加商品のRPP広告は無駄打ちになってしまう。<br>
@@ -3354,27 +3374,15 @@
       <!-- サブビュー: ⑬ サムネイル変更 -->
       <div id="tool-thumb-change" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>⑫ サムネイル変更</h2>
+          <h2>⑬ サムネイル変更</h2>
         </div>
-        <p class="tool-panel-description">SALE一括から通常のサムネイルを％ごとにダウンロードし、<br>
-        セール用サムネイルをChatGPTで生成していく。</p>
-
-        <div class="card">
-          <h2>通常のサムネイルをダウンロード</h2>
-          <div class="top-image-dl-grid">
-            <button type="button" data-rate="10" class="top-image-dl-btn disc-10">10%OFF商品</button>
-            <button type="button" data-rate="20" class="top-image-dl-btn disc-20">20%OFF商品</button>
-            <button type="button" data-rate="30" class="top-image-dl-btn disc-30">30%OFF商品</button>
-            <button type="button" data-rate="50" class="top-image-dl-btn disc-50">50%OFF商品</button>
-          </div>
-          <div id="thumb-change-dl-status" class="top-image-dl-status" aria-live="polite"></div>
-        </div>
+        <p class="tool-panel-description"></p>
       </div>
 
       <!-- サブビュー: ⑭ スマホ上部バナー設置予約 -->
       <div id="tool-sp-banner" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>⑬ スマホ上部バナー設置予約</h2>
+          <h2>⑭ スマホ上部バナー設置予約</h2>
         </div>
         <p class="tool-panel-description">RMSでセール用のスマホ上部バナーの設置予約をする。</p>
 
@@ -3664,7 +3672,7 @@
     // ※旧 cost-non-set は v0.52.88 で廃止(②のセクション1=単一商品 に統合)
     // ※サブビュー間は forward/back で履歴を残す。同一サブビュー間は履歴に積まない。
     // 履歴に積まれた viewId は、ブラウザ戻る/進むで復元される。
-    const VALID_VIEWS = ['products','workflow','add-products','decide-price','decide-title','dl-rms-csv','make-rms-csv','cost-set-item','cost-set-component','upload-rms','rms-event','sku-record','ad-delete','ad-restore','upload-original','sku-restore','thumb-change','sp-banner','top-image-back'];
+    const VALID_VIEWS = ['products','workflow','add-products','decide-price','decide-title','dl-rms-csv','make-rms-csv','make-thumb','cost-set-item','cost-set-component','upload-rms','rms-event','sku-record','ad-delete','ad-restore','upload-original','sku-restore','thumb-change','sp-banner','top-image-back'];
     // ブラウザ/マウスの「戻る」でサブビューから戻れるよう、サブビュー遷移時は history.pushState する
     let _suppressPushState = false; // popstate由来の呼び出しでは積まない
     const MAIN_TABS = ['products', 'workflow'];
@@ -3781,9 +3789,9 @@
       if (viewId === 'sku-restore') {
         if (typeof renderSkuRestoreTable === 'function') renderSkuRestoreTable();
       }
-      // thumb-change (⑬) / top-image-back (セール後③) を開くときは
+      // make-thumb (⑧セール用サムネイル作成) / top-image-back (セール後③) を開くときは
       // DLボタン末尾の該当商品数を最新化
-      if (viewId === 'thumb-change' || viewId === 'top-image-back') {
+      if (viewId === 'make-thumb' || viewId === 'top-image-back') {
         if (typeof renderTopImageDlButtons === 'function') renderTopImageDlButtons();
       }
       // make-rms-csv サブビュー: 状態はメモリ内のスロットに保持されているので特に再描画不要
@@ -4715,7 +4723,7 @@
 
     // ステータス表示更新 (現在開いている画面の状態DOMに反映)
     function setTopImageDlStatus(text, kind) {
-      const ids = ['thumb-change-dl-status', 'top-image-back-dl-status'];
+      const ids = ['make-thumb-dl-status', 'top-image-back-dl-status'];
       ids.forEach(id => {
         const el = document.getElementById(id);
         if (!el) return;
@@ -5038,6 +5046,7 @@
           { id: 'prep-decide-title', label: 'セール用タイトル決定', action: 'open-decide-title' },
           { id: 'prep-dl-rms-csv', label: 'RMSアップ用素材ダウンロード', action: 'open-dl-rms-csv' },
           { id: 'prep-make-rms-csv', label: 'RMSアップ用CSV作成', action: 'open-make-rms-csv' },
+          { id: 'prep-make-thumb', label: 'セール用サムネイル作成', action: 'open-make-thumb' },
           { id: 'prep-upload-rms', label: 'RMS-完成CSVアップロード■申請日当日■', action: 'open-upload-rms' },
           { id: 'prep-rms-event', label: 'RMSイベント申請■申請日当日■', action: 'open-rms-event' },
           { id: 'prep-sku-record', label: '審査落ちSKU倉庫入れ■申請日当日■', action: 'open-sku-record' },
