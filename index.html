@@ -3017,7 +3017,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.134</span>
+      <span class="version">v0.52.135</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -3896,12 +3896,30 @@
         if (typeof restoreStatusMessage === 'function') restoreStatusMessage('add-products-status');
       }
       if (viewId === 'cost-set-item') {
-        // 新②(v0.52.88〜): セクション1=単一商品 / セクション2=セット商品 / セクション3=取り込み結果
-        if (typeof restoreStatusMessage === 'function') {
-          restoreStatusMessage('cost-single-status');
-          restoreStatusMessage('cost-set-status');
-          restoreStatusMessage('cost-import-status');
+        // v0.52.135: ②を開くたびに前回の選択・取り込み完了メッセージをクリアして
+        //   まっさらな状態から始める (前回分とごっちゃになって分かりづらい問題を解消)
+        if (typeof clearStatusMessage === 'function') {
+          clearStatusMessage('cost-single-status');
+          clearStatusMessage('cost-set-status');
+          clearStatusMessage('cost-import-status');
         }
+        // 保留中のファイル選択もリセット
+        _costPendingFiles.single = null;
+        _costPendingFiles.set = null;
+        // ファイル入力欄の表示もクリア
+        ['cost-single-input', 'cost-set-input'].forEach(id => {
+          const inp = document.getElementById(id);
+          if (inp) { try { inp.value = ''; } catch(e){} }
+          // ファイル名表示をリセット
+          const fileInputWrap = inp && inp.closest('.file-input');
+          const fnEl = fileInputWrap && fileInputWrap.querySelector('.filename');
+          if (fnEl) fnEl.textContent = '';
+        });
+        // 各ステータス表示要素を空に
+        ['cost-single-status', 'cost-set-status', 'cost-import-status'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) { el.textContent = ''; el.className = 'status'; }
+        });
         // SKU数チェック表示も更新
         if (typeof updateCostSkuCheck === 'function') updateCostSkuCheck();
       }
@@ -6198,11 +6216,9 @@
     }
     // 全サブビューのステータスを一括復元 (年月切替時に呼ぶ)
     function restoreAllStatusMessages() {
+      // v0.52.135: ②(cost-single/set/import)はホールドしない方針に変更したため対象外
       const ids = [
         'add-products-status',
-        'cost-single-status',     // 新②: 単一商品アップロード
-        'cost-set-status',        // 新②: セット商品アップロード
-        'cost-import-status',     // 新②: 取り込み結果
         'cost-set-component-status',
       ];
       ids.forEach(restoreStatusMessage);
@@ -6347,24 +6363,24 @@
       if (!el) return;
       el.className = 'status' + (kind ? ' ' + kind : '');
       el.innerHTML = msg;
-      if (kind === 'success') saveStatusMessage('cost-single-status', msg, 'success');
-      else if (kind === 'error') clearStatusMessage('cost-single-status');
+      // v0.52.135: ファイル選択は揮発的な操作なので永続化しない (前回分ホールド防止)
+      clearStatusMessage('cost-single-status');
     }
     function setCostSetStatus(msg, kind) {
       const el = document.getElementById('cost-set-status');
       if (!el) return;
       el.className = 'status' + (kind ? ' ' + kind : '');
       el.innerHTML = msg;
-      if (kind === 'success') saveStatusMessage('cost-set-status', msg, 'success');
-      else if (kind === 'error') clearStatusMessage('cost-set-status');
+      // v0.52.135: ファイル選択は揮発的な操作なので永続化しない (前回分ホールド防止)
+      clearStatusMessage('cost-set-status');
     }
     function setCostImportStatus(msg, kind) {
       const el = document.getElementById('cost-import-status');
       if (!el) return;
       el.className = 'status' + (kind ? ' ' + kind : '');
       el.innerHTML = msg;
-      if (kind === 'success') saveStatusMessage('cost-import-status', msg, 'success');
-      else if (kind === 'error') clearStatusMessage('cost-import-status');
+      // v0.52.135: 取り込み完了メッセージも永続化しない (②を開くたびにまっさらにするため)
+      clearStatusMessage('cost-import-status');
     }
 
     // メモリ内に未保存のファイルを保持 (ページ更新するとリセット、これは仕様)
@@ -6438,29 +6454,10 @@
         btn.disabled = true;
         return;
       }
-      // 単一商品 / セット商品 のテキスト取得 (メモリ優先、なければアーカイブから)
-      let singleText = null;
-      if (_costPendingFiles.single) {
-        singleText = _costPendingFiles.single.text;
-      } else {
-        try {
-          const data = (loadArchive())[ym];
-          if (data && data.nonSetCsvB64) {
-            singleText = decodeShiftJIS(b642u8(data.nonSetCsvB64));
-          }
-        } catch (e) {}
-      }
-      let setText = null;
-      if (_costPendingFiles.set) {
-        setText = _costPendingFiles.set.text;
-      } else {
-        try {
-          const data = (loadArchive())[ym];
-          if (data && data.setItemCsvB64) {
-            setText = decodeShiftJIS(b642u8(data.setItemCsvB64));
-          }
-        } catch (e) {}
-      }
+      // v0.52.135: SKU数チェックは「今回新しく選択したファイル」のみで計算する。
+      //   (アーカイブに保存済みの前回分CSVは合算しない。前回分とごっちゃになる問題を解消)
+      const singleText = _costPendingFiles.single ? _costPendingFiles.single.text : null;
+      const setText = _costPendingFiles.set ? _costPendingFiles.set.text : null;
       const singleCount = singleText ? getSingleSkuCount(singleText) : 0;
       const setCount = setText ? getSetSkuCount(setText) : 0;
       const sum = singleCount + setCount;
