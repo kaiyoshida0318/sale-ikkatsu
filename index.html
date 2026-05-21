@@ -515,6 +515,29 @@
       border-radius: 4px;
     }
     .st-thumb-empty { color: #aaa; font-size: 12px; }
+    .st-drop-hint { display: block; margin-top: 4px; font-size: 10px; color: #bbb; line-height: 1.4; }
+    /* ドラッグオーバー時のハイライト */
+    .st-img-wrap.is-dragover {
+      border-color: var(--brand);
+      border-style: solid;
+      background: #eef4fc;
+    }
+    .st-drop-overlay {
+      display: none;
+      position: absolute;
+      inset: 0;
+      align-items: center;
+      justify-content: center;
+      background: rgba(30,58,95,0.82);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      border-radius: 6px;
+      pointer-events: none;
+      text-align: center;
+      padding: 4px;
+    }
+    .st-img-wrap.is-dragover .st-drop-overlay { display: flex; }
     .st-upload-btn {
       position: absolute;
       bottom: 4px;
@@ -628,7 +651,12 @@
       white-space: nowrap;
     }
     .thumb-hist-mgr { font-family: ui-monospace, monospace; white-space: nowrap; }
+    .thumb-hist-code { font-family: ui-monospace, monospace; white-space: nowrap; }
     .thumb-hist-img { width: 90px; }
+    /* v0.52.144: ⑧ セール用サムネ列 (今回の割引率セル) */
+    .make-thumb-table .thumb-hist-disc { white-space: nowrap; width: 1%; }
+    .make-thumb-table .thumb-hist-sale-cell { width: 170px; min-width: 150px; }
+    .make-thumb-table .thumb-hist-status { white-space: nowrap; width: 1%; }
     .thumb-hist-badges { white-space: nowrap; }
     /* 割引率バッジ */
     .thumb-rate-badge {
@@ -3217,7 +3245,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.142</span>
+      <span class="version">v0.52.144</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -3667,16 +3695,12 @@
         セール用サムネイルをChatGPTで生成していく。</p>
 
         <div class="card">
-          <h2>過去のセール参加履歴 <span class="thumb-hist-note">（過去に同じ割引率で出していれば、セール用サムネイルはRMSに保管済み＝作成不要）</span></h2>
+          <h2>セール用サムネイル <span class="thumb-hist-note">（今回割引率が決まっている商品の、今回の割引率のサムネイル状態）</span></h2>
           <p class="card-lead">
-            今回割引率が決まっている商品について、過去にどの割引率（10/20/30/50%OFF）でセール参加したかを表示します。<br>
-            <span class="thumb-hist-legend">
-              <span class="thumb-hist-key thumb-hist-key-past">■</span> 過去に出した割引率　
-              <span class="thumb-hist-key thumb-hist-key-now">★</span> 今回の割引率　
-              <span class="thumb-hist-key thumb-hist-key-skip">✓作成不要</span> 今回と同じ割引率を過去に出している
-            </span>
+            画像が登録済みの商品はその画像を表示します。未登録の商品は <span class="thumb-make-badge">要作成</span> と表示されます。<br>
+            各セルで画像のアップロード（ドラッグ＆ドロップ可）・画像URLの入力ができます。内容は「セール用サムネイル」タブと連動します。
           </p>
-          <div id="thumb-history-container">
+          <div id="make-thumb-history-container">
             <div class="empty-state">割引率が決まっている商品がありません。④「割引率決定」で割引率を選んでください。</div>
           </div>
 
@@ -5103,32 +5127,60 @@
     }
 
     // ⑧ 過去履歴表を描画
+    // v0.52.144: ⑧セール用サムネイル作成 — 今回割引率が決まっている商品のサムネ表
+    //   各商品 × 今回の割引率のサムネセル(セール用サムネイルタブと同じ saleThumbs データを共用)。
+    //   画像があればその画像、なければ「要作成」。画像のアップ/D&D/URL入力ができる(タブと連動)。
     window._renderThumbHistory = function _renderThumbHistory() {
-      const container = document.getElementById('thumb-history-container');
+      const container = document.getElementById('make-thumb-history-container');
       if (!container) return;
       const ym = currentYM || (typeof getCurrentYM === 'function' ? getCurrentYM() : null);
       if (!ym) {
         container.innerHTML = `<div class="empty-state">セール期間が選択されていません。</div>`;
         return;
       }
-      // 今回の mgr→割引率 (単一の割引率)
+      // 今回の mgr→割引率
       const curMap = getMgrDiscountMapForMonth(ym); // mgr -> Set (通常1個)
-      // 今回割引率が決まっている mgr のみ対象
       const curMgrs = Object.keys(curMap);
       if (curMgrs.length === 0) {
         container.innerHTML = `<div class="empty-state">割引率が決まっている商品がありません。④「割引率決定」で割引率を選んでください。</div>`;
         return;
       }
-      // 商品名・画像を引くため rows を参照
+      // 商品名・画像・コードを引くため rows / RMS を参照
       const archive = loadArchive();
       const data = archive[ym] || {};
       const rowsArr = Array.isArray(data.rows) ? data.rows : [];
       const mgrToRow = {};
       for (const r of rowsArr) { if (r && r.mgr) mgrToRow[r.mgr] = r; }
-      // 過去履歴
-      const pastHist = getPastDiscountHistory(ym);
-      const rates = [10, 20, 30, 50];
-      // 表示順: rows の順序を尊重し、その後 curMap のみのもの
+      // mgr→商品コード (商品番号優先)
+      const mgrToItemNo = {};
+      const mgrToSkus = {};
+      if (data.rmsCsvB64) {
+        try {
+          const rmsRows = parseCsvText(decodeShiftJIS(b642u8(data.rmsCsvB64)));
+          if (rmsRows.length >= 2) {
+            const rh = rmsRows[0];
+            const iMgr = rh.findIndex(x => x && x.indexOf('商品管理番号') >= 0);
+            const iSku = rh.findIndex(x => x && x.indexOf('システム連携用SKU番号') >= 0);
+            const iItemNo = rh.findIndex(x => x && x.trim() === '商品番号');
+            if (iMgr >= 0) {
+              for (let i = 1; i < rmsRows.length; i++) {
+                const r = rmsRows[i]; if (!r) continue;
+                const m = (r[iMgr]||'').trim();
+                const s = iSku >= 0 ? (r[iSku]||'').trim() : '';
+                const itemNo = iItemNo >= 0 ? (r[iItemNo]||'').trim() : '';
+                if (m && itemNo && !(m in mgrToItemNo)) mgrToItemNo[m] = itemNo;
+                if (m && s) { if (!mgrToSkus[m]) mgrToSkus[m] = []; mgrToSkus[m].push(s); }
+              }
+            }
+          }
+        } catch (e) {}
+      }
+      const resolveCode = (mgr) => {
+        if (mgrToItemNo[mgr]) return mgrToItemNo[mgr];
+        if (mgrToSkus[mgr]) return commonPrefixByHyphen(mgrToSkus[mgr]) || '';
+        return (mgrToRow[mgr] && mgrToRow[mgr].itemCode) || '';
+      };
+      // 表示順: rows の順序を尊重
       const orderedMgrs = [];
       const seen = new Set();
       for (const r of rowsArr) {
@@ -5138,45 +5190,42 @@
 
       const rowsHtml = orderedMgrs.map(mgr => {
         const row = mgrToRow[mgr] || {};
-        const curSet = curMap[mgr] || new Set();
-        const curDisc = [...curSet][0]; // 通常1個
-        const past = pastHist[mgr] || { discounts: new Set(), months: {} };
-        // 今回の割引率を過去にも出している → 作成不要
-        const skipMaking = curDisc && past.discounts.has(curDisc);
-        const badgesHtml = rates.map(rate => {
-          const isPast = past.discounts.has(rate);
-          const isNow = curDisc === rate;
-          let cls = 'thumb-rate-badge disc-' + rate;
-          if (isPast) cls += ' is-past';
-          if (isNow) cls += ' is-now';
-          // ツールチップ: 過去に出した月
-          const months = (past.months[rate] || []).map(y => y.replace('/', '年') + '月').join(', ');
-          const titleAttr = isPast ? ` title="過去にこの割引率で参加: ${escapeHtml(months)}"` : '';
-          const star = isNow ? '★' : '';
-          return `<span class="${cls}"${titleAttr}>${star}${rate}%</span>`;
-        }).join('');
-        const skipHtml = skipMaking
-          ? `<span class="thumb-skip-badge">✓ 作成不要</span>`
+        const curDisc = [...(curMap[mgr] || [])][0];
+        const t = (typeof getSaleThumb === 'function') ? getSaleThumb(mgr, curDisc) : { img:'', url:'' };
+        const hasImg = !!(t && t.img);
+        const statusHtml = hasImg
+          ? `<span class="thumb-skip-badge">✓ 作成済み</span>`
           : `<span class="thumb-make-badge">要作成</span>`;
+        // 今回の割引率のサムネセル (セール用サムネイルタブと同じ saleThumbCellHtml を流用)
+        const thumbCell = (typeof saleThumbCellHtml === 'function') ? saleThumbCellHtml(mgr, curDisc) : '';
         return `<tr>
           <td class="thumb-hist-mgr">${escapeHtml(mgr)}</td>
+          <td class="thumb-hist-code">${escapeHtml(resolveCode(mgr))}</td>
           <td class="thumb-hist-img">${imageCellHtml(row.imageUrl || '')}</td>
-          <td class="thumb-hist-badges">${badgesHtml}</td>
-          <td class="thumb-hist-skip">${skipHtml}</td>
+          <td class="thumb-hist-disc"><span class="thumb-rate-badge disc-${curDisc} is-now is-past">★${curDisc}%</span></td>
+          <td class="thumb-hist-sale-cell">${thumbCell}</td>
+          <td class="thumb-hist-status">${statusHtml}</td>
         </tr>`;
       }).join('');
 
-      container.innerHTML = `<table class="thumb-hist-table">
+      container.innerHTML = `<table class="thumb-hist-table make-thumb-table">
         <thead>
           <tr>
             <th>商品管理番号</th>
-            <th>画像</th>
-            <th>割引率履歴（過去＋今回）</th>
-            <th>サムネ</th>
+            <th>商品コード</th>
+            <th>通常サムネ</th>
+            <th>今回の<br>割引率</th>
+            <th>セール用サムネ</th>
+            <th>状態</th>
           </tr>
         </thead>
         <tbody>${rowsHtml}</tbody>
       </table>`;
+
+      // セール用サムネイルタブと同じ編集イベント (アップロード/D&D/URL/削除) をバインド
+      if (typeof bindSaleThumbCellEvents === 'function') {
+        bindSaleThumbCellEvents(container, () => window._renderThumbHistory());
+      }
     };
 
     // ⑬/セール後③ のDLボタンのテキスト末尾に「(N)」を付与/更新する。
@@ -5994,16 +6043,17 @@
       const t = getSaleThumb(mgr, rate);
       const imgHtml = t.img
         ? `<img src="${escapeHtml(t.img)}" alt="" class="st-thumb-img" />`
-        : `<div class="st-thumb-empty">画像なし</div>`;
+        : `<div class="st-thumb-empty">画像なし<br><span class="st-drop-hint">ドラッグ＆ドロップ<br>または ⬆ アップ</span></div>`;
       const urlText = t.url || '';
       return `<div class="st-cell" data-mgr="${escapeHtml(mgr)}" data-rate="${rate}">
-        <div class="st-img-wrap">
+        <div class="st-img-wrap" data-mgr="${escapeHtml(mgr)}" data-rate="${rate}">
           ${imgHtml}
           <label class="st-upload-btn" title="画像をアップロード">
             <input type="file" accept="image/*" class="st-file-input" data-mgr="${escapeHtml(mgr)}" data-rate="${rate}" hidden />
             ⬆ アップ
           </label>
           ${t.img ? `<button type="button" class="st-clear-btn" data-mgr="${escapeHtml(mgr)}" data-rate="${rate}" title="画像を削除">✕</button>` : ''}
+          <div class="st-drop-overlay">ドロップして画像を設定</div>
         </div>
         <div class="st-url-row">
           <span class="st-url-label">画像URL</span>
@@ -6067,7 +6117,18 @@
         <tbody>${bodyHtml}</tbody>
       </table>`;
 
-      // イベント: 画像URL入力 (保存)
+      // セルの編集イベント (URL入力/アップロード/D&D/削除) をバインド
+      bindSaleThumbCellEvents(container, () => renderSaleThumbTable());
+    }
+    window._renderSaleThumbTable = renderSaleThumbTable;
+
+    // v0.52.144: サムネセルの編集イベントをバインドする共通関数
+    //   container 内の .st-url-input / .st-file-input / .st-img-wrap / .st-clear-btn にイベントを付ける。
+    //   rerender: 保存後に呼ぶ再描画関数 (セール用サムネイルタブ or ⑧ で別々の再描画を渡す)
+    function bindSaleThumbCellEvents(container, rerender) {
+      if (!container) return;
+      const doRerender = (typeof rerender === 'function') ? rerender : () => {};
+      // 画像URL入力 (保存)
       container.querySelectorAll('.st-url-input').forEach(inp => {
         const save = () => {
           const mgr = inp.getAttribute('data-mgr');
@@ -6078,34 +6139,57 @@
         inp.addEventListener('change', save);
         inp.addEventListener('blur', save);
       });
-      // イベント: 画像アップロード
+      // ファイルから画像を取り込んで保存→再描画
+      const ingestThumbFile = async (file, mgr, rate) => {
+        if (!file) return;
+        if (!/^image\//.test(file.type)) { alert('画像ファイルを選んでください。'); return; }
+        try {
+          const dataUrl = await compressImageToDataUrl(file, 400, 0.8);
+          const ok = setSaleThumbField(mgr, rate, 'img', dataUrl);
+          if (ok) doRerender();
+        } catch (err) {
+          alert('画像の処理に失敗しました: ' + (err.message || err));
+        }
+      };
+      // 画像アップロード (ファイル選択)
       container.querySelectorAll('.st-file-input').forEach(fi => {
         fi.addEventListener('change', async (e) => {
           const file = e.target.files && e.target.files[0];
-          if (!file) return;
           const mgr = fi.getAttribute('data-mgr');
           const rate = parseInt(fi.getAttribute('data-rate'), 10);
-          try {
-            const dataUrl = await compressImageToDataUrl(file, 400, 0.8);
-            const ok = setSaleThumbField(mgr, rate, 'img', dataUrl);
-            if (ok) renderSaleThumbTable();
-          } catch (err) {
-            alert('画像の処理に失敗しました: ' + (err.message || err));
-          }
+          await ingestThumbFile(file, mgr, rate);
           e.target.value = '';
         });
       });
-      // イベント: 画像削除
+      // ドラッグ&ドロップ
+      container.querySelectorAll('.st-img-wrap').forEach(wrap => {
+        const mgr = wrap.getAttribute('data-mgr');
+        const rate = parseInt(wrap.getAttribute('data-rate'), 10);
+        ['dragenter', 'dragover'].forEach(ev => wrap.addEventListener(ev, (e) => {
+          e.preventDefault(); e.stopPropagation();
+          wrap.classList.add('is-dragover');
+        }));
+        ['dragleave', 'dragend'].forEach(ev => wrap.addEventListener(ev, (e) => {
+          e.preventDefault(); e.stopPropagation();
+          wrap.classList.remove('is-dragover');
+        }));
+        wrap.addEventListener('drop', async (e) => {
+          e.preventDefault(); e.stopPropagation();
+          wrap.classList.remove('is-dragover');
+          const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+          await ingestThumbFile(file, mgr, rate);
+        });
+      });
+      // 画像削除
       container.querySelectorAll('.st-clear-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const mgr = btn.getAttribute('data-mgr');
           const rate = parseInt(btn.getAttribute('data-rate'), 10);
           setSaleThumbField(mgr, rate, 'img', '');
-          renderSaleThumbTable();
+          doRerender();
         });
       });
     }
-    window._renderSaleThumbTable = renderSaleThumbTable;
 
     // v0.52.142: セール用サムネイル 検索欄のバインド (1回だけ)
     (function bindSaleThumbSearch() {
