@@ -399,12 +399,14 @@
       width: 100%;
       margin: 0 !important;
     }
+    /* v0.52.150: パネル全体をスクロールさせ、検索欄より上(見出し・説明文)は上へ消える。検索欄はバナー直下でsticky固定 */
     body[data-view="make-thumb"] #tool-make-thumb.tool-panel.active {
       display: flex;
       flex-direction: column;
       align-items: center; /* v0.52.149: コンテンツを画面中央に配置 */
       height: calc(100vh - var(--top-bar-h, 130px));
-      overflow: hidden;
+      overflow-y: auto;
+      overflow-x: hidden;
       padding: 0 8px;
       box-sizing: border-box;
     }
@@ -430,21 +432,26 @@
       margin: 0 0 6px 0;
       flex-shrink: 0;
     }
-    body[data-view="make-thumb"] .st-search-bar { flex-shrink: 0; }
+    /* v0.52.150: 検索欄をパネルスクロール基準でバナー直下にsticky固定 */
+    body[data-view="make-thumb"] .st-search-bar {
+      position: sticky;
+      top: 0;
+      z-index: 3;
+      flex-shrink: 0;
+    }
     body[data-view="make-thumb"] #make-thumb-history-container {
-      flex: 1;
-      min-height: 0;
-      overflow: auto;
+      flex-shrink: 0;
+      overflow: visible;
     }
     body[data-view="make-thumb"] .thumb-dl-section {
       flex-shrink: 0;
       background: var(--bg);
       margin-top: 0;
     }
-    /* ⑧表ヘッダー固定 */
+    /* ⑧表ヘッダー固定: v0.52.150 検索欄(sticky)の直下に固定 */
     body[data-view="make-thumb"] .make-thumb-table thead th {
       position: sticky;
-      top: 0;
+      top: 48px;
       z-index: 2;
       background: #f2f3f6;
       box-shadow: inset 0 -1px 0 #d8d8de, inset 0 1px 0 #d8d8de;
@@ -457,12 +464,14 @@
       width: 100%;
       margin: 0 !important;
     }
+    /* v0.52.150: パネル全体をスクロールさせ、検索欄より上(見出し・説明文)は上へ消える。検索欄はバナー直下でsticky固定 */
     body[data-view="sale-thumb"] #tool-sale-thumb.tool-panel.active {
       display: flex;
       flex-direction: column;
       align-items: center; /* v0.52.148: コンテンツを画面中央に配置 */
       height: calc(100vh - var(--top-bar-h, 130px));
-      overflow: hidden;
+      overflow-y: auto;
+      overflow-x: hidden;
       padding: 0 8px;
       box-sizing: border-box;
     }
@@ -486,6 +495,17 @@
       position: static;
       margin: 0 0 6px 0;
       flex-shrink: 0;
+    }
+    /* v0.52.150: 検索欄をパネルスクロール基準でバナー直下にsticky固定 */
+    body[data-view="sale-thumb"] .st-search-bar {
+      position: sticky;
+      top: 0;
+      z-index: 3;
+      flex-shrink: 0;
+    }
+    body[data-view="sale-thumb"] #sale-thumb-table-container {
+      flex-shrink: 0;
+      overflow: visible;
     }
     /* 検索バー: バナー直下に固定 (flex-shrink:0で常に表示、スクロールしない) */
     .st-search-bar {
@@ -529,17 +549,17 @@
       min-height: 0;
       overflow: auto;
     }
-    /* 表ヘッダーを固定 (スクロール領域基準のsticky) */
+    /* 表ヘッダーを固定: v0.52.150 検索欄(sticky)の直下に固定 */
     .sale-thumb-table thead th {
       position: sticky;
-      top: 0;
+      top: 48px;
       z-index: 2;
       background: #f2f3f6;
       box-shadow: inset 0 -1px 0 #d8d8de, inset 0 1px 0 #d8d8de;
     }
     /* 2段ヘッダーの2段目 (割引率行) は1段目の下に固定 */
     .sale-thumb-table thead tr:nth-child(2) th {
-      top: 38px;
+      top: 86px;
     }
     .sale-thumb-table {
       width: 100%;
@@ -3343,7 +3363,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.149</span>
+      <span class="version">v0.52.150</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
