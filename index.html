@@ -3038,7 +3038,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.138</span>
+      <span class="version">v0.52.139</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -7195,6 +7195,7 @@
       const iMgr = rh.findIndex(x => x && x.indexOf('商品管理番号') >= 0);
       const iName = rh.findIndex(x => x && x.trim() === '商品名');
       const iSku = rh.findIndex(x => x && x.indexOf('システム連携用SKU番号') >= 0);
+      const iSkuMgmt = rh.findIndex(x => x && x.trim() === 'SKU管理番号'); // v0.52.139
       const iPrice = rh.findIndex(x => x && x.indexOf('通常購入販売価格') >= 0);
       const iV1 = rh.findIndex(x => x && x.trim() === 'バリエーション項目選択肢1');
       const iV2 = rh.findIndex(x => x && x.trim() === 'バリエーション項目選択肢2');
@@ -7259,6 +7260,7 @@
         const mgr = (r[iMgr]||'').trim();
         const name = (r[iName]||'').trim();
         const sku = (r[iSku]||'').trim();
+        const skuMgmt = iSkuMgmt >= 0 ? (r[iSkuMgmt]||'').trim() : ''; // v0.52.139 SKU管理番号
         const priceRaw = (r[iPrice]||'').trim();
         if (!sku) continue;
         countTotal++;
@@ -7327,6 +7329,7 @@
           // 表示用 商品名 (同一管理番号の最初の行のみ出す。renderで分岐)
           isFirstInMgr,
           setCode: sku, mgr, image: '', ssTitle: dispSs,
+          skuMgmt: skuMgmt,
           itemCode: mgrItemCodeMap[mgr] || '',
           discount: discounts[sku] ?? null,
           price, priceActual: price,
@@ -8548,6 +8551,25 @@
     //   ・表示価格 = 元の通常価格 (row.price)
     //   ・通常購入販売価格 = 選んだ割引率のOFF価格 (10→off10p, 20→off20p, 30→off30p, 50→off50p)
     //   ・商品管理番号 と セール用タイトル は同一商品管理番号の連続行で最初の行のみ値を入れる
+    // v0.52.139: 出力フォーマットを楽天RMSアップ用の9列・本体行+SKU行構造に変更
+    //   列: 商品管理番号（商品URL）/ 商品名 / 販売期間指定（開始日時）/ 販売期間指定（終了日時）
+    //       / SKU管理番号 / システム連携用SKU番号 / 通常購入販売価格 / 表示価格 / 二重価格文言管理番号
+    //   本体行(各商品管理番号の最初): 商品管理番号・商品名(=セール用タイトル)・開始/終了日時 を入れる
+    //   SKU行(各SKU): 商品管理番号・SKU管理番号・システム連携用SKU番号・通常購入販売価格(=セール価格)
+    //                ・表示価格(=通常価格)・二重価格文言管理番号(=1) を入れる
+    //   日時は 2026-06-04 20:00 形式(ハイフン区切り・半角)に変換
+    function formatDtForRms(dt) {
+      // 入力例 "2026/06/04 20:00" → "2026-06-04 20:00" (全角→半角、スラッシュ→ハイフン)
+      if (!dt) return '';
+      let s = String(dt).trim();
+      // 全角数字→半角
+      s = s.replace(/[\uFF10-\uFF19]/g, ch => String.fromCharCode(ch.codePointAt(0) - 0xFF10 + 0x30));
+      // 全角スペース→半角、全角コロン→半角
+      s = s.replace(/\u3000/g, ' ').replace(/\uFF1A/g, ':').replace(/\uFF0F/g, '/');
+      // スラッシュ→ハイフン (日付部分)
+      s = s.replace(/\//g, '-');
+      return s;
+    }
     function buildRmsUploadCsvRows() {
       let result;
       try {
@@ -8559,11 +8581,15 @@
       if (!rows || rows.length === 0) {
         return { headers: [], dataRows: [], stats: { kept: 0, skipped: 0 } };
       }
-      // 商品管理番号ごとの代表SKU = isFirstInMgr=true の setCode
-      // editedCells[代表SKU].ssTitle を引いてセール用タイトルとする
       const ym = currentYM || getCurrentYM();
       const archive = loadArchive();
-      const editedCells = (ym && archive[ym] && archive[ym].editedCells) ? archive[ym].editedCells : {};
+      const data = archive[ym] || {};
+      const editedCells = (data && data.editedCells) ? data.editedCells : {};
+      // セール期間 (本体行の開始/終了日時に入れる)
+      const period = getCurrentPeriod();
+      const startDt = formatDtForRms(period.startDt || data.startDt || '');
+      const endDt = formatDtForRms(period.endDt || data.endDt || '');
+      // 各商品管理番号の代表SKU → セール用タイトル
       const mgrFirstSku = {};
       for (const r of rows) {
         if (r.isBlankRow) continue;
@@ -8575,7 +8601,6 @@
         mgrSsTitle[mgr] = (ed && ed.ssTitle) ? ed.ssTitle : '';
       }
       // 採用する商品管理番号 = discount が 10/20/30/50 のもの
-      // 各商品管理番号の代表行 (isFirstInMgr=true) の row.discount を見て判定
       const mgrDiscount = {};
       for (const r of rows) {
         if (r.isBlankRow) continue;
@@ -8587,29 +8612,42 @@
         if (d === 10 || d === 20 || d === 30 || d === 50) validMgr.add(mgr);
       }
 
-      const headers = ['商品管理番号', '表示価格', '通常購入販売価格', 'セール用タイトル'];
+      const headers = [
+        '商品管理番号（商品URL）', '商品名', '販売期間指定（開始日時）', '販売期間指定（終了日時）',
+        'SKU管理番号', 'システム連携用SKU番号', '通常購入販売価格', '表示価格', '二重価格文言管理番号'
+      ];
       const dataRows = [];
       let kept = 0;
-      let skippedMgrs = new Set();
-      // mgrごとに連続して出すため rows を順に走査
-      let lastEmittedMgr = null;
+      const skippedMgrs = new Set();
+      const emittedHeaderMgr = new Set();
       for (const r of rows) {
         if (r.isBlankRow) continue;
         const mgr = r.mgr;
-        if (!validMgr.has(mgr)) {
-          skippedMgrs.add(mgr);
-          continue;
+        if (!validMgr.has(mgr)) { skippedMgrs.add(mgr); continue; }
+        // 本体行: その商品管理番号で初めて出すとき1行追加 (商品名=セール用タイトル, 日時)
+        if (!emittedHeaderMgr.has(mgr)) {
+          emittedHeaderMgr.add(mgr);
+          dataRows.push([
+            mgr,                       // 商品管理番号（商品URL）
+            mgrSsTitle[mgr] || '',     // 商品名 = セール用タイトル
+            startDt,                   // 販売期間指定（開始日時）
+            endDt,                     // 販売期間指定（終了日時）
+            '', '', '', '', ''
+          ]);
         }
+        // SKU行: SKU管理番号・システム連携用SKU番号・セール価格・通常価格・二重価格1
         const d = mgrDiscount[mgr];
         const offPrice = d === 10 ? r.off10p : d === 20 ? r.off20p : d === 30 ? r.off30p : r.off50p;
-        const isFirstOfMgrEmit = (mgr !== lastEmittedMgr);
         dataRows.push([
-          isFirstOfMgrEmit ? mgr : '',
-          (r.price !== null && r.price !== undefined && r.price !== '') ? String(r.price) : '',
-          (offPrice !== null && offPrice !== undefined && offPrice !== '') ? String(offPrice) : '',
-          isFirstOfMgrEmit ? (mgrSsTitle[mgr] || '') : '',
+          mgr,                                         // 商品管理番号（商品URL）
+          '',                                          // 商品名 (SKU行は空)
+          '', '',                                      // 開始/終了日時 (SKU行は空)
+          r.skuMgmt || '',                             // SKU管理番号
+          r.setCode || '',                             // システム連携用SKU番号
+          (offPrice !== null && offPrice !== undefined && offPrice !== '') ? String(offPrice) : '',  // 通常購入販売価格 = セール価格
+          (r.price !== null && r.price !== undefined && r.price !== '') ? String(r.price) : '',       // 表示価格 = 通常価格
+          '1'                                          // 二重価格文言管理番号 = 1固定
         ]);
-        lastEmittedMgr = mgr;
         kept++;
       }
       return { headers, dataRows, stats: { kept, skipped: skippedMgrs.size } };
@@ -9003,6 +9041,9 @@
           if (!period.startDt || !period.endDt) {
             throw new Error('ヘッダーで開始日時と終了日時を入力してください');
           }
+          // v0.52.139: 日時を元ファイルと同じ 2026-06-04 20:00 形式(ハイフン区切り・半角)に変換
+          const startDtOut = formatDtForRms(period.startDt);
+          const endDtOut = formatDtForRms(period.endDt);
           // SALE一括ファイルをパース: 商品管理番号 → {表示価格, 通常購入販売価格, セール用タイトル}
           const saleMap = parseSaleIkkatsuCsv(slots.sale.text);
           if (saleMap.size === 0) throw new Error('SALE一括CSVに有効な行がありません');
@@ -9043,8 +9084,8 @@
             outRows.push([
               mgr,
               saleInfo.ssTitle || '',
-              period.startDt,
-              period.endDt,
+              startDtOut,
+              endDtOut,
               '', '', '', '', ''
             ]);
             // SKU行
