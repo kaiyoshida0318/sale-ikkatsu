@@ -3017,7 +3017,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.133</span>
+      <span class="version">v0.52.134</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -3372,7 +3372,7 @@
           </div>
           <p style="margin: 8px 0 0 0; font-size: 12px; color: var(--muted);">
             ※「単一商品CSVの<b>商品コード</b>」と「セット商品CSVの<b>セット商品コード</b>」の<b>合計</b>が、
-            セール開始準備①の<b>システム連携用SKU番号</b>の総数と<b>一致</b>している場合のみ取り込めます。
+            <b>直近①で取り込んだ分</b>の<b>システム連携用SKU番号</b>の数と<b>一致</b>している場合のみ取り込めます。
             不一致の場合はCSVを見直してください。
           </p>
           <div id="cost-import-status" class="status" style="margin-top: 10px;"></div>
@@ -6265,6 +6265,8 @@
             if (!archive[ym]) archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
             const mergedBytes = mergeRmsCsvBytes(archive[ym].rmsCsvB64, text);
             archive[ym].rmsCsvB64 = ab2b64(mergedBytes);
+            // v0.52.134: 直近①で取り込んだCSVのSKU数を記録 (②のSKU数チェックの期待値に使う)
+            archive[ym].lastImportSkuCount = countUniqueValuesInColumn(text, 'システム連携用SKU番号');
             saveArchive(archive);
           }
         } catch (err) {
@@ -6398,6 +6400,18 @@
         return countUniqueValuesInColumn(text, 'システム連携用SKU番号');
       } catch (e) { return 0; }
     }
+    // v0.52.134: ②のSKU数チェックの期待値 = 直近①で取り込んだ分のSKU数
+    //   lastImportSkuCount が記録されていればそれを、なければ全体カウントにフォールバック
+    function getExpectedSkuCountForCost(ym) {
+      try {
+        const archive = loadArchive();
+        const data = archive[ym];
+        if (data && typeof data.lastImportSkuCount === 'number' && data.lastImportSkuCount > 0) {
+          return data.lastImportSkuCount;
+        }
+      } catch (e) {}
+      return getRmsSkuCount(ym);
+    }
     function getSingleSkuCount(text) {
       return countUniqueValuesInColumn(text, '商品コード');
     }
@@ -6417,7 +6431,7 @@
         btn.disabled = true;
         return;
       }
-      const rmsCount = getRmsSkuCount(ym);
+      const rmsCount = getExpectedSkuCountForCost(ym);
       if (rmsCount === 0) {
         checkEl.className = 'status';
         checkEl.innerHTML = '<span style="color: var(--muted);">① 参加商品追加でRMSデータCSVを先に取り込んでください。</span>';
@@ -6450,8 +6464,8 @@
       const singleCount = singleText ? getSingleSkuCount(singleText) : 0;
       const setCount = setText ? getSetSkuCount(setText) : 0;
       const sum = singleCount + setCount;
-      // シンプル表示: 単一N件 + セットM件 = 合計K件 / 期待値L件
-      const summary = `単一 <b>${singleCount}</b> 件 + セット <b>${setCount}</b> 件 = <b>${sum}</b> 件 / 期待値 <b>${rmsCount}</b> 件`;
+      // シンプル表示: 単一N件 + セットM件 = 合計K件 / 直近①取り込み分L件
+      const summary = `単一 <b>${singleCount}</b> 件 + セット <b>${setCount}</b> 件 = <b>${sum}</b> 件 / 直近①取り込み分 <b>${rmsCount}</b> 件`;
       if (!singleText && !setText) {
         checkEl.className = 'status';
         checkEl.innerHTML = `<span style="color: var(--muted);">${summary} - 単一・セットのいずれかのCSVを選択してください。</span>`;
@@ -6463,7 +6477,7 @@
       } else {
         checkEl.className = 'status error';
         const diff = sum - rmsCount;
-        const msg = diff > 0 ? `期待値より <b>${diff}</b> 件多い` : `期待値より <b>${-diff}</b> 件少ない`;
+        const msg = diff > 0 ? `直近①取り込み分より <b>${diff}</b> 件多い` : `直近①取り込み分より <b>${-diff}</b> 件少ない`;
         checkEl.innerHTML = `❌ ${summary} - ${msg}ため、取り込めません。CSVを確認してください。`;
         btn.disabled = true;
       }
