@@ -1493,8 +1493,8 @@
       cursor: pointer;
     }
     /* v0.52.126: 商品状態列 */
-    .product-table th.col-pstatus { min-width: 150px; white-space: nowrap; }
-    .product-table td.col-pstatus { text-align: center; }
+    .product-table th.col-pstatus { width: 1%; white-space: nowrap; }
+    .product-table td.col-pstatus { text-align: center; white-space: nowrap; width: 1%; }
     .product-table .pstatus-select {
       font-family: inherit;
       font-size: 13px;
@@ -1503,7 +1503,7 @@
       border-radius: 6px;
       background: #fff;
       cursor: pointer;
-      max-width: 140px;
+      width: auto;
     }
     .product-table .pstatus-select:focus {
       outline: none;
@@ -3017,7 +3017,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.129</span>
+      <span class="version">v0.52.130</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -5370,8 +5370,7 @@
         <th class="col-itemcode">商品コード</th>
         <th class="col-img">商品画像</th>
         <th class="col-pstatus">商品状態 <button type="button" class="pstatus-sort-btn${sortActiveClass}" title="商品状態でソート" aria-label="商品状態でソート">${sortMark}</button></th>
-        <th class="col-discount">割引率</th>
-        <th class="col-decide-link">割引率決定表</th>
+        <th class="col-discount" colspan="2">割引率</th>
       </tr>`;
 
       // ベース: ①取り込み済みの商品 (商品管理番号単位、商品コード=共通プレフィクス、商品名=代表名)
@@ -5489,7 +5488,7 @@
             <td class="img-cell">${imageCellHtml(r.imageUrl)}</td>
             <td class="col-pstatus pstatus-${st}"><select class="pstatus-select" data-mgr="${escapeHtml(r.mgr || '')}" aria-label="商品状態">${optsHtml}</select></td>
             <td class="col-discount${discClass}">${discLabel}</td>
-            <td class="col-decide-link"><a href="?view=decide-price&mgr=${encodeURIComponent(r.mgr || '')}" class="decide-link-btn" data-mgr="${escapeHtml(r.mgr || '')}" title="この商品の割引率決定表へ">④へ ›</a></td>
+            <td class="col-decide-link"><a href="?view=decide-price&mgr=${encodeURIComponent(r.mgr || '')}" class="decide-link-btn" data-mgr="${escapeHtml(r.mgr || '')}" title="この商品の割引率決定表へ">割引率決定表へ</a></td>
           </tr>`;
         }).join('');
       }
