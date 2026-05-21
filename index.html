@@ -392,6 +392,52 @@
       font-weight: 700;
     }
     /* ⑬/セール後③ サムネイル ダウンロードボタン群 */
+    /* v0.52.146: ⑧ セール用サムネイル作成 も内部スクロール構造に */
+    body[data-view="make-thumb"] main {
+      max-width: 100% !important;
+      padding: 0 !important;
+      width: 100%;
+      margin: 0 !important;
+    }
+    body[data-view="make-thumb"] #tool-make-thumb.tool-panel.active {
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - var(--top-bar-h, 130px));
+      overflow: hidden;
+      padding: 0 8px;
+      box-sizing: border-box;
+    }
+    body[data-view="make-thumb"] .tool-panel-header {
+      position: static;
+      padding: 8px 0 4px;
+      margin-bottom: 0;
+      flex-shrink: 0;
+      background: var(--bg);
+    }
+    body[data-view="make-thumb"] .tool-panel-description {
+      position: static;
+      margin: 0 0 6px 0;
+      flex-shrink: 0;
+    }
+    body[data-view="make-thumb"] .st-search-bar { flex-shrink: 0; }
+    body[data-view="make-thumb"] #make-thumb-history-container {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+    }
+    body[data-view="make-thumb"] .thumb-dl-section {
+      flex-shrink: 0;
+      background: var(--bg);
+      margin-top: 0;
+    }
+    /* ⑧表ヘッダー固定 */
+    body[data-view="make-thumb"] .make-thumb-table thead th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: #f2f3f6;
+      box-shadow: inset 0 -1px 0 #d8d8de, inset 0 1px 0 #d8d8de;
+    }
     /* v0.52.141: セール用サムネイル タブ */
     /* v0.52.142: パネルをflex内部スクロール構造に。検索欄をバナー直下で固定、表ヘッダー固定 */
     body[data-view="sale-thumb"] main {
@@ -676,6 +722,13 @@
     .make-thumb-table .thumb-hist-disc { white-space: nowrap; width: 1%; }
     .make-thumb-table .thumb-hist-sale-cell { width: 170px; min-width: 150px; }
     .make-thumb-table .thumb-hist-status { white-space: nowrap; width: 1%; }
+    /* v0.52.146: ⑧通常サムネ画像を正方形に */
+    .make-thumb-table .thumb-hist-img .product-image-thumb {
+      width: 80px; height: 80px; object-fit: cover; border-radius: 4px; display: block; margin: 0 auto;
+    }
+    .make-thumb-table .thumb-hist-img .img-placeholder {
+      width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; margin: 0 auto;
+    }
     .thumb-hist-badges { white-space: nowrap; }
     /* 割引率バッジ */
     .thumb-rate-badge {
@@ -3264,7 +3317,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.145</span>
+      <span class="version">v0.52.146</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -3710,29 +3763,25 @@
         <div class="tool-panel-header">
           <h2>⑧ セール用サムネイル作成</h2>
         </div>
-        <p class="tool-panel-description">SALE一括から通常のサムネイルを％ごとにダウンロードし、<br>
-        セール用サムネイルをChatGPTで生成していく。</p>
-
-        <div class="card">
-          <h2>セール用サムネイル <span class="thumb-hist-note">（今回割引率が決まっている商品の、今回の割引率のサムネイル状態）</span></h2>
-          <p class="card-lead">
-            画像が登録済みの商品はその画像を表示します。未登録の商品は <span class="thumb-make-badge">要作成</span> と表示されます。<br>
-            各セルで画像のアップロード（ドラッグ＆ドロップ可）・画像URLの入力ができます。内容は「セール用サムネイル」タブと連動します。
-          </p>
-          <div id="make-thumb-history-container">
-            <div class="empty-state">割引率が決まっている商品がありません。④「割引率決定」で割引率を選んでください。</div>
+        <p class="tool-panel-description">今回割引率が決まっている商品について、今回の割引率のセール用サムネイルを作成・管理します。<br>
+        画像が登録済みの商品はその画像を表示、未登録の商品は <span class="thumb-make-badge">要作成</span> と表示されます。内容は「セール用サムネイル」タブと連動します。</p>
+        <div class="st-search-bar">
+          <input type="text" id="make-thumb-search" class="st-search-input" placeholder="🔍 商品管理番号・商品コードで検索" />
+          <button type="button" id="make-thumb-search-clear" class="st-search-clear" title="クリア">✕</button>
+          <span id="make-thumb-search-count" class="st-search-count"></span>
+        </div>
+        <div id="make-thumb-history-container" class="st-table-scroll">
+          <div class="empty-state">割引率が決まっている商品がありません。④「割引率決定」で割引率を選んでください。</div>
+        </div>
+        <div class="thumb-dl-section">
+          <h3 class="thumb-dl-heading">通常のサムネイルをダウンロード <span class="thumb-dl-note">（「作成不要」を除いた、サムネイル作成が必要な商品のみ）</span></h3>
+          <div class="top-image-dl-grid">
+            <button type="button" data-rate="10" class="top-image-dl-btn disc-10">10%OFF商品</button>
+            <button type="button" data-rate="20" class="top-image-dl-btn disc-20">20%OFF商品</button>
+            <button type="button" data-rate="30" class="top-image-dl-btn disc-30">30%OFF商品</button>
+            <button type="button" data-rate="50" class="top-image-dl-btn disc-50">50%OFF商品</button>
           </div>
-
-          <div class="thumb-dl-section">
-            <h3 class="thumb-dl-heading">通常のサムネイルをダウンロード <span class="thumb-dl-note">（「作成不要」を除いた、サムネイル作成が必要な商品のみ）</span></h3>
-            <div class="top-image-dl-grid">
-              <button type="button" data-rate="10" class="top-image-dl-btn disc-10">10%OFF商品</button>
-              <button type="button" data-rate="20" class="top-image-dl-btn disc-20">20%OFF商品</button>
-              <button type="button" data-rate="30" class="top-image-dl-btn disc-30">30%OFF商品</button>
-              <button type="button" data-rate="50" class="top-image-dl-btn disc-50">50%OFF商品</button>
-            </div>
-            <div id="make-thumb-dl-status" class="top-image-dl-status" aria-live="polite"></div>
-          </div>
+          <div id="make-thumb-dl-status" class="top-image-dl-status" aria-live="polite"></div>
         </div>
       </div>
 
@@ -5149,6 +5198,7 @@
     // v0.52.144: ⑧セール用サムネイル作成 — 今回割引率が決まっている商品のサムネ表
     //   各商品 × 今回の割引率のサムネセル(セール用サムネイルタブと同じ saleThumbs データを共用)。
     //   画像があればその画像、なければ「要作成」。画像のアップ/D&D/URL入力ができる(タブと連動)。
+    let _makeThumbSearchQuery = ''; // v0.52.146 ⑧検索キーワード
     window._renderThumbHistory = function _renderThumbHistory() {
       const container = document.getElementById('make-thumb-history-container');
       if (!container) return;
@@ -5200,12 +5250,30 @@
         return (mgrToRow[mgr] && mgrToRow[mgr].itemCode) || '';
       };
       // 表示順: rows の順序を尊重
-      const orderedMgrs = [];
+      let orderedMgrs = [];
       const seen = new Set();
       for (const r of rowsArr) {
         if (r && r.mgr && curMap[r.mgr] && !seen.has(r.mgr)) { orderedMgrs.push(r.mgr); seen.add(r.mgr); }
       }
       for (const mgr of curMgrs) { if (!seen.has(mgr)) { orderedMgrs.push(mgr); seen.add(mgr); } }
+
+      // v0.52.146: 検索フィルタ (商品管理番号・商品コードで部分一致)
+      const totalMgrs = orderedMgrs.length;
+      const q = (_makeThumbSearchQuery || '').trim().toLowerCase();
+      if (q) {
+        orderedMgrs = orderedMgrs.filter(mgr =>
+          (mgr && mgr.toLowerCase().includes(q)) ||
+          (resolveCode(mgr) && resolveCode(mgr).toLowerCase().includes(q)));
+      }
+      // 件数表示
+      const cntEl = document.getElementById('make-thumb-search-count');
+      if (cntEl) {
+        cntEl.textContent = q ? `${orderedMgrs.length} / ${totalMgrs} 件` : `${totalMgrs} 件`;
+      }
+      if (orderedMgrs.length === 0) {
+        container.innerHTML = `<div class="empty-state">「${escapeHtml(_makeThumbSearchQuery)}」に一致する商品がありません。</div>`;
+        return;
+      }
 
       const rowsHtml = orderedMgrs.map(mgr => {
         const row = mgrToRow[mgr] || {};
@@ -5246,6 +5314,27 @@
         bindSaleThumbCellEvents(container, () => window._renderThumbHistory());
       }
     };
+
+    // v0.52.146: ⑧ セール用サムネイル作成 検索欄のバインド (1回だけ)
+    (function bindMakeThumbSearch() {
+      const input = document.getElementById('make-thumb-search');
+      const clearBtn = document.getElementById('make-thumb-search-clear');
+      if (!input) return;
+      let timer = null;
+      input.addEventListener('input', () => {
+        _makeThumbSearchQuery = input.value;
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(() => { if (window._renderThumbHistory) window._renderThumbHistory(); }, 120);
+      });
+      if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+          input.value = '';
+          _makeThumbSearchQuery = '';
+          if (window._renderThumbHistory) window._renderThumbHistory();
+          input.focus();
+        });
+      }
+    })();
 
     // ⑬/セール後③ のDLボタンのテキスト末尾に「(N)」を付与/更新する。
     // 対象: .top-image-dl-btn (disc-10/20/30/50)。両画面とも同じクラスで描画。
