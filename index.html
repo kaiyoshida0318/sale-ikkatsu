@@ -537,10 +537,10 @@
       font-weight: 700;
       white-space: nowrap;
     }
-    .sale-thumb-table .st-col-mgr { font-family: ui-monospace, monospace; white-space: nowrap; width: 1%; }
-    .sale-thumb-table .st-col-code { font-family: ui-monospace, monospace; white-space: nowrap; width: 1%; }
+    .sale-thumb-table .st-col-mgr { font-family: ui-monospace, monospace; white-space: nowrap; width: 110px; }
+    .sale-thumb-table .st-col-code { font-family: ui-monospace, monospace; white-space: nowrap; width: 110px; }
     .sale-thumb-table .st-col-normal { width: 110px; }
-    .sale-thumb-table .st-col-rate { width: 150px; min-width: 130px; }
+    .sale-thumb-table .st-col-rate { width: 150px; }
     /* v0.52.145: 通常サムネ画像を正方形に */
     .sale-thumb-table .st-col-normal .product-image-thumb {
       width: 90px;
@@ -558,13 +558,17 @@
       justify-content: center;
       margin: 0 auto;
     }
-    /* v0.52.145: 表が画面幅いっぱいに横長になるのを防ぐ (内容幅に収める) */
-    .st-table-scroll .sale-thumb-table { width: auto; min-width: 0; }
+    /* v0.52.147: 表を固定レイアウトにして各列幅を厳密に制御 (横長防止) */
+    .st-table-scroll .sale-thumb-table {
+      width: 950px;
+      max-width: 100%;
+      table-layout: fixed;
+    }
     .st-cell { display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
     .st-img-wrap {
       position: relative;
       width: 100%;
-      min-height: 90px;
+      height: 130px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -572,6 +576,7 @@
       border: 1px dashed #c9c9d1;
       border-radius: 6px;
       padding: 4px;
+      box-sizing: border-box;
     }
     .st-thumb-img {
       max-width: 100%;
@@ -3317,7 +3322,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.146</span>
+      <span class="version">v0.52.147</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
