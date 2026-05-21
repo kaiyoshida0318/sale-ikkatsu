@@ -3364,7 +3364,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.151</span>
+      <span class="version">v0.52.152</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -6166,9 +6166,10 @@
 
     // 画像ファイルを縮小・圧縮して base64 (dataURL) を返す (Promise)
     //   最大辺 maxSize px、JPEG品質 quality でlocalStorage節約
+    //   v0.52.152: 表示専用のためデフォルトを 240px / 0.7 に縮小
     function compressImageToDataUrl(file, maxSize, quality) {
-      maxSize = maxSize || 400;
-      quality = quality || 0.8;
+      maxSize = maxSize || 240;
+      quality = quality || 0.7;
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => {
@@ -6299,7 +6300,8 @@
         if (!file) return;
         if (!/^image\//.test(file.type)) { alert('画像ファイルを選んでください。'); return; }
         try {
-          const dataUrl = await compressImageToDataUrl(file, 400, 0.8);
+          // v0.52.152: 表示専用のため容量削減 (最大辺240px・品質0.7)。表示枠は最大高さ110pxなので見た目はほぼ不変
+          const dataUrl = await compressImageToDataUrl(file, 240, 0.7);
           const ok = setSaleThumbField(mgr, rate, 'img', dataUrl);
           if (ok) doRerender();
         } catch (err) {
