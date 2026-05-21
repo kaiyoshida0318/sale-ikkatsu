@@ -3017,7 +3017,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.130</span>
+      <span class="version">v0.52.132</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -3117,13 +3117,14 @@
               <ul class="howto-checklist">
                 <li class="auto">商品管理番号<span class="howto-note">（必須-自動でDLされる）</span></li>
                 <li class="auto">SKU管理番号<span class="howto-note">（必須-自動でDLされる）</span></li>
+                <li class="check">商品番号</li>
                 <li class="check">システム連携用SKU番号</li>
                 <li class="check">通常購入販売価格</li>
                 <li class="check">商品名</li>
                 <li class="check">商品画像</li>
                 <li class="check">バリエーション項目名・選択肢</li>
               </ul>
-              <div class="howto-note" style="margin-top:6px;">※ チェックを入れるのは <b>5箇所</b></div>
+              <div class="howto-note" style="margin-top:6px;">※ チェックを入れるのは <b>6箇所</b></div>
             </li>
           </ol>
         </div>
@@ -5035,15 +5036,19 @@
         const iMgr = rh.findIndex(x => x && x.indexOf('商品管理番号') >= 0);
         const iSku = rh.findIndex(x => x && x.indexOf('システム連携用SKU番号') >= 0);
         const iPrice = rh.findIndex(x => x && x.indexOf('通常購入販売価格') >= 0);
+        const iItemNo = rh.findIndex(x => x && x.trim() === '商品番号'); // v0.52.131
         if (iMgr < 0 || iSku < 0) return targets;
         const mgrToFirstSku = {};
         const mgrToSkus = {};
+        const mgrToItemNo = {}; // v0.52.131
         for (let i = 1; i < rmsRows.length; i++) {
           const r = rmsRows[i];
           if (!r) continue;
           const mgr = (r[iMgr] || '').trim();
           const sku = (r[iSku] || '').trim();
           const priceRaw = iPrice >= 0 ? (r[iPrice] || '').trim() : '';
+          const itemNo = iItemNo >= 0 ? (r[iItemNo] || '').trim() : '';
+          if (mgr && itemNo && !(mgr in mgrToItemNo)) mgrToItemNo[mgr] = itemNo;
           if (!mgr || !sku) continue;
           if (iPrice >= 0 && !priceRaw) continue;
           if (!(mgr in mgrToFirstSku)) mgrToFirstSku[mgr] = sku;
@@ -5065,9 +5070,9 @@
           }
           const imageUrl = row.imageUrl || '';
           if (!imageUrl) continue; // 画像URLが取得できなかった商品はスキップ
-          // 商品コードはその場で再計算 (row.itemCode は古いロジックの可能性があるため信用しない)
+          // v0.52.131: 商品コード = 商品番号優先、なければ SKU プレフィックス算出
           const skus = mgrToSkus[mgr] || [];
-          const itemCode = (skus.length > 0 ? commonPrefixByHyphen(skus) : '').trim();
+          const itemCode = (mgrToItemNo[mgr] || (skus.length > 0 ? commonPrefixByHyphen(skus) : '')).trim();
           // ファイル名ベース: 商品コード優先、空なら商品管理番号でフォールバック
           let base = sanitizeFilenameBase(itemCode) || sanitizeFilenameBase(mgr) || 'image';
           // 同名衝突時は _2, _3... を付ける
@@ -5383,6 +5388,7 @@
       // 同時に mgrToSkus (各管理番号の全SKU一覧) も作り、itemCode を新ロジックで再計算する
       let mgrToFirstSku = {};  // { mgr -> 最初のSKU }
       let mgrToSkus = {};      // { mgr -> [sku, sku, ...] }
+      let mgrToItemNo = {};    // v0.52.131 { mgr -> 商品番号 (あれば) }
       try {
         const ym = currentYM || getCurrentYM();
         if (ym) {
@@ -5396,6 +5402,7 @@
               const iMgr = rh.findIndex(x => x && x.indexOf('商品管理番号') >= 0);
               const iSku = rh.findIndex(x => x && x.indexOf('システム連携用SKU番号') >= 0);
               const iPrice = rh.findIndex(x => x && x.indexOf('通常購入販売価格') >= 0);
+              const iItemNo = rh.findIndex(x => x && x.trim() === '商品番号'); // v0.52.131
               if (iMgr >= 0 && iSku >= 0) {
                 for (let i = 1; i < rmsRows.length; i++) {
                   const r = rmsRows[i];
@@ -5403,6 +5410,9 @@
                   const mgr = (r[iMgr]||'').trim();
                   const sku = (r[iSku]||'').trim();
                   const priceRaw = iPrice >= 0 ? (r[iPrice]||'').trim() : '';
+                  // v0.52.131: 商品番号 (本体行にのみ入っている。価格行除外より前に拾う)
+                  const itemNo = iItemNo >= 0 ? (r[iItemNo]||'').trim() : '';
+                  if (mgr && itemNo && !(mgr in mgrToItemNo)) mgrToItemNo[mgr] = itemNo;
                   if (!mgr || !sku) continue;
                   // 通常価格空欄行は⑤でスキップされるので、こちらも合わせて除外
                   if (iPrice >= 0 && !priceRaw) continue;
@@ -5418,7 +5428,9 @@
 
       // 商品コードを新ロジックで再計算 (アーカイブの r.itemCode は古いロジックの可能性があるため信用しない)
       // 再計算結果は表示専用 (アーカイブには書き戻さない)
+      // v0.52.131: 「商品番号」があればそれを優先、なければ SKU プレフィックス算出
       const resolveItemCode = (mgr, fallback) => {
+        if (mgrToItemNo[mgr]) return mgrToItemNo[mgr];
         const skus = mgrToSkus[mgr] || [];
         if (skus.length === 0) return fallback || '';
         const code = commonPrefixByHyphen(skus);
@@ -5960,6 +5972,8 @@
       const idxMgr = header.findIndex(h => h && h.indexOf('商品管理番号') >= 0);
       const idxName = header.findIndex(h => h && h.trim() === '商品名');
       const idxSku = header.findIndex(h => h && h.indexOf('システム連携用SKU番号') >= 0);
+      // v0.52.131: 「商品番号」列があれば商品コードとして優先採用
+      const idxItemNo = header.findIndex(h => h && h.trim() === '商品番号');
       const idxImg = findImageUrlColumn(header);
       if (idxMgr < 0 || idxName < 0 || idxSku < 0) {
         throw new Error('CSVの列が見つかりません (商品管理番号 / 商品名 / システム連携用SKU番号)');
@@ -5973,11 +5987,14 @@
         if (!mgr) continue;
         const name = (r[idxName] || '').trim();
         const sku = (r[idxSku] || '').trim();
+        const itemNo = idxItemNo >= 0 ? (r[idxItemNo] || '').trim() : '';
         const imgRaw = idxImg >= 0 ? (r[idxImg] || '').trim() : '';
-        if (!groups.has(mgr)) groups.set(mgr, { name, skus: [], imageUrl: '' });
+        if (!groups.has(mgr)) groups.set(mgr, { name, skus: [], imageUrl: '', itemNo: '' });
         const g = groups.get(mgr);
         if (!g.name && name) g.name = name;
         if (sku) g.skus.push(sku);
+        // 商品番号: 最初に見つかった非空の値を採用 (本体行にのみ入っている)
+        if (!g.itemNo && itemNo) g.itemNo = itemNo;
         // 最初に見つかった非空の画像URLを採用 (商品管理番号 = 商品単位なので大体共通)
         if (!g.imageUrl && imgRaw) {
           g.imageUrl = resolveRakutenImageUrl(imgRaw);
@@ -5986,9 +6003,11 @@
       // rows化
       const result = [];
       for (const [mgr, g] of groups) {
+        // 商品番号があればそれを商品コードに、なければ SKU プレフィックス算出
+        const itemCode = g.itemNo || commonPrefixByHyphen(g.skus);
         result.push({
           mgr: mgr,
-          itemCode: commonPrefixByHyphen(g.skus),
+          itemCode: itemCode,
           name: g.name,
           imageUrl: g.imageUrl || '',
         });
