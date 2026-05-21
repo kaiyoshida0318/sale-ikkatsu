@@ -449,9 +449,19 @@
     body[data-view="sale-thumb"] #tool-sale-thumb.tool-panel.active {
       display: flex;
       flex-direction: column;
+      align-items: center; /* v0.52.148: コンテンツを画面中央に配置 */
       height: calc(100vh - var(--top-bar-h, 130px));
       overflow: hidden;
       padding: 0 8px;
+      box-sizing: border-box;
+    }
+    /* v0.52.148: 各要素を表と同じ950px幅に揃えて中央配置 */
+    body[data-view="sale-thumb"] .tool-panel-header,
+    body[data-view="sale-thumb"] .tool-panel-description,
+    body[data-view="sale-thumb"] .st-search-bar,
+    body[data-view="sale-thumb"] #sale-thumb-table-container {
+      width: 950px;
+      max-width: 100%;
       box-sizing: border-box;
     }
     body[data-view="sale-thumb"] .tool-panel-header {
@@ -3322,7 +3332,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.147</span>
+      <span class="version">v0.52.148</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
