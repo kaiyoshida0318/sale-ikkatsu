@@ -1375,6 +1375,67 @@
       font-weight: 500;
       font-size: 12px;
     }
+    /* v0.52.126: 商品状態列 */
+    .product-table th.col-pstatus { min-width: 150px; white-space: nowrap; }
+    .product-table td.col-pstatus { text-align: center; }
+    .product-table .pstatus-select {
+      font-family: inherit;
+      font-size: 13px;
+      padding: 4px 6px;
+      border: 1px solid #c9c9d1;
+      border-radius: 6px;
+      background: #fff;
+      cursor: pointer;
+      max-width: 140px;
+    }
+    .product-table .pstatus-select:focus {
+      outline: none;
+      border-color: var(--brand);
+      box-shadow: 0 0 0 2px rgba(30,58,95,0.15);
+    }
+    /* 状態ごとのセル色 (薄く) */
+    .product-table td.col-pstatus.pstatus-new { background: #eef4fc; }
+    .product-table td.col-pstatus.pstatus-keep { background: #f4fbef; }
+    .product-table td.col-pstatus.pstatus-withdraw { background: #fdf0ef; }
+    /* ソートボタン */
+    .product-table .pstatus-sort-btn {
+      margin-left: 4px;
+      border: 1px solid #c9c9d1;
+      background: #fff;
+      color: #555;
+      border-radius: 4px;
+      font-size: 12px;
+      line-height: 1;
+      padding: 2px 5px;
+      cursor: pointer;
+      font-family: inherit;
+      vertical-align: middle;
+    }
+    .product-table .pstatus-sort-btn.is-sort-active {
+      background: var(--brand);
+      color: #fff;
+      border-color: var(--brand);
+    }
+    /* ④割引率決定表へのリンク列 */
+    .product-table th.col-decide-link { min-width: 110px; white-space: nowrap; }
+    .product-table td.col-decide-link { text-align: center; }
+    .product-table .decide-link-btn {
+      display: inline-block;
+      padding: 4px 12px;
+      border: 1px solid var(--brand);
+      border-radius: 14px;
+      color: var(--brand);
+      background: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      text-decoration: none;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .product-table .decide-link-btn:hover {
+      background: var(--brand);
+      color: #fff;
+    }
     .product-table th.col-title { min-width: 240px; max-width: 360px; }
     .product-table th.col-saletitle { min-width: 220px; }
     .product-table .empty-row {
@@ -2839,7 +2900,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.125</span>
+      <span class="version">v0.52.126</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4870,19 +4931,62 @@
       });
     }
 
+    // v0.52.126: 商品状態 (新商品 / 既存-伸ばし / 既存-撤退) の管理
+    //   保存先: archive[ym].productStatus[mgr] = 'new' | 'keep' | 'withdraw'
+    //   初期値・既存商品: 'keep' (既存-伸ばし)
+    const PRODUCT_STATUS_OPTIONS = [
+      { value: 'new', label: '新商品' },
+      { value: 'keep', label: '既存-伸ばし' },
+      { value: 'withdraw', label: '既存-撤退' },
+    ];
+    const PRODUCT_STATUS_DEFAULT = 'keep';
+    // 商品状態ソート: null=ソートなし(取り込み順), 'asc'/'desc'=状態順
+    let _productStatusSort = null;
+
+    function getProductStatus(mgr) {
+      try {
+        const ym = currentYM || getCurrentYM();
+        if (!ym) return PRODUCT_STATUS_DEFAULT;
+        const archive = loadArchive();
+        const data = archive[ym];
+        if (data && data.productStatus && data.productStatus[mgr]) {
+          return data.productStatus[mgr];
+        }
+      } catch (e) {}
+      return PRODUCT_STATUS_DEFAULT;
+    }
+    function setProductStatus(mgr, status) {
+      try {
+        const ym = currentYM || getCurrentYM();
+        if (!ym) return;
+        const archive = loadArchive();
+        if (!archive[ym]) archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
+        if (!archive[ym].productStatus || typeof archive[ym].productStatus !== 'object') {
+          archive[ym].productStatus = {};
+        }
+        archive[ym].productStatus[mgr] = status;
+        saveArchive(archive);
+      } catch (e) {}
+    }
+    // 状態の並び順ランク (新商品→既存-伸ばし→既存-撤退)
+    const PRODUCT_STATUS_RANK = { 'new': 0, 'keep': 1, 'withdraw': 2 };
+
     function renderProductTable() {
       const container = document.getElementById('product-table-container');
       if (!container) return;
       // タブのラベルにも件数を反映 (全体/10/20/30/50)
       if (typeof renderProductTabCounts === 'function') renderProductTabCounts();
 
-      // 列ヘッダー(5列固定)
+      // 列ヘッダー: 商品管理番号 | 商品コード | 商品画像 | 商品状態(ソート) | 割引率 | ④リンク
+      const sortMark = _productStatusSort === 'asc' ? '▲' : (_productStatusSort === 'desc' ? '▼' : '⇅');
+      const sortActiveClass = _productStatusSort ? ' is-sort-active' : '';
       const headHtml = `<tr>
         <th class="col-mgr">商品管理番号</th>
         <th class="col-itemcode">商品コード</th>
         <th class="col-img">商品画像</th>
+        <th class="col-pstatus">商品状態 <button type="button" class="pstatus-sort-btn${sortActiveClass}" title="商品状態でソート" aria-label="商品状態でソート">${sortMark}</button></th>
         <th class="col-discount">割引率</th>
-        <th class="col-pname">商品名</th>
+        <th class="col-decide-link">割引率決定表</th>
       </tr>`;
 
       // ベース: ①取り込み済みの商品 (商品管理番号単位、商品コード=共通プレフィクス、商品名=代表名)
@@ -4958,7 +5062,7 @@
           // 全体: ①取り込み済みの全商品
           displayRows = baseRows.map(r => ({
             mgr: r.mgr, itemCode: resolveItemCode(r.mgr, r.itemCode), name: r.name, imageUrl: r.imageUrl || '',
-            discount: mgrDiscounts[r.mgr] ?? null
+            discount: mgrDiscounts[r.mgr] ?? null, status: getProductStatus(r.mgr)
           }));
         } else {
           const target = parseInt(currentOffRate, 10);
@@ -4966,9 +5070,21 @@
             .filter(r => mgrDiscounts[r.mgr] === target)
             .map(r => ({
               mgr: r.mgr, itemCode: resolveItemCode(r.mgr, r.itemCode), name: r.name, imageUrl: r.imageUrl || '',
-              discount: target
+              discount: target, status: getProductStatus(r.mgr)
             }));
         }
+      }
+      // v0.52.126: 商品状態ソート (asc=新商品→既存-伸ばし→既存-撤退 / desc=逆)
+      if (_productStatusSort === 'asc' || _productStatusSort === 'desc') {
+        const dir = _productStatusSort === 'asc' ? 1 : -1;
+        displayRows = displayRows.map((r, i) => ({ r, i }))
+          .sort((a, b) => {
+            const ra = PRODUCT_STATUS_RANK[a.r.status] ?? 99;
+            const rb = PRODUCT_STATUS_RANK[b.r.status] ?? 99;
+            if (ra !== rb) return (ra - rb) * dir;
+            return a.i - b.i; // 同じ状態は元の順序を維持 (安定ソート)
+          })
+          .map(x => x.r);
       }
 
       let bodyHtml = '';
@@ -4977,12 +5093,17 @@
           const disc = r.discount;
           const discClass = (disc === 10 || disc === 20 || disc === 30 || disc === 50) ? ` disc-${disc}` : ' disc-none';
           const discLabel = (disc === 10 || disc === 20 || disc === 30 || disc === 50) ? `${disc}%OFF` : '未選択';
+          const st = r.status || PRODUCT_STATUS_DEFAULT;
+          const optsHtml = PRODUCT_STATUS_OPTIONS.map(o =>
+            `<option value="${o.value}"${o.value === st ? ' selected' : ''}>${escapeHtml(o.label)}</option>`
+          ).join('');
           return `<tr>
             <td class="mgr">${escapeHtml(r.mgr || '')}</td>
             <td class="mgr">${escapeHtml(r.itemCode || '')}</td>
             <td class="img-cell">${imageCellHtml(r.imageUrl)}</td>
+            <td class="col-pstatus pstatus-${st}"><select class="pstatus-select" data-mgr="${escapeHtml(r.mgr || '')}" aria-label="商品状態">${optsHtml}</select></td>
             <td class="col-discount${discClass}">${discLabel}</td>
-            <td class="name" title="${escapeHtml(r.name || '')}"><div class="name-clip">${escapeHtml(r.name || '')}</div></td>
+            <td class="col-decide-link"><a href="?view=decide-price&mgr=${encodeURIComponent(r.mgr || '')}" class="decide-link-btn" data-mgr="${escapeHtml(r.mgr || '')}" title="この商品の割引率決定表へ">④へ ›</a></td>
           </tr>`;
         }).join('');
       }
@@ -5007,6 +5128,41 @@
         <tbody>${bodyHtml}</tbody>
       </table>` + (hintText ? `
       <div class="table-hint">${escapeHtml(hintText)}</div>` : '');
+
+      // v0.52.126: 商品状態ドロップダウンの変更 → 保存 (更新時にソート解除)
+      container.querySelectorAll('.pstatus-select').forEach(sel => {
+        sel.addEventListener('change', () => {
+          const mgr = sel.getAttribute('data-mgr');
+          if (!mgr) return;
+          setProductStatus(mgr, sel.value);
+          // 更新するとソートは解除される
+          _productStatusSort = null;
+          renderProductTable();
+        });
+      });
+      // v0.52.126: 商品状態ヘッダーのソートボタン (none → asc → desc → none)
+      const sortBtn = container.querySelector('.pstatus-sort-btn');
+      if (sortBtn) {
+        sortBtn.addEventListener('click', () => {
+          _productStatusSort = _productStatusSort === null ? 'asc'
+            : (_productStatusSort === 'asc' ? 'desc' : null);
+          renderProductTable();
+        });
+      }
+      // v0.52.126: ④割引率決定表へのリンク (クリックで該当mgrの④へ / Ctrl+クリックで別タブ)
+      container.querySelectorAll('.decide-link-btn').forEach(a => {
+        a.addEventListener('click', (e) => {
+          const mgr = a.getAttribute('data-mgr');
+          if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) {
+            // 別タブ: ?view=decide-price&mgr=xxx (href通りなのでpreventDefaultしない)
+            return;
+          }
+          e.preventDefault();
+          if (mgr) { try { _decideActiveTab = mgr; } catch(_) {} }
+          showView('decide-price');
+        });
+      });
+
       // 新しい thead が生成されたので、sticky の top 値を再計算する
       if (typeof window._syncStickyTabs === 'function') {
         requestAnimationFrame(() => window._syncStickyTabs());
@@ -9729,6 +9885,11 @@
           // ② localStorage の前回ビュー
           const saved = localStorage.getItem(LAST_VIEW_KEY);
           if (saved && VALID_VIEWS.includes(saved)) target = saved;
+        }
+        // v0.52.126: ?view=decide-price&mgr=xxx の場合、その商品管理番号をアクティブに
+        const mgrParam = params.get('mgr');
+        if (target === 'decide-price' && mgrParam) {
+          try { _decideActiveTab = mgrParam; } catch (_) {}
         }
       } catch (e) {
         try {
