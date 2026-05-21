@@ -544,6 +544,33 @@
     }
     .st-search-clear:hover { background: #f0f0f2; }
     .st-search-count { font-size: 13px; color: var(--muted); white-space: nowrap; }
+    /* v0.52.154: ⑧ 未対応件数バッジ。完了(0件)で光る */
+    .st-pending-count {
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+      padding: 3px 10px;
+      border-radius: 12px;
+      color: #b3531b;
+      background: #fdecd9;
+      border: 1px solid #f3c89a;
+    }
+    .st-pending-count:empty {
+      display: none;
+    }
+    .st-pending-count.is-done {
+      color: #1f7a3d;
+      background: #e3f7ea;
+      border-color: #9fd9b3;
+      animation: pendingDoneGlow 1.6s ease-in-out infinite;
+    }
+    @keyframes pendingDoneGlow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(43,168,90,0.0); }
+      50% { box-shadow: 0 0 10px 2px rgba(43,168,90,0.55); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .st-pending-count.is-done { animation: none; box-shadow: 0 0 8px 1px rgba(43,168,90,0.45); }
+    }
     /* 表スクロール領域: flex:1 で残り全部、内部スクロール */
     .st-table-scroll {
       flex: 1;
@@ -767,6 +794,22 @@
     .thumb-hist-img { width: 90px; }
     /* v0.52.144: ⑧ セール用サムネ列 (今回の割引率セル) */
     .make-thumb-table .thumb-hist-disc { white-space: nowrap; width: 1%; }
+    /* v0.52.153: 「今回の割引率」ヘッダーのソートボタン */
+    .make-thumb-table th.make-thumb-sort-th {
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+    }
+    .make-thumb-table th.make-thumb-sort-th:hover { background: #e8eaf0; }
+    .make-thumb-table th.make-thumb-sort-th:focus-visible {
+      outline: 2px solid var(--brand);
+      outline-offset: -2px;
+    }
+    .make-thumb-table th.make-thumb-sort-th .make-thumb-sort-ind {
+      font-size: 11px;
+      color: var(--brand);
+      margin-left: 2px;
+    }
     .make-thumb-table .thumb-hist-sale-cell { width: 170px; min-width: 150px; }
     .make-thumb-table .thumb-hist-status { white-space: nowrap; width: 1%; }
     /* v0.52.146: ⑧通常サムネ画像を正方形に */
@@ -3364,7 +3407,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.152</span>
+      <span class="version">v0.52.154</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -3824,8 +3867,8 @@
         </div>
         <div class="st-search-bar">
           <input type="text" id="make-thumb-search" class="st-search-input" placeholder="🔍 商品管理番号・商品コードで検索" />
-          <button type="button" id="make-thumb-search-clear" class="st-search-clear" title="クリア">✕</button>
           <span id="make-thumb-search-count" class="st-search-count"></span>
+          <span id="make-thumb-pending-count" class="st-pending-count"></span>
         </div>
         <div id="make-thumb-history-container" class="st-table-scroll">
           <div class="empty-state">割引率が決まっている商品がありません。④「割引率決定」で割引率を選んでください。</div>
@@ -5246,6 +5289,7 @@
     //   各商品 × 今回の割引率のサムネセル(セール用サムネイルタブと同じ saleThumbs データを共用)。
     //   画像があればその画像、なければ「要作成」。画像のアップ/D&D/URL入力ができる(タブと連動)。
     let _makeThumbSearchQuery = ''; // v0.52.146 ⑧検索キーワード
+    let _makeThumbDiscSort = 0; // v0.52.153 ⑧今回の割引率ソート: 0=既定(行順) / 1=降順 / 2=昇順
     window._renderThumbHistory = function _renderThumbHistory() {
       const container = document.getElementById('make-thumb-history-container');
       if (!container) return;
@@ -5306,16 +5350,51 @@
 
       // v0.52.146: 検索フィルタ (商品管理番号・商品コードで部分一致)
       const totalMgrs = orderedMgrs.length;
+      const allOrderedMgrs = orderedMgrs.slice(); // v0.52.154: 検索前の全件 (未対応件数の集計用)
       const q = (_makeThumbSearchQuery || '').trim().toLowerCase();
       if (q) {
         orderedMgrs = orderedMgrs.filter(mgr =>
           (mgr && mgr.toLowerCase().includes(q)) ||
           (resolveCode(mgr) && resolveCode(mgr).toLowerCase().includes(q)));
       }
+      // v0.52.153: 今回の割引率でソート (0=既定/1=降順/2=昇順)。安定ソートで既定の行順を保持
+      if (_makeThumbDiscSort !== 0) {
+        const discOf = (mgr) => {
+          const d = [...(curMap[mgr] || [])][0];
+          const n = parseFloat(d);
+          return isNaN(n) ? -1 : n;
+        };
+        const decorated = orderedMgrs.map((mgr, i) => ({ mgr, i, d: discOf(mgr) }));
+        decorated.sort((a, b) => {
+          if (a.d !== b.d) return _makeThumbDiscSort === 1 ? (b.d - a.d) : (a.d - b.d);
+          return a.i - b.i; // 同率は元の行順を維持
+        });
+        orderedMgrs = decorated.map(o => o.mgr);
+      }
       // 件数表示
       const cntEl = document.getElementById('make-thumb-search-count');
       if (cntEl) {
         cntEl.textContent = q ? `${orderedMgrs.length} / ${totalMgrs} 件` : `${totalMgrs} 件`;
+      }
+      // v0.52.154: 未対応(要作成)件数を全件ベースで集計し、完了したら光らせる
+      const pendingEl = document.getElementById('make-thumb-pending-count');
+      if (pendingEl) {
+        let pending = 0;
+        for (const mgr of allOrderedMgrs) {
+          const d = [...(curMap[mgr] || [])][0];
+          const tt = (typeof getSaleThumb === 'function') ? getSaleThumb(mgr, d) : null;
+          if (!(tt && tt.img)) pending++;
+        }
+        if (totalMgrs === 0) {
+          pendingEl.textContent = '';
+          pendingEl.classList.remove('is-done');
+        } else if (pending === 0) {
+          pendingEl.textContent = '✓ 全件作成済み';
+          pendingEl.classList.add('is-done');
+        } else {
+          pendingEl.textContent = `未対応 ${pending} 件`;
+          pendingEl.classList.remove('is-done');
+        }
       }
       if (orderedMgrs.length === 0) {
         container.innerHTML = `<div class="empty-state">「${escapeHtml(_makeThumbSearchQuery)}」に一致する商品がありません。</div>`;
@@ -5348,7 +5427,7 @@
             <th>商品管理番号</th>
             <th>商品コード</th>
             <th>通常サムネ</th>
-            <th>今回の<br>割引率</th>
+            <th class="make-thumb-sort-th" id="make-thumb-disc-sort" role="button" tabindex="0" title="クリックで割引率ソート（降順→昇順→解除）">今回の<br>割引率 <span class="make-thumb-sort-ind">${_makeThumbDiscSort === 1 ? '▼' : _makeThumbDiscSort === 2 ? '▲' : '⇅'}</span></th>
             <th>セール用サムネ</th>
             <th>状態</th>
           </tr>
@@ -5360,12 +5439,23 @@
       if (typeof bindSaleThumbCellEvents === 'function') {
         bindSaleThumbCellEvents(container, () => window._renderThumbHistory());
       }
+      // v0.52.153: 「今回の割引率」ヘッダーのソートボタン
+      const sortTh = container.querySelector('#make-thumb-disc-sort');
+      if (sortTh) {
+        const cycleSort = () => {
+          _makeThumbDiscSort = (_makeThumbDiscSort + 1) % 3; // 既定→降順→昇順→既定
+          window._renderThumbHistory();
+        };
+        sortTh.addEventListener('click', cycleSort);
+        sortTh.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); cycleSort(); }
+        });
+      }
     };
 
     // v0.52.146: ⑧ セール用サムネイル作成 検索欄のバインド (1回だけ)
     (function bindMakeThumbSearch() {
       const input = document.getElementById('make-thumb-search');
-      const clearBtn = document.getElementById('make-thumb-search-clear');
       if (!input) return;
       let timer = null;
       input.addEventListener('input', () => {
@@ -5373,14 +5463,7 @@
         if (timer) clearTimeout(timer);
         timer = setTimeout(() => { if (window._renderThumbHistory) window._renderThumbHistory(); }, 120);
       });
-      if (clearBtn) {
-        clearBtn.addEventListener('click', () => {
-          input.value = '';
-          _makeThumbSearchQuery = '';
-          if (window._renderThumbHistory) window._renderThumbHistory();
-          input.focus();
-        });
-      }
+      // v0.52.154: ✕クリアボタンは廃止
     })();
 
     // ⑬/セール後③ のDLボタンのテキスト末尾に「(N)」を付与/更新する。
