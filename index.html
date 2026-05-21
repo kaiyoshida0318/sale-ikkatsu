@@ -2278,9 +2278,30 @@
       pointer-events: none;
     }
     /* v0.52.121: 割引率不一致のセール用タイトルセル — 赤背景でエラー表示 */
+    /* v0.52.138: 割引率不一致セル — 赤背景 + 右上に「⚠ 割引率不一致」ラベルを常時表示
+       (文字数オーバーの赤と混同しないよう、理由が一目で分かるようにする) */
     .dt-table td.dt-col-ss.has-disc-mismatch {
       background-color: #fde7e7 !important;
       box-shadow: inset 0 0 0 2px #d83838 !important;
+      position: relative;
+      padding-top: 24px !important;
+    }
+    .dt-table td.dt-col-ss.has-disc-mismatch::before {
+      content: "⚠ 割引率がタイトルと不一致";
+      position: absolute;
+      top: 2px;
+      left: 4px;
+      background: #d83838;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 7px;
+      border-radius: 0 0 6px 0;
+      border-radius: 8px;
+      line-height: 1.5;
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 1;
     }
     .dt-table td.dt-col-ss.has-disc-mismatch:hover {
       background-color: #fcdada !important;
@@ -3017,7 +3038,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.136</span>
+      <span class="version">v0.52.138</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -3174,7 +3195,10 @@
           <h2>⑤ セール用タイトル決定</h2>
         </div>
         <p class="tool-panel-description">セール用のタイトルを記入していく。<br>
-        スーパーSALEであれば先頭を「【スーパーSALEで◯％OFF】」のようにする。文字数は <b>127文字以内</b>。</p>
+        スーパーSALEであれば先頭を「【スーパーSALEで◯％OFF】」のようにする。文字数は <b>127文字以内</b>。<br>
+        <span style="font-size:12px; color:var(--muted);">
+          ※ <b style="color:#d83838;">セール用タイトルのセルが赤い</b>場合は、タイトル内の「○%OFF」が ④で選んだ割引率と一致していません（文字数オーバーは「文字数」列が赤くなります）。
+        </span></p>
 
         <div id="decide-title-table-wrap" class="product-table-wrap">
           <div id="decide-title-table-container">
@@ -3197,7 +3221,7 @@
         <div class="card">
           <h2>1. アップ用ファイルのダウンロード(SALE一括内から)</h2>
           <p class="card-lead">
-            すでに取り込み済みのデータと、⑤で選んだ割引率・⑥で入力したセール用タイトルから、
+            すでに取り込み済みのデータと、④で選んだ割引率・⑤で入力したセール用タイトルから、
             RMSアップ用のCSVを生成してダウンロードします。<br>
             割引率が <b>未選択</b> の商品はスキップされます。<span id="dl-rms-unselected-count" class="unselected-count"></span>
           </p>
@@ -3258,7 +3282,7 @@
           <div class="mk-slots">
             <div class="mk-slot" data-slot="sale">
               <div class="mk-slot-label"><span class="mk-slot-badge">A</span>SALE一括内で生成したCSV</div>
-              <div class="mk-slot-sub">⑦ 手順1でSALE一括からDLしたファイル(RMSアップ用素材)</div>
+              <div class="mk-slot-sub">⑥手順1でSALE一括からDLしたファイル(RMSアップ用素材)</div>
               <div id="mk-slot-sale-zone" class="archive-dropzone" tabindex="0" role="button" aria-label="クリックまたはドラッグでファイルをセット">
                 <div class="archive-dropzone-empty">
                   <div class="archive-dropzone-icon">📂</div>
@@ -3270,7 +3294,7 @@
 
             <div class="mk-slot" data-slot="rms">
               <div class="mk-slot-label"><span class="mk-slot-badge">B</span>RMSからダウンロードしたCSV</div>
-              <div class="mk-slot-sub">⑦ 手順2でRMSからDLしたファイル (normal-item…)</div>
+              <div class="mk-slot-sub">⑥手順2でRMSからDLしたファイル (normal-item…)</div>
               <div id="mk-slot-rms-zone" class="archive-dropzone" tabindex="0" role="button" aria-label="クリックまたはドラッグでファイルをセット">
                 <div class="archive-dropzone-empty">
                   <div class="archive-dropzone-icon">📂</div>
