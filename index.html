@@ -589,6 +589,11 @@
     .sale-thumb-table thead tr:nth-child(2) th {
       top: 86px;
     }
+    /* v0.52.162: 割引率ヘッダーセルに割引率ごとの色 (セール参加商品と統一パレット) */
+    .sale-thumb-table thead th.st-rate-head.disc-10 { background: #eef4fc; color: #2d6cb8; }
+    .sale-thumb-table thead th.st-rate-head.disc-20 { background: #fdf1e6; color: #d36916; }
+    .sale-thumb-table thead th.st-rate-head.disc-30 { background: #e8f5ed; color: #2a8a45; }
+    .sale-thumb-table thead th.st-rate-head.disc-50 { background: #fce8e8; color: #d83838; }
     .sale-thumb-table {
       width: 100%;
       border-collapse: collapse;
@@ -3475,7 +3480,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.161</span>
+      <span class="version">v0.52.162</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -6418,10 +6423,10 @@
         <th class="st-col-sale" colspan="4">セール用サムネ</th>
       </tr>
       <tr>
-        <th class="st-col-rate">10%OFF</th>
-        <th class="st-col-rate">20%OFF</th>
-        <th class="st-col-rate">30%OFF</th>
-        <th class="st-col-rate">50%OFF</th>
+        <th class="st-col-rate st-rate-head disc-10">10%OFF</th>
+        <th class="st-col-rate st-rate-head disc-20">20%OFF</th>
+        <th class="st-col-rate st-rate-head disc-30">30%OFF</th>
+        <th class="st-col-rate st-rate-head disc-50">50%OFF</th>
       </tr>`;
       const bodyHtml = products.map(p => {
         const cells = SALE_THUMB_RATES.map(rate => `<td class="st-col-rate">${saleThumbCellHtml(p.mgr, rate)}</td>`).join('');
