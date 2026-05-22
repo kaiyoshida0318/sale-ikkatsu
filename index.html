@@ -1907,6 +1907,29 @@
       color: #fff;
       border-color: var(--brand);
     }
+    /* v0.52.169: 広告出稿列 */
+    .product-table th.col-adstatus { width: 1%; white-space: nowrap; }
+    .product-table td.col-adstatus { text-align: center; white-space: nowrap; width: 1%; font-weight: 700; }
+    .product-table td.col-adstatus.adstatus-yes { color: #b3531b; background: #fdf1e6; }
+    .product-table td.col-adstatus.adstatus-no { color: #9aa0a6; background: #f6f7f9; font-weight: 400; }
+    .product-table .adstatus-sort-btn {
+      margin-left: 4px;
+      border: 1px solid #c9c9d1;
+      background: #fff;
+      color: #555;
+      border-radius: 4px;
+      font-size: 12px;
+      line-height: 1;
+      padding: 2px 5px;
+      cursor: pointer;
+      font-family: inherit;
+      vertical-align: middle;
+    }
+    .product-table .adstatus-sort-btn.is-sort-active {
+      background: var(--brand);
+      color: #fff;
+      border-color: var(--brand);
+    }
     /* ④割引率決定表へのリンク列 */
     .product-table th.col-decide-link { min-width: 110px; white-space: nowrap; }
     .product-table td.col-decide-link { text-align: center; }
@@ -3488,7 +3511,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.167</span>
+      <span class="version">v0.52.169</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -3617,7 +3640,7 @@
           <h2>2. RMSデータのダウンロード</h2>
           <ol class="howto-list">
             <li>RMS - 店舗設定 - <b>1 商品管理</b> - <b>2 CSV一括編集</b> - <b>CSVダウンロード</b></li>
-            <li>上でダウンロードしたADcheckデータの商品管理番をコピーし、「<b>商品管理番号で絞り込む</b>」に一括貼り付け</li>
+            <li>上でダウンロードしたADcheckデータの商品管理番号をコピーし、「<b>商品管理番号で絞り込む</b>」に一括貼り付け</li>
             <li>以下の項目にチェックを入れてダウンロード
               <ul class="howto-checklist">
                 <li class="auto">商品管理番号<span class="howto-note">（必須-自動でDLされる）</span></li>
@@ -6028,21 +6051,41 @@
     // 状態の並び順ランク (新商品→既存-伸ばし→既存-撤退)
     const PRODUCT_STATUS_RANK = { 'new': 0, 'keep': 1, 'withdraw': 2 };
 
+    // v0.52.169: 広告出稿 (②広告出稿情報追加で取り込み)
+    //   保存先: archive[ym].adStatus[mgr] = 'yes'(あり) | 'no'(なし)
+    //   未取り込み・データ無しは 'no'(なし) 扱い
+    let _adStatusSort = null; // null=ソートなし / 'asc'(なし→あり) / 'desc'(あり→なし)
+    function getAdStatus(mgr) {
+      try {
+        const ym = currentYM || getCurrentYM();
+        if (!ym) return 'no';
+        const archive = loadArchive();
+        const data = archive[ym];
+        if (data && data.adStatus && data.adStatus[mgr] === 'yes') return 'yes';
+      } catch (e) {}
+      return 'no';
+    }
+    // 広告出稿の並び順ランク (なし→あり)
+    const AD_STATUS_RANK = { 'no': 0, 'yes': 1 };
+
     function renderProductTable() {
       const container = document.getElementById('product-table-container');
       if (!container) return;
       // タブのラベルにも件数を反映 (全体/10/20/30/50)
       if (typeof renderProductTabCounts === 'function') renderProductTabCounts();
 
-      // 列ヘッダー: 商品管理番号 | 商品コード | 商品画像 | 商品状態(ソート) | 割引率 | ④リンク
+      // 列ヘッダー: 商品管理番号 | 商品コード | 商品画像 | 商品状態(ソート) | 広告出稿(ソート) | 割引率 | ④リンク
       const sortMark = _productStatusSort === 'asc' ? '▲' : (_productStatusSort === 'desc' ? '▼' : '⇅');
       const sortActiveClass = _productStatusSort ? ' is-sort-active' : '';
+      const adSortMark = _adStatusSort === 'asc' ? '▲' : (_adStatusSort === 'desc' ? '▼' : '⇅');
+      const adSortActiveClass = _adStatusSort ? ' is-sort-active' : '';
       const headHtml = `<tr>
         <th class="col-check"><input type="checkbox" class="pcheck-all" aria-label="全選択" /></th>
         <th class="col-mgr">商品管理番号</th>
         <th class="col-itemcode">商品コード</th>
         <th class="col-img">商品画像</th>
         <th class="col-pstatus">商品状態 <button type="button" class="pstatus-sort-btn${sortActiveClass}" title="商品状態でソート" aria-label="商品状態でソート">${sortMark}</button></th>
+        <th class="col-adstatus">広告出稿 <button type="button" class="adstatus-sort-btn${adSortActiveClass}" title="広告出稿でソート" aria-label="広告出稿でソート">${adSortMark}</button></th>
         <th class="col-discount" colspan="2">割引率</th>
       </tr>`;
 
@@ -6138,6 +6181,9 @@
             }));
         }
       }
+      // v0.52.169: 各行に広告出稿状態を付与
+      displayRows.forEach(r => { r.adStatus = getAdStatus(r.mgr); });
+
       // v0.52.126: 商品状態ソート (asc=新商品→既存-伸ばし→既存-撤退 / desc=逆)
       if (_productStatusSort === 'asc' || _productStatusSort === 'desc') {
         const dir = _productStatusSort === 'asc' ? 1 : -1;
@@ -6147,6 +6193,18 @@
             const rb = PRODUCT_STATUS_RANK[b.r.status] ?? 99;
             if (ra !== rb) return (ra - rb) * dir;
             return a.i - b.i; // 同じ状態は元の順序を維持 (安定ソート)
+          })
+          .map(x => x.r);
+      }
+      // v0.52.169: 広告出稿ソート (asc=なし→あり / desc=あり→なし)。商品状態ソートとは排他
+      if (_adStatusSort === 'asc' || _adStatusSort === 'desc') {
+        const dir = _adStatusSort === 'asc' ? 1 : -1;
+        displayRows = displayRows.map((r, i) => ({ r, i }))
+          .sort((a, b) => {
+            const ra = AD_STATUS_RANK[a.r.adStatus] ?? 99;
+            const rb = AD_STATUS_RANK[b.r.adStatus] ?? 99;
+            if (ra !== rb) return (ra - rb) * dir;
+            return a.i - b.i;
           })
           .map(x => x.r);
       }
@@ -6167,6 +6225,7 @@
             <td class="mgr">${escapeHtml(r.itemCode || '')}</td>
             <td class="img-cell">${imageCellHtml(r.imageUrl)}</td>
             <td class="col-pstatus pstatus-${st}"><select class="pstatus-select" data-mgr="${escapeHtml(r.mgr || '')}" aria-label="商品状態">${optsHtml}</select></td>
+            <td class="col-adstatus adstatus-${r.adStatus === 'yes' ? 'yes' : 'no'}">${r.adStatus === 'yes' ? 'あり' : 'なし'}</td>
             <td class="col-discount${discClass}">${discLabel}</td>
             <td class="col-decide-link"><a href="?view=decide-price&mgr=${encodeURIComponent(r.mgr || '')}" class="decide-link-btn" data-mgr="${escapeHtml(r.mgr || '')}" title="この商品の割引率決定表へ">割引率決定表へ</a></td>
           </tr>`;
@@ -6211,6 +6270,17 @@
         sortBtn.addEventListener('click', () => {
           _productStatusSort = _productStatusSort === null ? 'asc'
             : (_productStatusSort === 'asc' ? 'desc' : null);
+          _adStatusSort = null; // 排他: 広告出稿ソートは解除
+          renderProductTable();
+        });
+      }
+      // v0.52.169: 広告出稿ヘッダーのソートボタン (none → asc → desc → none)
+      const adSortBtn = container.querySelector('.adstatus-sort-btn');
+      if (adSortBtn) {
+        adSortBtn.addEventListener('click', () => {
+          _adStatusSort = _adStatusSort === null ? 'asc'
+            : (_adStatusSort === 'asc' ? 'desc' : null);
+          _productStatusSort = null; // 排他: 商品状態ソートは解除
           renderProductTable();
         });
       }
