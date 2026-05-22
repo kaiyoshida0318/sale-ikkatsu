@@ -3560,7 +3560,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.181</span>
+      <span class="version">v0.52.182</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4177,6 +4177,7 @@
             <button type="button" id="ad-delete-dl-btn" class="rms-event-dl-btn"><i class="ti ti-download"></i> 削除用ファイルをダウンロード</button>
             <span id="ad-delete-dl-status" class="rms-event-dl-status" aria-live="polite"></span>
           </div>
+          <p class="card-lead" style="margin-top:12px;">②「広告出稿情報追加」で取り込んだ広告状況が「<b>出稿中</b>」になっている商品が対象です。</p>
         </div>
 
         <div class="card">
@@ -4223,17 +4224,28 @@
         </div>
       </div>
 
-      <!-- サブビュー: セール当日① 広告復活 -->
+      <!-- サブビュー: セール当日① 広告復活 (v0.52.182 バッジ・表を廃止し一括復活ファイルDL方式に変更) -->
       <div id="tool-ad-restore" class="tool-panel">
         <div class="tool-panel-header">
           <h2>① 広告復活</h2>
-          <span class="check-complete-badge" id="ad-restore-complete-badge"></span>
         </div>
-        <p class="tool-panel-description">セール開始準備⑫で除外に入れたセール参加商品のRPP広告を復活させる。</p>
+        <p class="tool-panel-description">セール開始準備⑬「広告削除」で除外商品に入れたセール参加商品のRPP広告を復活させる。</p>
 
-        <div id="ad-restore-status" class="status"></div>
-        <div id="ad-restore-table-container">
-          <div class="empty-state">対象データがありません。「① 参加商品追加」でRMSデータを取り込んでください。</div>
+        <div class="card">
+          <h2>1. 広告一括復活ファイルのダウンロード</h2>
+          <div class="rms-event-dl-wrap">
+            <button type="button" id="ad-restore-dl-btn" class="rms-event-dl-btn"><i class="ti ti-download"></i> 復活用ファイルをダウンロード</button>
+            <span id="ad-restore-dl-status" class="rms-event-dl-status" aria-live="polite"></span>
+          </div>
+          <p class="card-lead" style="margin-top:12px;">②「広告出稿情報追加」で取り込んだ広告状況が「<b>出稿中</b>」になっている商品が対象です。</p>
+        </div>
+
+        <div class="card">
+          <h2>2. RMSにアップロード</h2>
+          <div class="howto-list" style="padding-left: 0;">
+            広告・アフィリエイト・楽天大学 - <b>1.広告（プロモーションメニュー）</b> - <b>検索連動型広告(RPP)</b> - <b>除外商品</b> - <b>一括アップロード</b>
+          </div>
+          <p class="card-lead" style="margin-top:12px;">1.でダウンロードしたファイルをアップロード。</p>
         </div>
       </div>
 
@@ -10072,6 +10084,61 @@
             return `${n.getFullYear()}${String(n.getMonth()+1).padStart(2,'0')}`;
           })();
           saveBlobAs(blob, `広告削除_${ymTag}.csv`);
+          setStatus(`✅ ${mgrs.length}件（広告状況：出稿中）をダウンロードしました`, 'is-ok');
+        } catch (err) {
+          setStatus('❌ エラー: ' + (err.message || String(err)), 'is-error');
+          console.error(err);
+        }
+      });
+    })();
+
+    // v0.52.182: ① 広告復活 — 広告一括復活ファイル(RPP除外商品 一括アップロード用)のダウンロード
+    //   形式: Shift_JIS / ヘッダー「コントロールカラム,商品管理番号」/ 各行「d,<商品管理番号>」
+    //   (コントロールカラム d = 除外解除=復活)。対象: ⑬広告削除と同じ 広告状況「出稿中」の商品管理番号
+    (function bindAdRestoreDl() {
+      const btn = document.getElementById('ad-restore-dl-btn');
+      const status = document.getElementById('ad-restore-dl-status');
+      if (!btn) return;
+      function setStatus(msg, kind) {
+        if (!status) return;
+        status.textContent = msg;
+        status.className = 'rms-event-dl-status' + (kind ? ' ' + kind : '');
+      }
+      btn.addEventListener('click', () => {
+        setStatus('', '');
+        try {
+          const rows = (typeof getCurrentRows === 'function') ? getCurrentRows() : [];
+          const mgrs = [];
+          const seen = new Set();
+          for (const r of rows) {
+            const m = r && r.mgr ? String(r.mgr).trim() : '';
+            if (!m || seen.has(m)) continue;
+            if (typeof getAdStatus === 'function' && getAdStatus(m) === 'yes') { seen.add(m); mgrs.push(m); }
+          }
+          if (mgrs.length === 0) {
+            setStatus('❌ 広告状況「出稿中」の商品がありません。「② 広告出稿情報追加」でADcheckデータを取り込んでください。', 'is-error');
+            return;
+          }
+          // テンプレと同形式: ヘッダー + 「d,<商品管理番号>」、LF改行、Shift_JIS
+          const lines = ['コントロールカラム,商品管理番号'];
+          for (const m of mgrs) {
+            const cell = /[",\r\n]/.test(m) ? '"' + m.replace(/"/g, '""') + '"' : m;
+            lines.push('d,' + cell);
+          }
+          const csvText = lines.join('\n') + '\n';
+          let blob;
+          if (typeof encodeShiftJIS === 'function') {
+            blob = new Blob([encodeShiftJIS(csvText)], { type: 'text/csv' });
+          } else {
+            blob = new Blob(['\ufeff' + csvText], { type: 'text/csv;charset=utf-8' });
+          }
+          const ym = (typeof currentYM !== 'undefined' && currentYM) ? currentYM
+                   : (typeof getCurrentYM === 'function' ? getCurrentYM() : null);
+          const ymTag = ym ? ym.replace('/', '') : (() => {
+            const n = new Date();
+            return `${n.getFullYear()}${String(n.getMonth()+1).padStart(2,'0')}`;
+          })();
+          saveBlobAs(blob, `広告復活_${ymTag}.csv`);
           setStatus(`✅ ${mgrs.length}件（広告状況：出稿中）をダウンロードしました`, 'is-ok');
         } catch (err) {
           setStatus('❌ エラー: ' + (err.message || String(err)), 'is-error');
