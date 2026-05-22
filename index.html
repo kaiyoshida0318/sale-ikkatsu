@@ -515,36 +515,54 @@
     .tc-table .tc-check { width: 1%; white-space: nowrap; }
     .tc-table .tc-check input { width: 18px; height: 18px; cursor: pointer; }
     .tc-table tr.is-thumb-changed td { background: #eef7f0; }
-    /* v0.52.192: ⑭サムネイル差し替え / ⑲サムネイル戻し
-       ドキュメントスクロール方式。見出し・説明文は普通に上へ流れる。
-       サマリーバーをメインタブバー直下にsticky固定、表ヘッダーをその直下にsticky固定。
+    /* v0.52.194: ⑭サムネイル差し替え / ⑲サムネイル戻し
+       パネルを画面高さに固定して内部スクロール。見出し・説明文はパネル内を上へ流れて消え、
+       サマリーバーはパネル上端(=バナー直下)にsticky固定。表ヘッダーはその下に固定。
        表(.tc-table-wrap)は内部スクロールで overscroll-behavior:contain (上端でページに伝播させない) */
+    body[data-view="thumb-change"] #tool-thumb-change.tool-panel.active,
+    body[data-view="top-image-back"] #tool-top-image-back.tool-panel.active {
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - var(--main-tabs-h, 50px));
+      overflow-y: auto;
+      overflow-x: hidden;
+      overscroll-behavior: contain;
+      padding: 0 8px;
+      box-sizing: border-box;
+    }
     body[data-view="thumb-change"] .tool-panel-header,
     body[data-view="top-image-back"] .tool-panel-header {
-      position: static; padding: 8px 0 4px; margin-bottom: 0; background: var(--bg);
+      position: static; flex-shrink: 0; padding: 8px 0 4px; margin-bottom: 0; background: var(--bg);
     }
     body[data-view="thumb-change"] .tool-panel-description,
     body[data-view="top-image-back"] .tool-panel-description {
-      position: static; margin: 0 0 6px 0;
+      position: static; flex-shrink: 0; margin: 0 0 6px 0;
     }
     body[data-view="thumb-change"] #tool-thumb-change .card,
     body[data-view="top-image-back"] #tool-top-image-back .card {
-      overflow: visible;
+      flex: 1; min-height: 0; display: flex; flex-direction: column;
+      padding: 0; border: 0; background: transparent; overflow: visible;
     }
-    /* サマリーバー: メインタブバー直下にsticky固定 */
+    /* サマリーバー: パネルスクロール基準でバナー直下(top:0)にsticky固定 */
     body[data-view="thumb-change"] #thumb-change-summary,
     body[data-view="top-image-back"] #top-image-back-summary {
       position: sticky;
-      top: var(--main-tabs-h, 50px);
+      top: 0;
       z-index: 8;
+      flex-shrink: 0;
       margin-bottom: 0;
     }
     body[data-view="thumb-change"] #thumb-change-summary:empty,
     body[data-view="top-image-back"] #top-image-back-summary:empty { display: none; }
+    /* 表コンテナ: 残り領域を内部スクロール */
+    body[data-view="thumb-change"] #thumb-change-table-container,
+    body[data-view="top-image-back"] #top-image-back-table-container {
+      flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden;
+    }
     /* 表ラッパー: 内部スクロール + 上端で伝播停止 */
     body[data-view="thumb-change"] #thumb-change-table-container .tc-table-wrap,
     body[data-view="top-image-back"] #top-image-back-table-container .tc-table-wrap {
-      max-height: calc(100vh - var(--top-bar-h, 130px) - 90px);
+      flex: 1; min-height: 0;
       overflow: auto;
       overscroll-behavior: contain;
       margin-top: 8px;
@@ -3594,7 +3612,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.193</span>
+      <span class="version">v0.52.194</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
