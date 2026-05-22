@@ -579,18 +579,6 @@
       border-color: var(--brand);
       box-shadow: 0 0 0 2px rgba(30,58,95,0.15);
     }
-    .st-search-clear {
-      border: 1px solid #c9c9d1;
-      background: #fff;
-      color: #666;
-      border-radius: 6px;
-      width: 32px;
-      height: 32px;
-      cursor: pointer;
-      font-size: 13px;
-      flex-shrink: 0;
-    }
-    .st-search-clear:hover { background: #f0f0f2; }
     .st-search-count { font-size: 13px; color: var(--muted); white-space: nowrap; }
     /* v0.52.154: ⑧ 未対応件数バッジ。完了(0件)で光る */
     .st-pending-count {
@@ -3560,7 +3548,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.182</span>
+      <span class="version">v0.52.183</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -3661,7 +3649,6 @@
         各セルに画像をアップロードでき、その下に画像URLを入力できます（クリックして入力）。データは商品ごと・割引率ごとに保存されます。</p>
         <div class="st-search-bar">
           <input type="text" id="sale-thumb-search" class="st-search-input" placeholder="🔍 商品管理番号・商品コードで検索" />
-          <button type="button" id="sale-thumb-search-clear" class="st-search-clear" title="クリア">✕</button>
           <span id="sale-thumb-search-count" class="st-search-count"></span>
         </div>
         <div id="sale-thumb-table-container" class="st-table-scroll">
@@ -6862,7 +6849,6 @@
     // v0.52.142: セール用サムネイル 検索欄のバインド (1回だけ)
     (function bindSaleThumbSearch() {
       const input = document.getElementById('sale-thumb-search');
-      const clearBtn = document.getElementById('sale-thumb-search-clear');
       if (!input) return;
       let timer = null;
       input.addEventListener('input', () => {
@@ -6871,14 +6857,7 @@
         if (timer) clearTimeout(timer);
         timer = setTimeout(() => renderSaleThumbTable(), 120);
       });
-      if (clearBtn) {
-        clearBtn.addEventListener('click', () => {
-          input.value = '';
-          _saleThumbSearchQuery = '';
-          renderSaleThumbTable();
-          input.focus();
-        });
-      }
+      // v0.52.183: ✕クリアボタンは廃止
     })();
 
     // ---- セール作業フロー ----
