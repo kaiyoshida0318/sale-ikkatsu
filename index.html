@@ -3488,7 +3488,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.165</span>
+      <span class="version">v0.52.167</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -3605,10 +3605,19 @@
         <p class="tool-panel-description">セール参加商品のデータをRMSからダウンロードし、それをSALE一括内に取り込んでいく。</p>
 
         <div class="card">
-          <h2>1. RMSデータのダウンロード</h2>
+          <h2>1. ADcheckからデータダウンロード</h2>
+          <ol class="howto-list">
+            <li>ADcheckの<b>SS列</b>でセール参加希望商品を選定。</li>
+            <li><b>【SS】</b>ブロックからセール月をクリック。</li>
+            <li>「<b>SALE一括用ファイル出力</b>」をクリックしてCSVファイルをダウンロード。</li>
+          </ol>
+        </div>
+
+        <div class="card">
+          <h2>2. RMSデータのダウンロード</h2>
           <ol class="howto-list">
             <li>RMS - 店舗設定 - <b>1 商品管理</b> - <b>2 CSV一括編集</b> - <b>CSVダウンロード</b></li>
-            <li>「<b>商品管理番号で絞り込む</b>」でセール参加商品の商品管理番号を一括貼り付け</li>
+            <li>上でダウンロードしたADcheckデータの商品管理番をコピーし、「<b>商品管理番号で絞り込む</b>」に一括貼り付け</li>
             <li>以下の項目にチェックを入れてダウンロード
               <ul class="howto-checklist">
                 <li class="auto">商品管理番号<span class="howto-note">（必須-自動でDLされる）</span></li>
@@ -3626,8 +3635,8 @@
         </div>
 
         <div class="card">
-          <h2>2. RMSデータのアップロード</h2>
-          <p class="card-lead">上記「1. RMSデータのダウンロード」で取得したCSVファイルをここでアップロードしてください。</p>
+          <h2>3. RMSデータのアップロード</h2>
+          <p class="card-lead">上記「2. RMSデータのダウンロード」で取得したCSVファイルをここでアップロードしてください。</p>
           <form id="add-products-form">
             <div class="grid">
               <div class="file-input" data-target="rms-products" style="grid-column: 1 / -1;">
@@ -3651,7 +3660,27 @@
         <div class="tool-panel-header">
           <h2>② 広告出稿情報追加</h2>
         </div>
-        <p class="tool-panel-description"></p>
+        <p class="tool-panel-description">セール参加準備①でダウンロードしたADcheckのデータを取り込み、広告出稿状況を反映させる。</p>
+
+        <div class="card">
+          <h2>CSVデータのアップロード</h2>
+          <p class="card-lead">ADcheckからダウンロードしたCSVファイルをアップロードしてください。</p>
+          <form id="ad-info-form">
+            <div class="grid">
+              <div class="file-input" data-target="ad-info-csv" style="grid-column: 1 / -1;">
+                <label>ADcheckデータCSV</label>
+                <div class="desc">ADcheckからダウンロードした広告出稿状況のCSV</div>
+                <input type="file" name="ad_info_csv" accept=".csv" required />
+                <div class="filename"></div>
+              </div>
+            </div>
+
+            <div class="actions">
+              <button type="submit" id="btn-ad-info-upload">取り込んで反映</button>
+            </div>
+            <div id="ad-info-status" class="status"></div>
+          </form>
+        </div>
       </div>
 
       <!-- サブビュー: セール価格決定 (作成済みの計算結果を表で表示) -->
@@ -6797,6 +6826,17 @@
         }
       });
     });
+
+    // v0.52.167: ② 広告出稿情報追加 のフォーム送信ガード (取り込みロジックは未実装)
+    (function bindAdInfoForm() {
+      const form = document.getElementById('ad-info-form');
+      if (!form) return;
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const st = document.getElementById('ad-info-status');
+        if (st) { st.textContent = '取り込み機能は準備中です。'; st.className = 'status'; }
+      });
+    })();
 
 
 
