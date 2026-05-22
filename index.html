@@ -500,8 +500,7 @@
       word-break: break-all;
       max-width: 320px;
     }
-    .tc-table td.tc-url a { color: #2d6cb8; text-decoration: none; }
-    .tc-table td.tc-url a:hover { text-decoration: underline; }
+    .tc-table td.tc-url .tc-url-text { color: #555; user-select: all; cursor: text; }
     .tc-table td.tc-url .tc-url-none { color: #aaa; }
     .tc-table .tc-check { width: 1%; white-space: nowrap; }
     .tc-table .tc-check input { width: 18px; height: 18px; cursor: pointer; }
@@ -3560,7 +3559,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.178</span>
+      <span class="version">v0.52.179</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -5776,7 +5775,7 @@
         // v0.52.178: 画像URL列 (登録されている画像URL)
         const url = (t && t.url) ? String(t.url).trim() : '';
         const urlCell = url
-          ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(url)}</a>`
+          ? `<span class="tc-url-text">${escapeHtml(url)}</span>`
           : `<span class="tc-url-none">—</span>`;
         return `<tr${trCls} data-mgr="${escapeHtml(mgr)}">
           <td class="tc-mgr">${escapeHtml(mgr)}</td>
