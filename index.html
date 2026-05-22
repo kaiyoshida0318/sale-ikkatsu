@@ -3357,16 +3357,12 @@
       border-bottom: 2px solid #d8d8de;
       text-align: center;
     }
-    /* ⑪⑭(sku-record/sku-restore) は通常bodyスクロールなので、
-       表ヘッダーは tool-panel-header + sku-record-card>h2 の下に固定する
-       積み重ね: viewport_top(0) → メインタブバー(top-bar-h) → tool-panel-header(+48px)
-                → sku-record-card>h2(+sku-card-h2-h) → sr-table thead */
+    /* v0.52.191: ⑫⑱ は表を内部スクロールにしたので、カード見出しは通常配置に戻す
+       (document sticky をやめ、表ヘッダー top:0 と噛み合わず重なる不具合を解消) */
     body[data-view="sku-record"] .sr-table thead th,
     body[data-view="sku-restore"] .sr-table thead th {
-      top: calc(var(--top-bar-h, 130px) + 48px + var(--sku-card-h2-h, 0px));
+      top: 0;
     }
-    /* ⑪⑭の「2. 倉庫入れSKU記録表」カードの h2 も sticky 化、
-       tool-panel-header の直下に積む */
     body[data-view="sku-record"] .sku-record-card,
     body[data-view="sku-restore"] .sku-record-card {
       padding-top: 0;
@@ -3374,28 +3370,17 @@
     }
     body[data-view="sku-record"] .sku-record-card > h2,
     body[data-view="sku-restore"] .sku-record-card > h2 {
-      position: sticky;
-      top: calc(var(--top-bar-h, 130px) + 48px);
-      z-index: 29;
+      position: static;
+      z-index: auto;
       background: var(--card);
-      margin: 0 -22px 0;
-      padding: 18px 22px 18px;
-      border-bottom: 1px solid var(--border);
+      margin: 0 0 10px;
+      padding: 0;
+      border-bottom: none;
     }
-    /* h2のmargin-bottomを0にして、その分は表ラッパーのmargin-topで確保
-       (sticky の h2 と表ヘッダーの間に透明な隙間ができないように) */
+    /* 表ラッパー: 見出しの下に通常配置で内部スクロール */
     body[data-view="sku-record"] .sku-record-card .sr-table-wrap,
     body[data-view="sku-restore"] .sku-record-card .sr-table-wrap {
       margin-top: 0;
-    }
-    /* v0.52.188: ⑫⑱ — 表(.sr-table-wrap)を内部スクロールにし、上端まで行ったら
-       ページ全体に伝播させない (overscroll-behavior:contain)。表ヘッダーは表内部上端に固定 */
-    body[data-view="sku-record"] .sku-record-card,
-    body[data-view="sku-restore"] .sku-record-card {
-      overflow: visible;
-    }
-    body[data-view="sku-record"] .sku-record-card .sr-table-wrap,
-    body[data-view="sku-restore"] .sku-record-card .sr-table-wrap {
       max-height: calc(100vh - var(--top-bar-h, 130px) - 130px);
       overflow: auto;
       overscroll-behavior: contain;
@@ -3624,7 +3609,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.190</span>
+      <span class="version">v0.52.191</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
