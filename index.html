@@ -3276,6 +3276,53 @@
       background: #fff8e7;
     }
 
+    /* v0.52.155: ⑩ RMSイベント申請 - 全商品管理番号CSVダウンロード */
+    .rms-event-dl-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+    .rms-event-dl-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 22px;
+      border: none;
+      border-radius: 8px;
+      background: var(--brand);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 800;
+      font-family: inherit;
+      line-height: 1.2;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      transition: background .12s, transform .12s, box-shadow .12s;
+    }
+    .rms-event-dl-btn:hover { background: var(--brand-dark); box-shadow: 0 2px 8px rgba(30,58,95,0.25); }
+    .rms-event-dl-btn:active { transform: translateY(1px); }
+    .rms-event-dl-btn:disabled { background: #b9bfca; cursor: not-allowed; box-shadow: none; }
+    .rms-event-dl-status { font-size: 13px; color: var(--muted); }
+    .rms-event-dl-status.is-error { color: #d83838; font-weight: 700; }
+    .rms-event-dl-status.is-ok { color: #2a8a45; font-weight: 700; }
+    .rms-event-steps {
+      margin: 16px 0 0;
+      padding-left: 22px;
+      line-height: 1.9;
+    }
+    .rms-event-steps li { margin-bottom: 2px; }
+    .rms-event-note {
+      margin-top: 14px;
+      padding: 12px 14px;
+      background: #fff7ed;
+      border: 1px solid #f3c89a;
+      border-radius: 8px;
+      color: #8a4b14;
+      line-height: 1.7;
+    }
     /* ⑫ 広告削除 (⑪と同じ作りだが商品管理番号単位) */
     .ad-table-wrap {
       border: 1px solid var(--border);
@@ -3407,7 +3454,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.154</span>
+      <span class="version">v0.52.155</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -3929,7 +3976,17 @@
           <div class="howto-list" style="padding-left: 0;">
             楽天RMS - 店舗設定 - <b>1 商品管理</b> - <b>3 イベント申請</b> - <b>イベント商品申請</b>
           </div>
-          <div style="margin-top: 12px;">※ 全てのセール参加商品の商品管理番号を<b>一括で貼り付けて申請</b>する。<br>
+
+          <!-- v0.52.155: 全商品管理番号CSVダウンロード + 申請手順 -->
+          <div class="rms-event-dl-wrap">
+            <button type="button" id="rms-event-dl-mgr" class="btn-primary rms-event-dl-btn">⬇ 全商品管理番号をCSVでダウンロード</button>
+            <span id="rms-event-dl-status" class="rms-event-dl-status" aria-live="polite"></span>
+          </div>
+          <ol class="rms-event-steps">
+            <li>上のボタンで、セール参加商品全体の<b>全商品管理番号</b>をCSVでダウンロードする。</li>
+            <li>ダウンロードしたCSVの<b>商品管理番号</b>を、<b>イベント商品申請</b>の入力欄に貼り付けて申請する。</li>
+          </ol>
+          <div class="rms-event-note">※ 全てのセール参加商品の商品管理番号を<b>一括で貼り付けて申請</b>する。<br>
           分割するとデータが上書きされて、前に申請していた分の内容が消えてしまうため。</div>
         </div>
       </div>
@@ -9476,6 +9533,52 @@
           setStatus(`✅ ${stats.kept}行のCSVをダウンロードしました${skippedText}`, 'success');
         } catch (err) {
           setStatus('❌ エラー: ' + (err.message || String(err)), 'error');
+          console.error(err);
+        }
+      });
+    })();
+
+    // v0.52.155: ⑩ RMSイベント申請 - 全商品管理番号CSVダウンロード
+    //   セール参加商品全体(現在の年月の全行)の商品管理番号を重複排除してCSV出力。
+    //   この番号をRMSのイベント商品申請に一括貼り付けして申請する運用。
+    (function bindRmsEventMgrDl() {
+      const btn = document.getElementById('rms-event-dl-mgr');
+      const status = document.getElementById('rms-event-dl-status');
+      if (!btn) return;
+      function setStatus(msg, kind) {
+        if (!status) return;
+        status.textContent = msg;
+        status.className = 'rms-event-dl-status' + (kind ? ' ' + kind : '');
+      }
+      btn.addEventListener('click', () => {
+        setStatus('', '');
+        try {
+          const rows = (typeof getCurrentRows === 'function') ? getCurrentRows() : [];
+          // 商品管理番号を重複排除 (行の出現順を維持)
+          const mgrs = [];
+          const seen = new Set();
+          for (const r of rows) {
+            const m = r && r.mgr ? String(r.mgr).trim() : '';
+            if (m && !seen.has(m)) { seen.add(m); mgrs.push(m); }
+          }
+          if (mgrs.length === 0) {
+            setStatus('❌ 対象データがありません。「① 参加商品追加」でRMSデータを取り込んでください。', 'is-error');
+            return;
+          }
+          const dataRows = mgrs.map(m => [m]);
+          const csvText = rowsToCsvText(['商品管理番号'], dataRows);
+          const BOM = '\ufeff';
+          const blob = new Blob([BOM + csvText], { type: 'text/csv;charset=utf-8' });
+          const ym = (typeof currentYM !== 'undefined' && currentYM) ? currentYM
+                   : (typeof getCurrentYM === 'function' ? getCurrentYM() : null);
+          const ymTag = ym ? ym.replace('/', '') : (() => {
+            const n = new Date();
+            return `${n.getFullYear()}${String(n.getMonth()+1).padStart(2,'0')}`;
+          })();
+          saveBlobAs(blob, `セール参加商品_商品管理番号_${ymTag}.csv`);
+          setStatus(`✅ ${mgrs.length}件の商品管理番号をダウンロードしました`, 'is-ok');
+        } catch (err) {
+          setStatus('❌ エラー: ' + (err.message || String(err)), 'is-error');
           console.error(err);
         }
       });
