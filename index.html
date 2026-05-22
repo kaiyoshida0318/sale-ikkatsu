@@ -457,6 +457,41 @@
       background: #f2f3f6;
       box-shadow: inset 0 -1px 0 #d8d8de, inset 0 1px 0 #d8d8de;
     }
+    /* v0.52.176: ⑭ サムネイル差し替え 表 */
+    .tc-table-wrap {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-top: 12px;
+    }
+    .tc-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      background: #fff;
+    }
+    .tc-table th, .tc-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid #e6e6ec;
+      border-right: 1px solid #e6e6ec;
+      vertical-align: middle;
+      text-align: center;
+    }
+    .tc-table th { background: #f2f3f6; font-weight: 700; }
+    .tc-table th:last-child, .tc-table td:last-child { border-right: none; }
+    .tc-table tbody tr:last-child td { border-bottom: none; }
+    .tc-table td.tc-mgr { font-family: monospace; white-space: nowrap; }
+    .tc-table .tc-disc { white-space: nowrap; width: 1%; }
+    .tc-table .tc-thumb .product-image-thumb {
+      width: 80px; height: 80px; object-fit: cover; border-radius: 4px; display: block; margin: 0 auto;
+    }
+    .tc-table .tc-thumb .img-placeholder {
+      width: 80px; height: 80px; display: inline-flex; align-items: center; justify-content: center;
+      color: #aaa; font-size: 12px; background: #f6f7f9; border-radius: 4px;
+    }
+    .tc-table .tc-check { width: 1%; white-space: nowrap; }
+    .tc-table .tc-check input { width: 18px; height: 18px; cursor: pointer; }
+    .tc-table tr.is-thumb-changed td { background: #eef7f0; }
     /* v0.52.141: セール用サムネイル タブ */
     /* v0.52.142: パネルをflex内部スクロール構造に。検索欄をバナー直下で固定、表ヘッダー固定 */
     body[data-view="sale-thumb"] main {
@@ -3511,7 +3546,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.175</span>
+      <span class="version">v0.52.176</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4139,12 +4174,19 @@
         </div>
       </div>
 
-      <!-- サブビュー: ⑬ サムネイル変更 -->
+      <!-- サブビュー: ⑭ サムネイル差し替え (v0.52.176 表+差し替えチェック) -->
       <div id="tool-thumb-change" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>⑭ サムネイル変更</h2>
+          <h2>⑭ サムネイル差し替え</h2>
         </div>
-        <p class="tool-panel-description"></p>
+        <p class="tool-panel-description">通常のサムネイルをセール用のサムネイルに差し替えていく。</p>
+
+        <div class="card">
+          <div id="thumb-change-summary" class="status sku-restore-summary"></div>
+          <div id="thumb-change-table-container">
+            <div class="empty-state">対象データがありません。「① 参加商品追加」でRMSデータを取り込んでください。</div>
+          </div>
+        </div>
       </div>
 
       <!-- サブビュー: ⑭ スマホ上部バナー設置予約 -->
@@ -4570,6 +4612,10 @@
       // ad-restore サブビュー (セール当日①) を開くときは表を再描画
       if (viewId === 'ad-restore') {
         if (typeof renderAdRestoreTable === 'function') renderAdRestoreTable();
+      }
+      // v0.52.176: thumb-change サブビュー (⑭ サムネイル差し替え) を開くときは表を再描画
+      if (viewId === 'thumb-change') {
+        if (typeof window._renderThumbChangeTable === 'function') window._renderThumbChangeTable();
       }
       // upload-original サブビュー (セール後①) を開くときは保管ファイル表示を更新
       if (viewId === 'upload-original') {
@@ -5629,6 +5675,132 @@
       });
       // v0.52.154: ✕クリアボタンは廃止
     })();
+
+    // v0.52.176: ⑭ サムネイル差し替え — 差し替え済みチェックの保存 (年月別)
+    //   保存先: archive[ym].thumbChange[mgr] = true
+    function getThumbChangeMap() {
+      try {
+        const ym = currentYM || getCurrentYM();
+        if (!ym) return {};
+        const archive = loadArchive();
+        const data = archive[ym];
+        return (data && data.thumbChange && typeof data.thumbChange === 'object') ? data.thumbChange : {};
+      } catch (e) { return {}; }
+    }
+    function setThumbChange(mgr, done) {
+      try {
+        const ym = currentYM || getCurrentYM();
+        if (!ym) return;
+        const archive = loadArchive();
+        if (!archive[ym]) archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
+        if (!archive[ym].thumbChange || typeof archive[ym].thumbChange !== 'object') archive[ym].thumbChange = {};
+        if (done) archive[ym].thumbChange[mgr] = true;
+        else delete archive[ym].thumbChange[mgr];
+        saveArchive(archive);
+      } catch (e) {}
+    }
+
+    // v0.52.176: ⑭ サムネイル差し替え 表を描画 (当月のセール参加商品全件)
+    function renderThumbChangeTable() {
+      const container = document.getElementById('thumb-change-table-container');
+      if (!container) return;
+      const summaryEl = document.getElementById('thumb-change-summary');
+      const setSummary = (html, cls) => {
+        if (!summaryEl) return;
+        summaryEl.innerHTML = html;
+        summaryEl.className = 'status sku-restore-summary' + (cls ? ' ' + cls : '');
+      };
+      const ym = currentYM || (typeof getCurrentYM === 'function' ? getCurrentYM() : null);
+      if (!ym) {
+        setSummary('', '');
+        container.innerHTML = `<div class="empty-state">セール期間が選択されていません。</div>`;
+        return;
+      }
+      const curMap = (typeof getMgrDiscountMapForMonth === 'function') ? getMgrDiscountMapForMonth(ym) : {};
+      const archive = loadArchive();
+      const data = archive[ym] || {};
+      const rowsArr = Array.isArray(data.rows) ? data.rows : [];
+      // 表示順: rows の順序を尊重し、当月のセール参加商品全件
+      const orderedMgrs = [];
+      const seen = new Set();
+      for (const r of rowsArr) {
+        if (r && r.mgr && !seen.has(r.mgr)) { orderedMgrs.push(r.mgr); seen.add(r.mgr); }
+      }
+      for (const mgr of Object.keys(curMap)) { if (!seen.has(mgr)) { orderedMgrs.push(mgr); seen.add(mgr); } }
+
+      if (orderedMgrs.length === 0) {
+        setSummary('', '');
+        container.innerHTML = `<div class="empty-state">対象データがありません。「① 参加商品追加」でRMSデータを取り込んでください。</div>`;
+        return;
+      }
+      const mgrToRow = {};
+      for (const r of rowsArr) { if (r && r.mgr) mgrToRow[r.mgr] = r; }
+      const changeMap = getThumbChangeMap();
+
+      // サマリー (未対応=未チェック件数。0で完了→光る)
+      const total = orderedMgrs.length;
+      let remain = 0;
+      for (const mgr of orderedMgrs) { if (!changeMap[mgr]) remain++; }
+      if (remain === 0) {
+        setSummary(`✓ 差し替え完了: <b>0</b> 件未対応（全 ${total} 件 差し替え済み）`, 'is-done');
+      } else {
+        setSummary(`差し替えが必要なSKU: <b>${remain}</b> 件（全 ${total} 件中）`, 'is-pending');
+      }
+
+      const rowsHtml = orderedMgrs.map(mgr => {
+        const curDisc = [...(curMap[mgr] || [])][0];
+        const t = (typeof getSaleThumb === 'function') ? getSaleThumb(mgr, curDisc) : { img:'', url:'' };
+        const src = (t && t.img) ? t.img : ((t && t.url) ? t.url : '');
+        const thumbCell = src
+          ? `<img src="${escapeHtml(src)}" class="product-image-thumb" alt="セール用サムネ" loading="lazy" />`
+          : `<span class="img-placeholder">画像なし</span>`;
+        const discBadge = (curDisc === 10 || curDisc === 20 || curDisc === 30 || curDisc === 50)
+          ? `<span class="thumb-rate-badge disc-${curDisc} is-now is-past">★${curDisc}%</span>`
+          : `<span class="thumb-rate-badge disc-none">未選択</span>`;
+        const checked = !!changeMap[mgr];
+        const trCls = checked ? ' class="is-thumb-changed"' : '';
+        return `<tr${trCls} data-mgr="${escapeHtml(mgr)}">
+          <td class="tc-mgr">${escapeHtml(mgr)}</td>
+          <td class="tc-disc">${discBadge}</td>
+          <td class="tc-thumb">${thumbCell}</td>
+          <td class="tc-check"><input type="checkbox" class="tc-change-check" data-mgr="${escapeHtml(mgr)}"${checked ? ' checked' : ''} aria-label="差し替え"></td>
+        </tr>`;
+      }).join('');
+
+      container.innerHTML = `<div class="tc-table-wrap">
+        <table class="tc-table">
+          <thead>
+            <tr>
+              <th class="tc-mgr">商品管理番号</th>
+              <th class="tc-disc">今回の<br>割引率</th>
+              <th class="tc-thumb">セール用サムネ</th>
+              <th class="tc-check">差し替え</th>
+            </tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>`;
+
+      container.querySelectorAll('input.tc-change-check').forEach(cb => {
+        cb.addEventListener('change', () => {
+          const mgr = cb.getAttribute('data-mgr');
+          if (!mgr) return;
+          setThumbChange(mgr, cb.checked);
+          const tr = cb.closest('tr');
+          if (tr) tr.classList.toggle('is-thumb-changed', cb.checked);
+          // サマリー再計算
+          const allCb = container.querySelectorAll('input.tc-change-check');
+          let tot = 0, rem = 0;
+          allCb.forEach(c => { tot++; if (!c.checked) rem++; });
+          if (rem === 0) {
+            setSummary(`✓ 差し替え完了: <b>0</b> 件未対応（全 ${tot} 件 差し替え済み）`, 'is-done');
+          } else {
+            setSummary(`差し替えが必要なSKU: <b>${rem}</b> 件（全 ${tot} 件中）`, 'is-pending');
+          }
+        });
+      });
+    }
+    window._renderThumbChangeTable = renderThumbChangeTable;
 
     // ⑬/セール後③ のDLボタンのテキスト末尾に「(N)」を付与/更新する。
     // 対象: .top-image-dl-btn (disc-10/20/30/50)。両画面とも同じクラスで描画。
@@ -6697,7 +6869,7 @@
           { id: 'prep-rms-event', label: 'RMSイベント申請■申請日当日■', action: 'open-rms-event' },
           { id: 'prep-sku-record', label: '審査落ちSKU倉庫入れ■申請日当日■', action: 'open-sku-record' },
           { id: 'prep-ad-delete', label: '広告削除■申請日当日■', action: 'open-ad-delete' },
-          { id: 'prep-thumb-change', label: 'サムネイル変更', action: 'open-thumb-change' },
+          { id: 'prep-thumb-change', label: 'サムネイル差し替え', action: 'open-thumb-change' },
           { id: 'prep-sp-banner', label: 'スマホ上部バナー設置予約', action: 'open-sp-banner' },
         ],
       },
