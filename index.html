@@ -3171,6 +3171,27 @@
       background: #f4f5f8;
     }
     /* ⑪ 倉庫入れSKU記録 */
+    /* v0.52.161: セール後② 倉庫出し 対応必要SKU数サマリー */
+    .sku-restore-summary {
+      font-size: 15px;
+      font-weight: 700;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+    .sku-restore-summary.is-pending {
+      color: #b3531b;
+      background: #fdecd9;
+      border: 1px solid #f3c89a;
+    }
+    .sku-restore-summary.is-pending b { font-size: 18px; }
+    .sku-restore-summary.is-none,
+    .sku-restore-summary.is-done {
+      color: #1f7a3d;
+      background: #e3f7ea;
+      border: 1px solid #9fd9b3;
+    }
+    .sku-restore-summary.is-done b { font-size: 18px; }
     .sr-table-wrap {
       border: 1px solid var(--border);
       border-radius: 8px;
@@ -3454,7 +3475,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.159</span>
+      <span class="version">v0.52.161</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4000,7 +4021,8 @@
         </div>
         <p class="tool-panel-description">セール参加可否の審査は商品コード単位ではなく、中のSKU単位で行われる。<br>
         そのため、審査の結果✕が出たSKUがあった場合でも、そのSKUだけを倉庫に入れることで再度審査を受けることができる。<br>
-        ここでは、倉庫に入れたSKUを記録をしていく。</p>
+        ここでは、倉庫に入れたSKUを記録をしていく。<br>
+        ※審査落ちSKUを倉庫に入れたあと、再度申請をする必要はない。翌日自動的にそれを踏まえた審査結果が出る。</p>
 
         <div class="card">
           <h2>1. 倉庫に入れる手順</h2>
@@ -8621,8 +8643,17 @@
     function renderSkuRestoreTable() {
       const container = document.getElementById('sku-restore-table-container');
       if (!container) return;
+      const statusEl = document.getElementById('sku-restore-status');
+      // v0.52.161: 対応が必要なSKU数サマリー
+      const setSummary = (html, cls) => {
+        if (!statusEl) return;
+        statusEl.innerHTML = html;
+        statusEl.className = 'status sku-restore-summary' + (cls ? ' ' + cls : '');
+      };
       const { rows: allRows, reason } = buildSkuRecordRows();
       if (!allRows || allRows.length === 0) {
+        setSummary('', '');
+        if (statusEl) { statusEl.className = 'status'; statusEl.innerHTML = ''; }
         container.innerHTML = `<div class="empty-state">${escapeHtml(reason || '対象データがありません')}</div>`;
         return;
       }
@@ -8630,10 +8661,20 @@
       const warehoused = getWarehouseSkuMap();
       const rows = allRows.filter(r => !!warehoused[r.sku]);
       if (rows.length === 0) {
+        // 倉庫入れされたSKUが無い = 倉庫出しの対応不要
+        setSummary('✓ 対応が必要なSKUはありません（倉庫出しの対応は不要です）', 'is-none');
         container.innerHTML = `<div class="empty-state">対象SKUがありません。<br>「⑪ 審査落ちSKU倉庫入れ」で倉庫入れにチェックを入れたSKUがここに表示されます。</div>`;
         return;
       }
       const map = getSkuRestoreMap();
+      // 対応が必要な(=まだ倉庫出しチェックが付いていない)SKU数
+      const totalCnt = rows.length;
+      const remainCnt = rows.reduce((n, r) => n + (map[r.sku] ? 0 : 1), 0);
+      if (remainCnt === 0) {
+        setSummary(`✓ 対応が必要なSKU: <b>0</b> 件（全 ${totalCnt} 件 倉庫出し済み）`, 'is-done');
+      } else {
+        setSummary(`対応が必要なSKU: <b>${remainCnt}</b> 件（全 ${totalCnt} 件中）`, 'is-pending');
+      }
       const rowsHtml = rows.map(r => {
         const checked = !!map[r.sku];
         const trCls = checked ? ' class="is-warehoused"' : '';
@@ -8666,6 +8707,15 @@
           setSkuRestore(sku, cb.checked);
           const tr = cb.closest('tr');
           if (tr) tr.classList.toggle('is-warehoused', cb.checked);
+          // v0.52.161: サマリーの「対応が必要なSKU数」を再計算
+          const allCb = container.querySelectorAll('input.sr-restore-check');
+          let total = 0, remain = 0;
+          allCb.forEach(c => { total++; if (!c.checked) remain++; });
+          if (remain === 0) {
+            setSummary(`✓ 対応が必要なSKU: <b>0</b> 件（全 ${total} 件 倉庫出し済み）`, 'is-done');
+          } else {
+            setSummary(`対応が必要なSKU: <b>${remain}</b> 件（全 ${total} 件中）`, 'is-pending');
+          }
         });
       });
     }
