@@ -3559,7 +3559,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.179</span>
+      <span class="version">v0.52.180</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -6299,7 +6299,7 @@
         <th class="col-itemcode">商品コード</th>
         <th class="col-img">商品画像</th>
         <th class="col-pstatus">商品状態 <button type="button" class="pstatus-sort-btn${sortActiveClass}" title="商品状態でソート" aria-label="商品状態でソート">${sortMark}</button></th>
-        <th class="col-adstatus">広告出稿 <button type="button" class="adstatus-sort-btn${adSortActiveClass}" title="広告出稿でソート" aria-label="広告出稿でソート">${adSortMark}</button></th>
+        <th class="col-adstatus">広告状況 <button type="button" class="adstatus-sort-btn${adSortActiveClass}" title="広告状況でソート" aria-label="広告状況でソート">${adSortMark}</button></th>
         <th class="col-discount" colspan="2">割引率</th>
       </tr>`;
 
@@ -6439,7 +6439,7 @@
             <td class="mgr">${escapeHtml(r.itemCode || '')}</td>
             <td class="img-cell">${imageCellHtml(r.imageUrl)}</td>
             <td class="col-pstatus pstatus-${st}"><select class="pstatus-select" data-mgr="${escapeHtml(r.mgr || '')}" aria-label="商品状態">${optsHtml}</select></td>
-            <td class="col-adstatus adstatus-${r.adStatus === 'yes' ? 'yes' : 'no'}">${r.adStatus === 'yes' ? 'あり' : 'なし'}</td>
+            <td class="col-adstatus adstatus-${r.adStatus === 'yes' ? 'yes' : 'no'}">${r.adStatus === 'yes' ? '出稿中' : '未出稿'}</td>
             <td class="col-discount${discClass}">${discLabel}</td>
             <td class="col-decide-link"><a href="?view=decide-price&mgr=${encodeURIComponent(r.mgr || '')}" class="decide-link-btn" data-mgr="${escapeHtml(r.mgr || '')}" title="この商品の割引率決定表へ">割引率決定表へ</a></td>
           </tr>`;
@@ -7143,9 +7143,9 @@
           if (!rows || rows.length < 2) { setSt('❌ データが見つかりません。', 'error'); return; }
           const header = rows[0].map(h => (h || '').trim());
           const iMgr = header.findIndex(h => h.indexOf('商品管理番号') >= 0);
-          const iAd = header.findIndex(h => h.indexOf('広告出稿') >= 0);
+          const iAd = header.findIndex(h => h.indexOf('広告状況') >= 0);
           if (iMgr < 0 || iAd < 0) {
-            setSt('❌ 「商品管理番号」「広告出稿」列が見つかりません。ADcheckのCSVか確認してください。', 'error');
+            setSt('❌ 「商品管理番号」「広告状況」列が見つかりません。ADcheckのCSVか確認してください。', 'error');
             return;
           }
           const map = {};
@@ -7154,12 +7154,12 @@
             const mgr = (rows[i][iMgr] || '').trim();
             if (!mgr) continue;
             const v = (rows[i][iAd] || '').trim();
-            if (v === 'あり') { map[mgr] = 'yes'; yes++; }
+            if (v === '出稿中') { map[mgr] = 'yes'; yes++; }
             else { map[mgr] = 'no'; no++; }
           }
           if (Object.keys(map).length === 0) { setSt('❌ 有効な行がありませんでした。', 'error'); return; }
           saveAdStatusMap(map);
-          setSt(`✅ ${Object.keys(map).length}件を取り込みました（あり ${yes}件 / なし ${no}件）。「セール参加商品」表の「広告出稿」列に反映されます。`, 'success');
+          setSt(`✅ ${Object.keys(map).length}件を取り込みました（出稿中 ${yes}件 / 未出稿 ${no}件）。「セール参加商品」表の「広告状況」列に反映されます。`, 'success');
           // 参加商品表を即時再描画して反映
           if (typeof renderProductTable === 'function') renderProductTable();
         } catch (err) {
@@ -10025,7 +10025,7 @@
 
     // v0.52.174: ⑬ 広告削除 — 広告一括削除ファイル(RPP除外商品 一括アップロード用)のダウンロード
     //   形式: Shift_JIS / ヘッダー「コントロールカラム,商品管理番号」/ 各行「n,<商品管理番号>」
-    //   対象: ②広告出稿情報追加で「あり」と取り込まれた商品管理番号
+    //   対象: ②広告出稿情報追加で「出稿中」と取り込まれた商品管理番号
     (function bindAdDeleteDl() {
       const btn = document.getElementById('ad-delete-dl-btn');
       const status = document.getElementById('ad-delete-dl-status');
@@ -10038,7 +10038,7 @@
       btn.addEventListener('click', () => {
         setStatus('', '');
         try {
-          // 広告出稿「あり」の商品管理番号を、参加商品の出現順で抽出 (重複排除)
+          // 広告状況「出稿中」の商品管理番号を、参加商品の出現順で抽出 (重複排除)
           const rows = (typeof getCurrentRows === 'function') ? getCurrentRows() : [];
           const mgrs = [];
           const seen = new Set();
@@ -10048,7 +10048,7 @@
             if (typeof getAdStatus === 'function' && getAdStatus(m) === 'yes') { seen.add(m); mgrs.push(m); }
           }
           if (mgrs.length === 0) {
-            setStatus('❌ 広告出稿「あり」の商品がありません。「② 広告出稿情報追加」でADcheckデータを取り込んでください。', 'is-error');
+            setStatus('❌ 広告状況「出稿中」の商品がありません。「② 広告出稿情報追加」でADcheckデータを取り込んでください。', 'is-error');
             return;
           }
           // テンプレと同形式: ヘッダー + 「n,<商品管理番号>」、LF改行、Shift_JIS
@@ -10071,7 +10071,7 @@
             return `${n.getFullYear()}${String(n.getMonth()+1).padStart(2,'0')}`;
           })();
           saveBlobAs(blob, `広告削除_${ymTag}.csv`);
-          setStatus(`✅ ${mgrs.length}件（広告出稿あり）をダウンロードしました`, 'is-ok');
+          setStatus(`✅ ${mgrs.length}件（広告状況：出稿中）をダウンロードしました`, 'is-ok');
         } catch (err) {
           setStatus('❌ エラー: ' + (err.message || String(err)), 'is-error');
           console.error(err);
