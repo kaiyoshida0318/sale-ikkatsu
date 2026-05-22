@@ -3548,7 +3548,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.185</span>
+      <span class="version">v0.52.186</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4323,14 +4323,10 @@
         <p class="tool-panel-description">サムネイルをセール用から通常のものに戻していく。</p>
 
         <div class="card">
-          <h2>通常のサムネイルをダウンロード</h2>
-          <div class="top-image-dl-grid">
-            <button type="button" data-rate="10" class="top-image-dl-btn disc-10">10%OFF商品</button>
-            <button type="button" data-rate="20" class="top-image-dl-btn disc-20">20%OFF商品</button>
-            <button type="button" data-rate="30" class="top-image-dl-btn disc-30">30%OFF商品</button>
-            <button type="button" data-rate="50" class="top-image-dl-btn disc-50">50%OFF商品</button>
+          <div id="top-image-back-summary" class="status sku-restore-summary"></div>
+          <div id="top-image-back-table-container">
+            <div class="empty-state">対象データがありません。「① 参加商品追加」でRMSデータを取り込んでください。</div>
           </div>
-          <div id="top-image-back-dl-status" class="top-image-dl-status" aria-live="polite"></div>
         </div>
       </div>
     </div>
@@ -4646,6 +4642,10 @@
       // v0.52.128: ⑧ 過去のセール参加履歴表を描画
       if (viewId === 'make-thumb') {
         if (typeof window._renderThumbHistory === 'function') window._renderThumbHistory();
+      }
+      // v0.52.186: ③ サムネイル戻し 表を描画
+      if (viewId === 'top-image-back') {
+        if (typeof window._renderTopImageBackTable === 'function') window._renderTopImageBackTable();
       }
       // make-rms-csv サブビュー: 状態はメモリ内のスロットに保持されているので特に再描画不要
       // 検索用DLボタンの活性/非活性更新
@@ -5821,6 +5821,131 @@
       });
     }
     window._renderThumbChangeTable = renderThumbChangeTable;
+
+    // v0.52.186: ③ サムネイル戻し — 戻し済みチェックの保存 (年月別)
+    //   保存先: archive[ym].topImageBack[mgr] = true  (⑭差し替えとは別管理)
+    function getTopImageBackMap() {
+      try {
+        const ym = currentYM || getCurrentYM();
+        if (!ym) return {};
+        const archive = loadArchive();
+        const data = archive[ym];
+        return (data && data.topImageBack && typeof data.topImageBack === 'object') ? data.topImageBack : {};
+      } catch (e) { return {}; }
+    }
+    function setTopImageBack(mgr, done) {
+      try {
+        const ym = currentYM || getCurrentYM();
+        if (!ym) return;
+        const archive = loadArchive();
+        if (!archive[ym]) archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
+        if (!archive[ym].topImageBack || typeof archive[ym].topImageBack !== 'object') archive[ym].topImageBack = {};
+        if (done) archive[ym].topImageBack[mgr] = true;
+        else delete archive[ym].topImageBack[mgr];
+        saveArchive(archive);
+      } catch (e) {}
+    }
+
+    // v0.52.186: ③ サムネイル戻し 表を描画 (当月のセール参加商品全件)
+    //   通常サムネ = RMSの商品画像 (imageUrl)、画像URL = その通常サムネのURL
+    function renderTopImageBackTable() {
+      const container = document.getElementById('top-image-back-table-container');
+      if (!container) return;
+      const summaryEl = document.getElementById('top-image-back-summary');
+      const setSummary = (html, cls) => {
+        if (!summaryEl) return;
+        summaryEl.innerHTML = html;
+        summaryEl.className = 'status sku-restore-summary' + (cls ? ' ' + cls : '');
+      };
+      const ym = currentYM || (typeof getCurrentYM === 'function' ? getCurrentYM() : null);
+      if (!ym) {
+        setSummary('', '');
+        container.innerHTML = `<div class="empty-state">セール期間が選択されていません。</div>`;
+        return;
+      }
+      const curMap = (typeof getMgrDiscountMapForMonth === 'function') ? getMgrDiscountMapForMonth(ym) : {};
+      const archive = loadArchive();
+      const data = archive[ym] || {};
+      const rowsArr = Array.isArray(data.rows) ? data.rows : [];
+      // 表示順: rows の順序を尊重し、当月のセール参加商品全件 (⑭と同じ対象)
+      const orderedMgrs = [];
+      const seen = new Set();
+      for (const r of rowsArr) {
+        if (r && r.mgr && !seen.has(r.mgr)) { orderedMgrs.push(r.mgr); seen.add(r.mgr); }
+      }
+      for (const mgr of Object.keys(curMap)) { if (!seen.has(mgr)) { orderedMgrs.push(mgr); seen.add(mgr); } }
+
+      if (orderedMgrs.length === 0) {
+        setSummary('', '');
+        container.innerHTML = `<div class="empty-state">対象データがありません。「① 参加商品追加」でRMSデータを取り込んでください。</div>`;
+        return;
+      }
+      const mgrToRow = {};
+      for (const r of rowsArr) { if (r && r.mgr) mgrToRow[r.mgr] = r; }
+      const backMap = getTopImageBackMap();
+
+      // サマリー (未対応=未チェック件数。0で完了→光る)
+      const total = orderedMgrs.length;
+      let remain = 0;
+      for (const mgr of orderedMgrs) { if (!backMap[mgr]) remain++; }
+      if (remain === 0) {
+        setSummary(`✓ 戻し完了: <b>0</b> 件未対応（全 ${total} 件 戻し済み）`, 'is-done');
+      } else {
+        setSummary(`戻しが必要な商品: <b>${remain}</b> 件（全 ${total} 件中）`, 'is-pending');
+      }
+
+      const rowsHtml = orderedMgrs.map(mgr => {
+        const row = mgrToRow[mgr] || {};
+        const url = (row.imageUrl) ? String(row.imageUrl).trim() : '';
+        const thumbCell = url
+          ? `<img src="${escapeHtml(url)}" class="product-image-thumb" alt="通常サムネ" loading="lazy" />`
+          : `<span class="img-placeholder">画像なし</span>`;
+        const urlCell = url
+          ? `<span class="tc-url-text">${escapeHtml(url)}</span>`
+          : `<span class="tc-url-none">—</span>`;
+        const checked = !!backMap[mgr];
+        const trCls = checked ? ' class="is-thumb-changed"' : '';
+        return `<tr${trCls} data-mgr="${escapeHtml(mgr)}">
+          <td class="tc-mgr">${escapeHtml(mgr)}</td>
+          <td class="tc-thumb">${thumbCell}</td>
+          <td class="tc-url">${urlCell}</td>
+          <td class="tc-check"><input type="checkbox" class="tib-back-check" data-mgr="${escapeHtml(mgr)}"${checked ? ' checked' : ''} aria-label="戻し"></td>
+        </tr>`;
+      }).join('');
+
+      container.innerHTML = `<div class="tc-table-wrap">
+        <table class="tc-table">
+          <thead>
+            <tr>
+              <th class="tc-mgr">商品管理番号</th>
+              <th class="tc-thumb">通常サムネ</th>
+              <th class="tc-url">画像URL</th>
+              <th class="tc-check">戻し</th>
+            </tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>`;
+
+      container.querySelectorAll('input.tib-back-check').forEach(cb => {
+        cb.addEventListener('change', () => {
+          const mgr = cb.getAttribute('data-mgr');
+          if (!mgr) return;
+          setTopImageBack(mgr, cb.checked);
+          const tr = cb.closest('tr');
+          if (tr) tr.classList.toggle('is-thumb-changed', cb.checked);
+          const allCb = container.querySelectorAll('input.tib-back-check');
+          let tot = 0, rem = 0;
+          allCb.forEach(c => { tot++; if (!c.checked) rem++; });
+          if (rem === 0) {
+            setSummary(`✓ 戻し完了: <b>0</b> 件未対応（全 ${tot} 件 戻し済み）`, 'is-done');
+          } else {
+            setSummary(`戻しが必要な商品: <b>${rem}</b> 件（全 ${tot} 件中）`, 'is-pending');
+          }
+        });
+      });
+    }
+    window._renderTopImageBackTable = renderTopImageBackTable;
 
     // ⑬/セール後③ のDLボタンのテキスト末尾に「(N)」を付与/更新する。
     // 対象: .top-image-dl-btn (disc-10/20/30/50)。両画面とも同じクラスで描画。
