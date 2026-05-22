@@ -2300,7 +2300,7 @@
                   width は JS で scrollWidth に合わせて動的設定 (表より広く=表本体が下から透けない) */
     body[data-view="decide-price"] .product-group .product-group-header {
       position: sticky;
-      top: 0;
+      top: var(--decide-h-mgr, 72px); /* v0.52.195: mgr-tabsエリアの下に固定 (重なり解消) */
       z-index: 25;
       /* width は JS で動的設定 (scrollWidth)。fallback として 100% */
       width: 100%;
@@ -3089,7 +3089,7 @@
     /* decide-price 画面: 内部スクロールコンテナ (.groups-scroll) 基準で sticky
        v0.52.113: ドキュメントスクロール → 内部スクロールに変更したため、top は商品名ヘッダーの高さのみで OK */
     body[data-view="decide-price"] .product-table.decide-table tr.sub-header-row th {
-      top: var(--mgr-header-h, 72px);
+      top: calc(var(--decide-h-mgr, 72px) + var(--mgr-header-h, 72px)); /* v0.52.195: mgr-tabs+商品名ヘッダーの下 */
     }
     /* 編集可能セル */
     .product-table.decide-table td.editable {
@@ -3612,7 +3612,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.194</span>
+      <span class="version">v0.52.195</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
