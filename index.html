@@ -3226,24 +3226,31 @@
       0%, 100% { box-shadow: 0 0 0 4px rgba(34,168,87,0.18), 0 0 12px rgba(34,168,87,0.55); }
       50%      { box-shadow: 0 0 0 6px rgba(34,168,87,0.10), 0 0 22px rgba(34,168,87,0.85); }
     }
-    /* ⑩審査落ちSKU倉庫入れ (sku-record) サブビュー: 見出しを sticky 化
-       (セール後② 審査落ちSKU倉庫出し sku-restore は除外 — ユーザー要件) */
-    body[data-view="sku-record"] .tool-panel-header {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      position: sticky;
-      top: var(--top-bar-h, 130px);
-      z-index: 30;
-      background: var(--bg);
-      padding: 8px 0 4px;
-      margin-bottom: 0;
-    }
-    /* セール後② sku-restore は tool-panel-header の flex 化のみ (sticky は外す) */
+    /* v0.52.193: ⑫⑱ — 見出しは普通に上へ流す (sticky解除)。
+       代わりに記録表カードの見出し(h2)とサマリー(status)で固定を担当する */
+    body[data-view="sku-record"] .tool-panel-header,
     body[data-view="sku-restore"] .tool-panel-header {
       display: flex;
       align-items: center;
       gap: 12px;
+    }
+    /* ⑫⑱ 「2. 倉庫入れ/出しSKU記録表」見出し: メインタブバー直下にsticky固定 */
+    body[data-view="sku-record"] .sku-record-card > h2,
+    body[data-view="sku-restore"] .sku-record-card > h2 {
+      position: sticky;
+      top: var(--main-tabs-h, 50px);
+      z-index: 9;
+      background: var(--card);
+      margin: 0;
+      padding: 10px 0;
+    }
+    /* ⑫⑱ サマリー(status)バー: 見出しの直下にsticky固定 */
+    body[data-view="sku-record"] #sku-record-status.sku-restore-summary,
+    body[data-view="sku-restore"] #sku-restore-status.sku-restore-summary {
+      position: sticky;
+      top: calc(var(--main-tabs-h, 50px) + 44px);
+      z-index: 8;
+      margin-bottom: 8px;
     }
 
     /* ⑪広告削除 (ad-delete) / セール後① 広告復活 (ad-restore) サブビュー
@@ -3348,31 +3355,18 @@
       border-bottom: 2px solid #d8d8de;
       text-align: center;
     }
-    /* v0.52.191: ⑫⑱ は表を内部スクロールにしたので、カード見出しは通常配置に戻す
-       (document sticky をやめ、表ヘッダー top:0 と噛み合わず重なる不具合を解消) */
-    body[data-view="sku-record"] .sr-table thead th,
-    body[data-view="sku-restore"] .sr-table thead th {
-      top: 0;
-    }
+    /* v0.52.193: ⑫⑱ 表ヘッダーは表内部スクロール基準で上端固定。
+       カード見出し・サマリーの固定は上部の v0.52.193 ルールで担当 */
     body[data-view="sku-record"] .sku-record-card,
     body[data-view="sku-restore"] .sku-record-card {
       padding-top: 0;
       overflow: visible;
     }
-    body[data-view="sku-record"] .sku-record-card > h2,
-    body[data-view="sku-restore"] .sku-record-card > h2 {
-      position: static;
-      z-index: auto;
-      background: var(--card);
-      margin: 0 0 10px;
-      padding: 0;
-      border-bottom: none;
-    }
-    /* 表ラッパー: 見出しの下に通常配置で内部スクロール */
+    /* 表ラッパー: 内部スクロール (上端で伝播停止) */
     body[data-view="sku-record"] .sku-record-card .sr-table-wrap,
     body[data-view="sku-restore"] .sku-record-card .sr-table-wrap {
       margin-top: 0;
-      max-height: calc(100vh - var(--top-bar-h, 130px) - 130px);
+      max-height: calc(100vh - var(--top-bar-h, 130px) - 110px);
       overflow: auto;
       overscroll-behavior: contain;
     }
@@ -3600,7 +3594,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.192</span>
+      <span class="version">v0.52.193</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
