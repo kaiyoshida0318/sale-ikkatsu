@@ -3511,7 +3511,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.169</span>
+      <span class="version">v0.52.170</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -6067,6 +6067,18 @@
     }
     // 広告出稿の並び順ランク (なし→あり)
     const AD_STATUS_RANK = { 'no': 0, 'yes': 1 };
+    // v0.52.170: ②取り込み時に広告出稿マップを保存 ({ mgr: 'yes'|'no' })
+    function saveAdStatusMap(mapObj) {
+      const ym = currentYM || getCurrentYM();
+      if (!ym) throw new Error('セール期間(年月)が未選択です。先に「① 参加商品追加」でデータを取り込んでください。');
+      const archive = loadArchive();
+      if (!archive[ym]) archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
+      // 既存を保持しつつ上書きマージ (再取り込みで最新の状態に更新)
+      const cur = (archive[ym].adStatus && typeof archive[ym].adStatus === 'object') ? archive[ym].adStatus : {};
+      for (const k in mapObj) cur[k] = mapObj[k];
+      archive[ym].adStatus = cur;
+      saveArchive(archive);
+    }
 
     function renderProductTable() {
       const container = document.getElementById('product-table-container');
@@ -6897,14 +6909,61 @@
       });
     });
 
-    // v0.52.167: ② 広告出稿情報追加 のフォーム送信ガード (取り込みロジックは未実装)
+    // v0.52.170: ② 広告出稿情報追加 — ADcheck CSV (商品管理番号, 広告出稿) を取り込み adStatus に保存
     (function bindAdInfoForm() {
       const form = document.getElementById('ad-info-form');
       if (!form) return;
-      form.addEventListener('submit', (e) => {
-        e.preventDefault();
+      const setSt = (msg, kind) => {
         const st = document.getElementById('ad-info-status');
-        if (st) { st.textContent = '取り込み機能は準備中です。'; st.className = 'status'; }
+        if (st) { st.textContent = msg; st.className = 'status' + (kind ? ' ' + kind : ''); }
+      };
+      // ファイルをエンコーディング自動判定で文字列化 (UTF-8 BOM / Shift_JIS 両対応)
+      async function readCsvAuto(file) {
+        const u8 = new Uint8Array(await file.arrayBuffer());
+        if (u8.length >= 3 && u8[0] === 0xEF && u8[1] === 0xBB && u8[2] === 0xBF) {
+          return new TextDecoder('utf-8').decode(u8.subarray(3));
+        }
+        let sjisHits = 0;
+        const sampleLen = Math.min(2048, u8.length);
+        for (let i = 0; i < sampleLen; i++) { if (u8[i] >= 0x81 && u8[i] <= 0x9F) sjisHits++; }
+        if (sjisHits > 20 && typeof decodeShiftJIS === 'function') return decodeShiftJIS(u8);
+        return new TextDecoder('utf-8').decode(u8);
+      }
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const input = form.querySelector('input[type=file]');
+        const file = input && input.files && input.files[0];
+        if (!file) { setSt('❌ CSVファイルを選択してください。', 'error'); return; }
+        try {
+          setSt('取り込み中…', '');
+          const text = await readCsvAuto(file);
+          const rows = parseCsvText(text);
+          if (!rows || rows.length < 2) { setSt('❌ データが見つかりません。', 'error'); return; }
+          const header = rows[0].map(h => (h || '').trim());
+          const iMgr = header.findIndex(h => h.indexOf('商品管理番号') >= 0);
+          const iAd = header.findIndex(h => h.indexOf('広告出稿') >= 0);
+          if (iMgr < 0 || iAd < 0) {
+            setSt('❌ 「商品管理番号」「広告出稿」列が見つかりません。ADcheckのCSVか確認してください。', 'error');
+            return;
+          }
+          const map = {};
+          let yes = 0, no = 0;
+          for (let i = 1; i < rows.length; i++) {
+            const mgr = (rows[i][iMgr] || '').trim();
+            if (!mgr) continue;
+            const v = (rows[i][iAd] || '').trim();
+            if (v === 'あり') { map[mgr] = 'yes'; yes++; }
+            else { map[mgr] = 'no'; no++; }
+          }
+          if (Object.keys(map).length === 0) { setSt('❌ 有効な行がありませんでした。', 'error'); return; }
+          saveAdStatusMap(map);
+          setSt(`✅ ${Object.keys(map).length}件を取り込みました（あり ${yes}件 / なし ${no}件）。「セール参加商品」表の「広告出稿」列に反映されます。`, 'success');
+          // 参加商品表を即時再描画して反映
+          if (typeof renderProductTable === 'function') renderProductTable();
+        } catch (err) {
+          setSt('❌ 取り込みエラー: ' + (err.message || String(err)), 'error');
+          console.error(err);
+        }
       });
     })();
 
