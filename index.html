@@ -3260,6 +3260,14 @@
     body[data-view="sku-restore"] .sku-record-card .sr-table-wrap {
       margin-top: 0;
     }
+    /* v0.52.163: ⑪ 審査落ちSKU倉庫入れ — 表の上でホイールしてもページ全体がスクロールするように、
+       表ラッパー/カードを独立スクロール領域にしない (内部スクロールを無効化) */
+    body[data-view="sku-record"] .sku-record-card,
+    body[data-view="sku-record"] .sku-record-card .sr-table-wrap {
+      max-height: none;
+      overflow: visible;
+      overscroll-behavior: auto;
+    }
     .sr-table th.sr-col-mgr,
     .sr-table td.sr-col-mgr {
       width: 140px;
@@ -3480,7 +3488,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.162</span>
+      <span class="version">v0.52.164</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -8765,12 +8773,10 @@
       const adMap = getAdDeleteMap();
       const rowsHtml = rows.map(r => {
         const mgr = r.mgr || '';
-        const itemCode = r.itemCode || '';
         const checked = !!adMap[mgr];
         const trCls = checked ? ' class="is-ad-deleted"' : '';
         return `<tr${trCls} data-mgr="${escapeHtml(mgr)}">
           <td class="ad-col-img">${imageCellHtml(r.imageUrl)}</td>
-          <td class="ad-col-itemcode">${escapeHtml(itemCode)}</td>
           <td class="ad-col-mgr">${escapeHtml(mgr)}</td>
           <td class="ad-col-del"><input type="checkbox" class="ad-del-check" data-mgr="${escapeHtml(mgr)}"${checked ? ' checked' : ''} aria-label="広告削除"></td>
         </tr>`;
@@ -8781,7 +8787,6 @@
             <thead>
               <tr>
                 <th class="ad-col-img">商品画像</th>
-                <th class="ad-col-itemcode">商品コード</th>
                 <th class="ad-col-mgr">商品管理番号</th>
                 <th class="ad-col-del">広告削除</th>
               </tr>
@@ -8852,12 +8857,10 @@
       const map = getAdRestoreMap();
       const rowsHtml = rows.map(r => {
         const mgr = r.mgr || '';
-        const itemCode = r.itemCode || '';
         const checked = !!map[mgr];
         const trCls = checked ? ' class="is-ad-deleted"' : '';
         return `<tr${trCls} data-mgr="${escapeHtml(mgr)}">
           <td class="ad-col-img">${imageCellHtml(r.imageUrl)}</td>
-          <td class="ad-col-itemcode">${escapeHtml(itemCode)}</td>
           <td class="ad-col-mgr">${escapeHtml(mgr)}</td>
           <td class="ad-col-del"><input type="checkbox" class="ad-restore-check" data-mgr="${escapeHtml(mgr)}"${checked ? ' checked' : ''} aria-label="広告復活"></td>
         </tr>`;
@@ -8868,7 +8871,6 @@
             <thead>
               <tr>
                 <th class="ad-col-img">商品画像</th>
-                <th class="ad-col-itemcode">商品コード</th>
                 <th class="ad-col-mgr">商品管理番号</th>
                 <th class="ad-col-del">広告復活</th>
               </tr>
