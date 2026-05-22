@@ -1472,7 +1472,8 @@
       margin-bottom: 24px;
       box-sizing: border-box;
     }
-    body[data-view="products"] #workflow-shared { display: none; }
+    body[data-view="products"] #workflow-shared,
+    body[data-view="sale-thumb"] #workflow-shared { display: none; } /* v0.52.181: セール用サムネイルでもワークフロー非表示 */
     /* workflow 画面そのもの (3ブロックのみ表示) のときは区切り線・下マージン不要 */
     body[data-view="workflow"] #workflow-shared {
       border-bottom: 0;
@@ -3559,7 +3560,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.180</span>
+      <span class="version">v0.52.181</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
