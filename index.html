@@ -433,7 +433,13 @@
       flex-shrink: 0;
     }
     body[data-view="make-thumb"] .st-search-bar {
+      position: sticky; /* v0.52.196: 検索欄をメインタブバー直下に固定 */
+      top: var(--main-tabs-h, 50px);
+      z-index: 5;
       flex-shrink: 0;
+      background: var(--bg);
+      padding-top: 4px;
+      padding-bottom: 4px;
     }
     /* v0.52.190: 表だけ内部スクロール。高さは画面に収まる範囲、上端で伝播停止 */
     body[data-view="make-thumb"] #make-thumb-history-container {
@@ -3612,7 +3618,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.195</span>
+      <span class="version">v0.52.196</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
