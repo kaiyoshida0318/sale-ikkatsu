@@ -3488,7 +3488,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.164</span>
+      <span class="version">v0.52.165</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -3646,10 +3646,18 @@
         </div>
       </div>
 
+      <!-- サブビュー: ② 広告出稿情報追加 (v0.52.165 新規追加) -->
+      <div id="tool-ad-info" class="tool-panel">
+        <div class="tool-panel-header">
+          <h2>② 広告出稿情報追加</h2>
+        </div>
+        <p class="tool-panel-description"></p>
+      </div>
+
       <!-- サブビュー: セール価格決定 (作成済みの計算結果を表で表示) -->
       <div id="tool-decide-price" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>④ 割引率決定</h2>
+          <h2>⑤ 割引率決定</h2>
         </div>
         <p class="tool-panel-description">商品管理番号ごとに割引率を決定していく。10～50％OFFの利益額・利益率を見て判断する。</p>
 
@@ -3667,12 +3675,12 @@
       <!-- サブビュー: ⑥ セール用タイトル決定 -->
       <div id="tool-decide-title" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>⑤ セール用タイトル決定</h2>
+          <h2>⑥ セール用タイトル決定</h2>
         </div>
         <p class="tool-panel-description">セール用のタイトルを記入していく。<br>
         スーパーSALEであれば先頭を「【スーパーSALEで◯％OFF】」のようにする。文字数は <b>127文字以内</b>。<br>
         <span style="font-size:12px; color:var(--muted);">
-          ※ <b style="color:#d83838;">セール用タイトルのセルが赤い</b>場合は、タイトル内の「○%OFF」が ④で選んだ割引率と一致していません（文字数オーバーは「文字数」列が赤くなります）。
+          ※ <b style="color:#d83838;">セール用タイトルのセルが赤い</b>場合は、タイトル内の「○%OFF」が ⑤で選んだ割引率と一致していません（文字数オーバーは「文字数」列が赤くなります）。
         </span></p>
 
         <div id="decide-title-table-wrap" class="product-table-wrap">
@@ -3688,7 +3696,7 @@
       <!-- サブビュー: ⑦ RMSアップ用素材ダウンロード -->
       <div id="tool-dl-rms-csv" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>⑥ RMSアップ用素材ダウンロード</h2>
+          <h2>⑦ RMSアップ用素材ダウンロード</h2>
         </div>
         <p class="tool-panel-description">RMSアップ用ファイルの生成材料となる2つのファイルを用意していく。<br>
         RMSからダウンロードしたファイルに関しては、セール後に使用するためこのページで保管しておく。</p>
@@ -3696,7 +3704,7 @@
         <div class="card">
           <h2>1. アップ用ファイルのダウンロード(SALE一括内から)</h2>
           <p class="card-lead">
-            すでに取り込み済みのデータと、④で選んだ割引率・⑤で入力したセール用タイトルから、
+            すでに取り込み済みのデータと、⑤で選んだ割引率・⑥で入力したセール用タイトルから、
             RMSアップ用のCSVを生成してダウンロードします。<br>
             割引率が <b>未選択</b> の商品はスキップされます。<span id="dl-rms-unselected-count" class="unselected-count"></span>
           </p>
@@ -3746,13 +3754,13 @@
       <!-- サブビュー: ⑧ RMSアップ用CSV作成 -->
       <div id="tool-make-rms-csv" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>⑦ RMSアップ用CSV作成</h2>
+          <h2>⑧ RMSアップ用CSV作成</h2>
         </div>
-        <p class="tool-panel-description">セール開始準備⑥で用意した2つのファイルをアップロードして組み合わせることで、RMSにアップするセールバージョンのCSVファイルを作成する。</p>
+        <p class="tool-panel-description">セール開始準備⑦で用意した2つのファイルをアップロードして組み合わせることで、RMSにアップするセールバージョンのCSVファイルを作成する。</p>
 
         <div class="card">
           <h2>1. 2つのファイルをアップロード</h2>
-          <p class="card-lead">下の2つのスロットに、⑦で用意したファイルをそれぞれセットしてください。両方セットされるとCSV作成が可能になります。</p>
+          <p class="card-lead">下の2つのスロットに、⑧で用意したファイルをそれぞれセットしてください。両方セットされるとCSV作成が可能になります。</p>
 
           <div class="mk-slots">
             <div class="mk-slot" data-slot="sale">
@@ -3794,7 +3802,7 @@
       <!-- サブビュー: ② 原価特定 NE-セット商品コード -->
       <div id="tool-cost-set-item" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>② 原価特定-NE-単一orセット商品仕分け</h2>
+          <h2>③ 原価特定-NE-単一orセット商品仕分け</h2>
         </div>
         <p class="tool-panel-description">セール開始準備①でRMSからダウンロードしたデータからは、その商品が単一商品なのかセット商品なのかを判別することができない。<br>
         ここでは、ネクストエンジンでの検索を通すことでそれぞれを特定し、ツール内に情報を取り込んでいく。</p>
@@ -3882,15 +3890,15 @@
       <!-- サブビュー: ③ 原価特定 NE-セット構成物コード -->
       <div id="tool-cost-set-component" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>③ 原価特定-NE-セット構成物原価特定</h2>
+          <h2>④ 原価特定-NE-セット構成物原価特定</h2>
         </div>
         <p class="tool-panel-description">割引率を決定するために必要となる原価情報を収集する。<br>
-        ②の2でネクストエンジンからダウンロードしたセット商品データには、セット商品を構成している商品の個別原価が現れない。そのため、ここではそれらの構成物をネクストエンジンで検索し直し個別の原価を特定していく。</p>
+        ③の2でネクストエンジンからダウンロードしたセット商品データには、セット商品を構成している商品の個別原価が現れない。そのため、ここではそれらの構成物をネクストエンジンで検索し直し個別の原価を特定していく。</p>
 
         <div class="card">
           <h2>1. 検索用ファイルのダウンロード(SALE一括内から)</h2>
           <div class="howto-list" style="padding-left: 0;">
-            セール開始準備<b>②の2</b>でアップしたセット商品CSVから、商品コードを抽出した検索用CSVをダウンロードします。<br>
+            セール開始準備<b>③の2</b>でアップしたセット商品CSVから、商品コードを抽出した検索用CSVをダウンロードします。<br>
             <span style="color: var(--muted); font-size: 12px;">※「<code>"</code>」は除去・重複は1件にまとめ・ヘッダー「商品コード」付き</span>
           </div>
           <div class="actions" style="margin-top: 12px;">
@@ -3932,7 +3940,7 @@
       <!-- サブビュー: ⑧ セール用サムネイル作成 (旧⑫サムネイル変更の内容を複製) -->
       <div id="tool-make-thumb" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>⑧ セール用サムネイル作成</h2>
+          <h2>⑨ セール用サムネイル作成</h2>
         </div>
         <p class="tool-panel-description">今回割引率が決まっている商品について、今回の割引率のセール用サムネイルを作成・管理します。<br>
         画像が登録済みの商品はその画像を表示、未登録の商品は <span class="thumb-make-badge">要作成</span> と表示されます。内容は「セール用サムネイル」タブと連動します。</p>
@@ -3960,9 +3968,9 @@
       <!-- サブビュー: ⑨ RMSにアップロード -->
       <div id="tool-upload-rms" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>⑨ RMS-完成CSVアップロード</h2>
+          <h2>⑩ RMS-完成CSVアップロード</h2>
         </div>
-        <p class="tool-panel-description">セール開始準備⑦で作成した「normal-item-sale」ファイルをRMSにアップロードしていく。<br>
+        <p class="tool-panel-description">セール開始準備⑧で作成した「normal-item-sale」ファイルをRMSにアップロードしていく。<br>
         アップロードにはWinSCPを使用する。</p>
 
         <div class="card">
@@ -4001,7 +4009,7 @@
       <!-- サブビュー: ⑩ RMSイベント申請 -->
       <div id="tool-rms-event" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>⑩ RMSイベント申請</h2>
+          <h2>⑪ RMSイベント申請</h2>
         </div>
         <p class="tool-panel-description">RMSへの反映が確認できたらセールの申請を行う。</p>
 
@@ -4030,7 +4038,7 @@
       <!-- サブビュー: ⑪ 倉庫入れSKU記録 -->
       <div id="tool-sku-record" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>⑪ 審査落ちSKU倉庫入れ</h2>
+          <h2>⑫ 審査落ちSKU倉庫入れ</h2>
         </div>
         <p class="tool-panel-description">セール参加可否の審査は商品コード単位ではなく、中のSKU単位で行われる。<br>
         そのため、審査の結果✕が出たSKUがあった場合でも、そのSKUだけを倉庫に入れることで再度審査を受けることができる。<br>
@@ -4057,7 +4065,7 @@
       <!-- サブビュー: ⑫ 広告削除 -->
       <div id="tool-ad-delete" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>⑫ 広告削除</h2>
+          <h2>⑬ 広告削除</h2>
           <span class="check-complete-badge" id="ad-delete-complete-badge"></span>
         </div>
         <p class="tool-panel-description">セール用CSVをRMSにアップした時点で販売停止状態になるため、参加商品のRPP広告は無駄打ちになってしまう。<br>
@@ -4072,7 +4080,7 @@
       <!-- サブビュー: ⑬ サムネイル変更 -->
       <div id="tool-thumb-change" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>⑬ サムネイル変更</h2>
+          <h2>⑭ サムネイル変更</h2>
         </div>
         <p class="tool-panel-description"></p>
       </div>
@@ -4080,7 +4088,7 @@
       <!-- サブビュー: ⑭ スマホ上部バナー設置予約 -->
       <div id="tool-sp-banner" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>⑭ スマホ上部バナー設置予約</h2>
+          <h2>⑮ スマホ上部バナー設置予約</h2>
         </div>
         <p class="tool-panel-description">RMSでセール用のスマホ上部バナーの設置予約をする。</p>
 
@@ -4103,7 +4111,7 @@
           <h2>① 広告復活</h2>
           <span class="check-complete-badge" id="ad-restore-complete-badge"></span>
         </div>
-        <p class="tool-panel-description">セール開始準備⑪で除外に入れたセール参加商品のRPP広告を復活させる。</p>
+        <p class="tool-panel-description">セール開始準備⑫で除外に入れたセール参加商品のRPP広告を復活させる。</p>
 
         <div id="ad-restore-status" class="status"></div>
         <div id="ad-restore-table-container">
@@ -4121,7 +4129,7 @@
 
         <div class="card">
           <h2>1. 保管ファイルをダウンロード</h2>
-          <p class="card-lead">⑦で保管したCSVファイルをここからダウンロードしてください。差し替えや削除は ⑦ RMSアップ用素材ダウンロード から行ってください。</p>
+          <p class="card-lead">⑧で保管したCSVファイルをここからダウンロードしてください。差し替えや削除は ⑧ RMSアップ用素材ダウンロード から行ってください。</p>
           <div class="archive-file-area" id="upload-original-archive-area">
             <div id="upload-original-display" class="archive-dropzone" style="cursor:default;">
               <div class="archive-dropzone-empty">
@@ -4171,7 +4179,7 @@
         <div class="tool-panel-header">
           <h2>② 審査落ちSKU倉庫出し</h2>
         </div>
-        <p class="tool-panel-description">セール開始準備⑩で倉庫に入れたSKUを販売中に戻していく。</p>
+        <p class="tool-panel-description">セール開始準備⑪で倉庫に入れたSKUを販売中に戻していく。</p>
 
         <div class="card">
           <h2>1. 倉庫から出す手順</h2>
@@ -4370,7 +4378,7 @@
     // ※旧 cost-non-set は v0.52.88 で廃止(②のセクション1=単一商品 に統合)
     // ※サブビュー間は forward/back で履歴を残す。同一サブビュー間は履歴に積まない。
     // 履歴に積まれた viewId は、ブラウザ戻る/進むで復元される。
-    const VALID_VIEWS = ['products','workflow','sale-thumb','add-products','decide-price','decide-title','dl-rms-csv','make-rms-csv','make-thumb','cost-set-item','cost-set-component','upload-rms','rms-event','sku-record','ad-delete','ad-restore','upload-original','sku-restore','thumb-change','sp-banner','top-image-back'];
+    const VALID_VIEWS = ['products','workflow','sale-thumb','add-products','ad-info','decide-price','decide-title','dl-rms-csv','make-rms-csv','make-thumb','cost-set-item','cost-set-component','upload-rms','rms-event','sku-record','ad-delete','ad-restore','upload-original','sku-restore','thumb-change','sp-banner','top-image-back'];
     // ブラウザ/マウスの「戻る」でサブビューから戻れるよう、サブビュー遷移時は history.pushState する
     let _suppressPushState = false; // popstate由来の呼び出しでは積まない
     const MAIN_TABS = ['products', 'workflow', 'sale-thumb'];
@@ -6556,6 +6564,7 @@
         className: 'block-prep',
         buttons: [
           { id: 'prep-add-products', label: '参加商品追加', action: 'open-add-products' },
+          { id: 'prep-ad-info', label: '広告出稿情報追加', action: 'open-ad-info' },
           { id: 'prep-cost-set-item', label: '原価特定-NE-単一orセット商品仕分け', action: 'open-cost-set-item' },
           { id: 'prep-cost-set-component', label: '原価特定-NE-セット構成物原価特定', action: 'open-cost-set-component' },
           { id: 'prep-decide-price', label: '割引率決定', action: 'open-decide-price' },
@@ -8904,7 +8913,7 @@
     // ============================================================
     // セール後① RMSに元データアップロード
     // ------------------------------------------------------------
-    // ⑦で保管した archive[ym].normalItemCsv の読み取り専用表示+DLボタン
+    // ⑧で保管した archive[ym].normalItemCsv の読み取り専用表示+DLボタン
     // ============================================================
     function renderUploadOriginalArchive() {
       const display = document.getElementById('upload-original-display');
