@@ -3548,7 +3548,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.186</span>
+      <span class="version">v0.52.187</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4214,7 +4214,7 @@
       <!-- サブビュー: セール当日① 広告復活 (v0.52.182 バッジ・表を廃止し一括復活ファイルDL方式に変更) -->
       <div id="tool-ad-restore" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>① 広告復活</h2>
+          <h2>⑯ 広告復活</h2>
         </div>
         <p class="tool-panel-description">セール開始準備⑬で除外商品に入れた商品の広告を復活させる。</p>
 
@@ -4239,7 +4239,7 @@
       <!-- サブビュー: セール後① RMSに元データアップロード -->
       <div id="tool-upload-original" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>① RMS-元CSVアップロード</h2>
+          <h2>⑰ RMS-元CSVアップロード</h2>
         </div>
         <p class="tool-panel-description">セール開始準備の「⑦ RMSアップ用素材ダウンロード」で保管しておいたCSVファイルをRMSにアップロードする。それにより商品情報をセール前の状態に戻すことができる。<br>
         アップロードにはWinSCPを使用する。</p>
@@ -4294,9 +4294,9 @@
       <!-- サブビュー: セール後② 倉庫入れSKU戻し -->
       <div id="tool-sku-restore" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>② 審査落ちSKU倉庫出し</h2>
+          <h2>⑱ 審査落ちSKU倉庫出し</h2>
         </div>
-        <p class="tool-panel-description">セール開始準備⑪で倉庫に入れたSKUを販売中に戻していく。</p>
+        <p class="tool-panel-description">セール開始準備⑫で倉庫に入れたSKUを販売中に戻していく。</p>
 
         <div class="card">
           <h2>1. 倉庫から出す手順</h2>
@@ -4318,7 +4318,7 @@
       <!-- サブビュー: セール後③ サムネイル戻し -->
       <div id="tool-top-image-back" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>③ サムネイル戻し</h2>
+          <h2>⑲ サムネイル戻し</h2>
         </div>
         <p class="tool-panel-description">サムネイルをセール用から通常のものに戻していく。</p>
 
@@ -7080,6 +7080,7 @@
       const root = document.getElementById('workflow');
       if (!root) return;
       const state = getWorkflowState();
+      let _wfNum = 0; // v0.52.187: 全ブロック通し番号
       const html = WORKFLOW_BLOCKS.map(block => {
         const btnsHtml = block.buttons.map((btn, idx) => {
           const done = !!state[btn.id];
@@ -7087,7 +7088,8 @@
           const classes = ['wf-btn'];
           if (done) classes.push('is-done');
           if (inProgress) classes.push('is-active');
-          const numMark = WF_NUMBER_MARKS[idx] || `(${idx+1})`;
+          const numMark = WF_NUMBER_MARKS[_wfNum] || `(${_wfNum+1})`;
+          _wfNum++;
           return `<button type="button" class="${classes.join(' ')}" data-wf-id="${btn.id}" ${btn.action ? `data-wf-action="${btn.action}"` : ''}>
             <span class="wf-label"><span class="wf-num">${numMark}</span>${escapeHtml(btn.label)}</span>
             <input type="checkbox" class="wf-check" data-wf-check="${btn.id}" ${done ? 'checked' : ''} aria-label="完了" />
