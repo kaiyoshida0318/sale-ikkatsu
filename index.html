@@ -3618,7 +3618,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.198</span>
+      <span class="version">v0.52.199</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -10088,7 +10088,7 @@
         if (d === 10 || d === 20 || d === 30 || d === 50) validMgr.add(mgr);
       }
 
-      const headers = ['商品管理番号', '表示価格', '通常購入販売価格', 'セール用タイトル'];
+      const headers = ['商品管理番号', 'SKU管理番号', 'システム連携用SKU番号', '表示価格', '通常購入販売価格', 'セール用タイトル'];
       const dataRows = [];
       let kept = 0;
       const skippedMgrs = new Set();
@@ -10102,6 +10102,9 @@
         const isFirstOfMgrEmit = (mgr !== lastEmittedMgr);
         dataRows.push([
           isFirstOfMgrEmit ? mgr : '',
+          // v0.52.199: SKU管理番号 / システム連携用SKU番号 はSKU(行)ごとの値
+          (r.skuMgmt !== null && r.skuMgmt !== undefined) ? String(r.skuMgmt) : '',
+          (r.setCode !== null && r.setCode !== undefined) ? String(r.setCode) : '',
           (r.price !== null && r.price !== undefined && r.price !== '') ? String(r.price) : '',
           (offPrice !== null && offPrice !== undefined && offPrice !== '') ? String(offPrice) : '',
           isFirstOfMgrEmit ? (mgrSsTitle[mgr] || '') : '',
