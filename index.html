@@ -3618,7 +3618,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.199</span>
+      <span class="version">v0.52.200</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -10663,9 +10663,9 @@
           // v0.52.139: 日時を元ファイルと同じ 2026-06-04 20:00 形式(ハイフン区切り・半角)に変換
           const startDtOut = formatDtForRms(period.startDt);
           const endDtOut = formatDtForRms(period.endDt);
-          // SALE一括ファイルをパース: 商品管理番号 → {表示価格, 通常購入販売価格, セール用タイトル}
-          const saleMap = parseSaleIkkatsuCsv(slots.sale.text);
-          if (saleMap.size === 0) throw new Error('SALE一括CSVに有効な行がありません');
+          // v0.52.200: SALE一括ファイルを「システム連携用SKU番号」キーでパース (SKU単位で価格対応)
+          const { bySku: saleBySku, titleByMgr } = parseSaleIkkatsuCsvBySku(slots.sale.text);
+          if (saleBySku.size === 0) throw new Error('SALE一括CSVに有効なSKU行がありません（⑦で最新のCSVを再生成してください）');
           // RMSファイルをパース: 各SKU行を取得
           const rmsRows = parseRmsNormalItemCsv(slots.rms.text);
           if (rmsRows.length === 0) throw new Error('RMSダウンロードCSVに有効な行がありません');
@@ -10691,41 +10691,54 @@
 
           const outRows = [];
           let totalSkus = 0;
-          let skippedMgrs = [];
+          let skippedMgrs = [];          // SALE一括側にタイトルもSKUも無い商品
+          const unmatchedSkus = [];      // RMSにあるがSALE一括に無いSKU (システム連携用SKU番号)
+          const skuMgrMismatch = [];     // SKU管理番号が両ファイルで食い違うSKU
           for (const mgr of mgrOrder) {
-            const saleInfo = saleMap.get(mgr);
-            if (!saleInfo) {
-              // SALE一括CSVに該当商品が無い → スキップ
+            const skus = mgrSkus.get(mgr) || [];
+            // この商品のSKUのうち、SALE一括CSVに価格が存在するものだけ対象
+            const matchedSkus = skus.filter(s => saleBySku.has(s.itemSku));
+            if (matchedSkus.length === 0) {
+              // この商品はSALE一括CSVに1件も無い → 商品ごとスキップ (割引対象外など)
               skippedMgrs.push(mgr);
               continue;
             }
-            // タイトル行
+            // タイトル行 (商品管理番号の先頭行)
             outRows.push([
               mgr,
-              saleInfo.ssTitle || '',
+              titleByMgr.get(mgr) || '',
               startDtOut,
               endDtOut,
               '', '', '', '', ''
             ]);
-            // SKU行
-            const skus = mgrSkus.get(mgr) || [];
+            // SKU行: システム連携用SKU番号でSALE一括の価格を引き当て (SKU単位で対応)
             for (const s of skus) {
+              const info = saleBySku.get(s.itemSku);
+              if (!info) {
+                // SALE一括CSVに該当SKUが無い → このSKUは出力しない (対応が取れないため)
+                unmatchedSkus.push(s.itemSku || '(空)');
+                continue;
+              }
+              // SKU管理番号の整合チェック (両ファイルに値があり食い違う場合は警告)
+              if (info.skuMgr && s.skuMgr && info.skuMgr !== s.skuMgr) {
+                skuMgrMismatch.push(s.itemSku);
+              }
               outRows.push([
                 mgr,
                 '',
                 '',
                 '',
-                s.skuMgr || '',
+                s.skuMgr || info.skuMgr || '',
                 s.itemSku || '',
-                (saleInfo.salePrice !== '' && saleInfo.salePrice !== undefined) ? String(saleInfo.salePrice) : '',
-                (saleInfo.dispPrice !== '' && saleInfo.dispPrice !== undefined) ? String(saleInfo.dispPrice) : '',
+                (info.salePrice !== '' && info.salePrice !== undefined) ? String(info.salePrice) : '',
+                (info.dispPrice !== '' && info.dispPrice !== undefined) ? String(info.dispPrice) : '',
                 '1'
               ]);
               totalSkus++;
             }
           }
           if (outRows.length === 0) {
-            throw new Error('出力行がありません。SALE一括CSVとRMSデータの商品管理番号が一致するか確認してください。');
+            throw new Error('出力行がありません。SALE一括CSVとRMSデータのシステム連携用SKU番号が一致するか確認してください。');
           }
           // CSV化 (CRLFで結ぶ、各セルは必要ならクォート)
           const csvText = rowsToCsvText(OUT_HEADERS, outRows);
@@ -10740,8 +10753,19 @@
           a.click();
           document.body.removeChild(a);
           URL.revokeObjectURL(url);
-          const skipMsg = skippedMgrs.length > 0 ? `<br><span style="color:var(--muted)">※ SALE一括CSVに無い商品 ${skippedMgrs.length} 件はスキップ: ${skippedMgrs.slice(0, 5).join(', ')}${skippedMgrs.length > 5 ? '…' : ''}</span>` : '';
-          setStatus(`✅ ダウンロードしました (${mgrOrder.length - skippedMgrs.length}商品 / ${totalSkus} SKU)${skipMsg}`, 'success');
+          // 対応確認の結果を表示
+          const notes = [];
+          if (skippedMgrs.length > 0) {
+            notes.push(`SALE一括CSVに無い商品 ${skippedMgrs.length} 件はスキップ: ${skippedMgrs.slice(0, 5).join(', ')}${skippedMgrs.length > 5 ? '…' : ''}`);
+          }
+          if (unmatchedSkus.length > 0) {
+            notes.push(`⚠ 価格が対応しないSKU ${unmatchedSkus.length} 件を除外: ${unmatchedSkus.slice(0, 5).join(', ')}${unmatchedSkus.length > 5 ? '…' : ''}`);
+          }
+          if (skuMgrMismatch.length > 0) {
+            notes.push(`⚠ SKU管理番号が両ファイルで食い違うSKU ${skuMgrMismatch.length} 件 (RMS側を採用): ${skuMgrMismatch.slice(0, 5).join(', ')}${skuMgrMismatch.length > 5 ? '…' : ''}`);
+          }
+          const noteMsg = notes.length > 0 ? '<br><span style="color:var(--muted)">※ ' + notes.join('<br>※ ') + '</span>' : '';
+          setStatus(`✅ ダウンロードしました (${mgrOrder.length - skippedMgrs.length}商品 / ${totalSkus} SKU、SKU番号で価格を対応付け)${noteMsg}`, 'success');
         } catch (err) {
           setStatus('❌ ' + (err.message || String(err)), 'error');
           console.error(err);
@@ -10753,6 +10777,45 @@
       renderZone(slotRmsZone, 'rms');
       updateButton();
     })();
+
+    // v0.52.200: SALE一括CSVを「システム連携用SKU番号」キーでパース (SKU単位で価格を対応させる)
+    //   返り値: {
+    //     bySku: Map(システム連携用SKU番号 → {skuMgr, dispPrice, salePrice, mgr}),
+    //     titleByMgr: Map(商品管理番号 → セール用タイトル)
+    //   }
+    //   ⑦(v0.52.199)の出力列: 商品管理番号, SKU管理番号, システム連携用SKU番号, 表示価格, 通常購入販売価格, セール用タイトル
+    function parseSaleIkkatsuCsvBySku(text) {
+      const rows = parseCsvText(text);
+      if (rows.length < 2) return { bySku: new Map(), titleByMgr: new Map() };
+      const h = rows[0];
+      const iMgr = h.findIndex(x => x && x.trim().indexOf('商品管理番号') >= 0);
+      const iSkuMgr = h.findIndex(x => x && x.trim() === 'SKU管理番号');
+      const iItemSku = h.findIndex(x => x && x.trim().indexOf('システム連携用SKU番号') >= 0);
+      const iDisp = h.findIndex(x => x && x.trim() === '表示価格');
+      const iSale = h.findIndex(x => x && x.trim() === '通常購入販売価格');
+      const iTitle = h.findIndex(x => x && x.trim().indexOf('セール用タイトル') >= 0);
+      if (iMgr < 0) throw new Error('SALE一括CSVに「商品管理番号」列がありません');
+      if (iItemSku < 0) throw new Error('SALE一括CSVに「システム連携用SKU番号」列がありません（⑦で最新のCSVを再生成してください）');
+      const bySku = new Map();
+      const titleByMgr = new Map();
+      let lastMgr = '';
+      for (let i = 1; i < rows.length; i++) {
+        const r = rows[i]; if (!r) continue;
+        const mgrCell = (r[iMgr] || '').trim();
+        const mgr = mgrCell || lastMgr; // mgr空欄は直前を継承
+        if (mgr) lastMgr = mgr;
+        const itemSku = (iItemSku >= 0 ? (r[iItemSku] || '').trim() : '');
+        const titleVal = (iTitle >= 0 ? (r[iTitle] || '').trim() : '');
+        // タイトルは商品管理番号の最初の非空を採用
+        if (mgr && titleVal && !titleByMgr.has(mgr)) titleByMgr.set(mgr, titleVal);
+        if (!itemSku) continue; // SKU番号が無い行は価格対応の対象外
+        const skuMgr = (iSkuMgr >= 0 ? (r[iSkuMgr] || '').trim() : '');
+        const dispVal = (iDisp >= 0 ? (r[iDisp] || '').trim() : '');
+        const saleVal = (iSale >= 0 ? (r[iSale] || '').trim() : '');
+        bySku.set(itemSku, { skuMgr, dispPrice: dispVal, salePrice: saleVal, mgr });
+      }
+      return { bySku, titleByMgr };
+    }
 
     // SALE一括が生成したCSVをパース: 商品管理番号 → {ssTitle, dispPrice, salePrice}
     //   列: 商品管理番号, 表示価格, 通常購入販売価格, セール用タイトル
