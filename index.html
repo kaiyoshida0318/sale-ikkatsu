@@ -2547,6 +2547,25 @@
       line-height: 1;
     }
     .uploaded-file-chip .uf-clear:hover { background: #fdecea; border-color: #d83838; color: #d83838; }
+    /* v0.52.204: DL可能なファイル名 (ボタン化) */
+    .uploaded-file-chip button.uf-name.uf-download {
+      border: 0; background: transparent; padding: 0; cursor: pointer;
+      font: inherit; text-align: left; text-decoration: underline;
+    }
+    .uploaded-file-chip button.uf-name.uf-download:hover { color: #155a2c; }
+    /* v0.52.204: 未取り込みファイルのクリア(選択解除)ボタン */
+    .file-input .filename .file-clear-btn {
+      margin-left: 8px;
+      border: 1px solid #c9c9d1;
+      background: #fff;
+      color: #b3531b;
+      border-radius: 5px;
+      padding: 1px 8px;
+      font-size: 12px;
+      cursor: pointer;
+      vertical-align: middle;
+    }
+    .file-input .filename .file-clear-btn:hover { background: #fdecea; border-color: #d83838; color: #d83838; }
     /* 保管済みファイル表示 */
     .archive-file-saved {
       display: flex;
@@ -3649,7 +3668,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.203</span>
+      <span class="version">v0.52.204</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4742,7 +4761,7 @@
         if (viewId === 'ad-info') renderUploadedFileSlot('adInfo', 'uf-slot-adInfo', () => { if (typeof renderProductTable === 'function') renderProductTable(); });
         if (viewId === 'cost-set-item') { renderUploadedFileSlot('setItem', 'uf-slot-setItem'); renderUploadedFileSlot('nonSet', 'uf-slot-nonSet'); }
         if (viewId === 'cost-set-component') renderUploadedFileSlot('setComponent', 'uf-slot-setComponent');
-        if (viewId === 'make-rms-csv') { renderUploadedFileSlot('mkSale', 'uf-slot-mkSale'); renderUploadedFileSlot('mkRms', 'uf-slot-mkRms'); }
+        if (viewId === 'make-rms-csv') { renderUploadedFileSlot('mkSale', 'uf-slot-mkSale', () => { if (window._mkClearSlot) window._mkClearSlot('sale'); }); renderUploadedFileSlot('mkRms', 'uf-slot-mkRms', () => { if (window._mkClearSlot) window._mkClearSlot('rms'); }); }
       }
       // upload-original サブビュー (セール後①) を開くときは保管ファイル表示を更新
       if (viewId === 'upload-original') {
@@ -5131,18 +5150,21 @@
       mkSale:       [],  // ⑧ A: SALE一括CSV (メモリのみだったもの。メタのみ保持)
       mkRms:        [],  // ⑧ B: RMSダウンロードCSV
     };
-    function recordUploadedFile(slotKey, file) {
+    function recordUploadedFile(slotKey, file, dataB64, mime) {
       try {
         const ym = currentYM || getCurrentYM();
         if (!ym || !file) return;
         const archive = loadArchive();
         if (!archive[ym]) archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
         if (!archive[ym].uploadedFiles || typeof archive[ym].uploadedFiles !== 'object') archive[ym].uploadedFiles = {};
-        archive[ym].uploadedFiles[slotKey] = {
+        const entry = {
           name: String(file.name || 'file.csv'),
           size: Number(file.size || 0),
           at: Date.now(),
         };
+        // v0.52.204: ダウンロード用に中身(Base64)も保持 (渡された場合のみ)
+        if (dataB64) { entry.dataB64 = dataB64; entry.mime = mime || 'text/csv'; }
+        archive[ym].uploadedFiles[slotKey] = entry;
         saveArchive(archive);
       } catch (e) { console.warn('uploadedFile記録失敗', e); }
     }
@@ -5169,25 +5191,61 @@
         saveArchive(archive);
       } catch (e) { console.warn('uploadedFileクリア失敗', e); }
     }
+    // v0.52.204: 保持中ファイルをダウンロード (dataB64があればそれ、無ければ紐づくアーカイブデータから復元)
+    function downloadUploadedFile(slotKey) {
+      try {
+        const info = getUploadedFile(slotKey);
+        if (!info) return;
+        let bytes = null, mime = info.mime || 'text/csv';
+        if (info.dataB64) {
+          bytes = b642u8(info.dataB64);
+        } else {
+          // フォールバック: 紐づくアーカイブのB64データ (①③④はこちらで復元可能)
+          const ym = currentYM || getCurrentYM();
+          const archive = loadArchive();
+          const data = archive[ym] || {};
+          const keys = UPLOAD_SLOT_DATA_KEYS[slotKey] || [];
+          for (const k of keys) {
+            if (k.endsWith('B64') && data[k]) { bytes = b642u8(data[k]); break; }
+          }
+        }
+        if (!bytes) { alert('この保存ファイルはダウンロード用データを保持していません。'); return; }
+        const blob = new Blob([bytes], { type: mime });
+        saveBlobAs(blob, info.name || 'file.csv');
+      } catch (e) { console.warn('uploadedFileダウンロード失敗', e); alert('ダウンロードに失敗しました'); }
+    }
     function fmtFileSize(b) {
       b = Number(b) || 0;
       if (b < 1024) return b + ' B';
       if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
       return (b / 1024 / 1024).toFixed(2) + ' MB';
     }
-    // 指定コンテナに「保持中ファイル」チップを描画 (なければ空に)。✕で clearUploadedFile + 再描画 + onClear()
+    // 指定コンテナに「保持中ファイル」チップを描画 (なければ空に)。
+    //   ファイル名クリックでダウンロード / ✕で clearUploadedFile + 再描画 + onClear()
     function renderUploadedFileSlot(slotKey, containerId, onClear) {
       const el = document.getElementById(containerId);
       if (!el) return;
       const info = getUploadedFile(slotKey);
       if (!info) { el.innerHTML = ''; el.style.display = 'none'; return; }
+      // ダウンロード可能か (dataB64 か 紐づくB64データがあるか)
+      let canDownload = !!info.dataB64;
+      if (!canDownload) {
+        const keys = UPLOAD_SLOT_DATA_KEYS[slotKey] || [];
+        const ym = currentYM || getCurrentYM();
+        const data = (loadArchive()[ym]) || {};
+        canDownload = keys.some(k => k.endsWith('B64') && data[k]);
+      }
       el.style.display = '';
       el.innerHTML = `<div class="uploaded-file-chip">
         <span class="uf-icon">📄</span>
-        <span class="uf-name" title="${escapeHtml(info.name)}">${escapeHtml(info.name)}</span>
+        ${canDownload
+          ? `<button type="button" class="uf-name uf-download" title="クリックでダウンロード: ${escapeHtml(info.name)}">${escapeHtml(info.name)}</button>`
+          : `<span class="uf-name" title="${escapeHtml(info.name)}">${escapeHtml(info.name)}</span>`}
         <span class="uf-meta">${escapeHtml(fmtFileSize(info.size))}</span>
         <button type="button" class="uf-clear" aria-label="このファイルを削除" title="削除">✕</button>
       </div>`;
+      const dlBtn = el.querySelector('.uf-download');
+      if (dlBtn) dlBtn.addEventListener('click', () => downloadUploadedFile(slotKey));
       const btn = el.querySelector('.uf-clear');
       if (btn) {
         btn.addEventListener('click', () => {
@@ -7412,13 +7470,27 @@
       });
     });
 
-    // ファイル選択のラベル更新
+    // ファイル選択のラベル更新 + v0.52.204: 未取り込みファイルのクリア(選択解除)ボタン
     document.querySelectorAll('.file-input input[type=file]').forEach(input => {
       input.addEventListener('change', (e) => {
         const wrap = e.target.closest('.file-input');
         const fn = wrap.querySelector('.filename');
         if (e.target.files && e.target.files[0]) {
-          fn.textContent = '📎 ' + e.target.files[0].name;
+          fn.innerHTML = '';
+          const label = document.createElement('span');
+          label.textContent = '📎 ' + e.target.files[0].name;
+          const clearBtn = document.createElement('button');
+          clearBtn.type = 'button';
+          clearBtn.className = 'file-clear-btn';
+          clearBtn.textContent = 'クリア';
+          clearBtn.title = '選択を取り消す（未取り込み）';
+          clearBtn.addEventListener('click', () => {
+            input.value = '';
+            fn.textContent = '';
+            wrap.classList.remove('filled');
+          });
+          fn.appendChild(label);
+          fn.appendChild(clearBtn);
           wrap.classList.add('filled');
         } else {
           fn.textContent = '';
@@ -7475,8 +7547,11 @@
           }
           if (Object.keys(map).length === 0) { setSt('❌ 有効な行がありませんでした。', 'error'); return; }
           saveAdStatusMap(map);
-          // v0.52.203: アップロードファイルを保持表示
-          recordUploadedFile('adInfo', file);
+          // v0.52.204: アップロードファイルを保持表示 (元CSVの中身も保存しDL可能に)
+          try {
+            const _b64 = ab2b64(new Uint8Array(await file.arrayBuffer()));
+            recordUploadedFile('adInfo', file, _b64, file.type || 'text/csv');
+          } catch (e) { recordUploadedFile('adInfo', file); }
           renderUploadedFileSlot('adInfo', 'uf-slot-adInfo', () => { if (typeof renderProductTable === 'function') renderProductTable(); });
           setSt(`✅ ${Object.keys(map).length}件を取り込みました（出稿中 ${yes}件 / 未出稿 ${no}件）。「セール参加商品」表の「広告状況」列に反映されます。`, 'success');
           // 参加商品表を即時再描画して反映
@@ -10685,6 +10760,18 @@
       function updateButton() {
         btnMake.disabled = !(slots.sale && slots.rms);
       }
+      // v0.52.204: スロットのメモリ・保存記録・ゾーン表示・チップをまとめてクリア
+      function mkClearSlot(slotKey) {
+        slots[slotKey] = null;
+        const zone = slotKey === 'sale' ? slotSaleZone : slotRmsZone;
+        renderZone(zone, slotKey);
+        updateButton();
+        setStatus('', '');
+        const ufKey = slotKey === 'sale' ? 'mkSale' : 'mkRms';
+        clearUploadedFile(ufKey);
+        renderUploadedFileSlot(ufKey, slotKey === 'sale' ? 'uf-slot-mkSale' : 'uf-slot-mkRms', () => mkClearSlot(slotKey));
+      }
+      window._mkClearSlot = mkClearSlot;
       function formatSize(b) {
         if (b < 1024) return b + ' B';
         if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
@@ -10741,10 +10828,13 @@
           const text = await readAsTextAutoDetect(file);
           slots[slotKey] = { name: file.name, size: file.size, text };
           setStatus('', '');
-          // v0.52.203: アップロードファイルを保持表示 (sale→mkSale / rms→mkRms)
+          // v0.52.204: アップロードファイルを保持表示 (中身も保存しDL可能に)
           const ufKey = slotKey === 'sale' ? 'mkSale' : 'mkRms';
-          recordUploadedFile(ufKey, file);
-          renderUploadedFileSlot(ufKey, slotKey === 'sale' ? 'uf-slot-mkSale' : 'uf-slot-mkRms');
+          try {
+            const _b64 = ab2b64(new Uint8Array(await file.arrayBuffer()));
+            recordUploadedFile(ufKey, file, _b64, file.type || 'text/csv');
+          } catch (e) { recordUploadedFile(ufKey, file); }
+          renderUploadedFileSlot(ufKey, slotKey === 'sale' ? 'uf-slot-mkSale' : 'uf-slot-mkRms', () => mkClearSlot(slotKey));
         } catch (err) {
           setStatus('❌ 読み込み失敗: ' + (err.message || String(err)), 'error');
           slots[slotKey] = null;
@@ -10787,14 +10877,7 @@
           e.stopPropagation();
           const act = btn.getAttribute('data-action');
           if (act === 'clear') {
-            slots[slotKey] = null;
-            renderZone(zone, slotKey);
-            updateButton();
-            setStatus('', '');
-            // v0.52.203: 保持中ファイル表示もクリア
-            const ufKey = slotKey === 'sale' ? 'mkSale' : 'mkRms';
-            clearUploadedFile(ufKey);
-            renderUploadedFileSlot(ufKey, slotKey === 'sale' ? 'uf-slot-mkSale' : 'uf-slot-mkRms');
+            mkClearSlot(slotKey);
           } else if (act === 'replace') {
             input.click();
           }
