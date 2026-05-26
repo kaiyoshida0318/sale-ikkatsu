@@ -3668,7 +3668,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.205</span>
+      <span class="version">v0.52.206</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -9342,6 +9342,7 @@
       const rh = rmsRows[0];
       const iMgr = rh.findIndex(x => x && x.indexOf('商品管理番号') >= 0);
       const iSku = rh.findIndex(x => x && x.indexOf('システム連携用SKU番号') >= 0);
+      const iSkuMgmt = rh.findIndex(x => x && x.trim() === 'SKU管理番号');
       const iPrice = rh.findIndex(x => x && x.indexOf('通常購入販売価格') >= 0);
       if (iMgr < 0 || iSku < 0) {
         return { rows: [], reason: 'RMSデータCSVに必要な列が見つかりません' };
@@ -9359,11 +9360,12 @@
         if (!r) continue;
         const mgr = (r[iMgr]||'').trim();
         const sku = (r[iSku]||'').trim();
+        const skuMgmt = iSkuMgmt >= 0 ? (r[iSkuMgmt]||'').trim() : '';
         const priceRaw = iPrice >= 0 ? (r[iPrice]||'').trim() : '';
         if (!mgr || !sku) continue;
         // 通常価格空欄行は⑤と同じ基準でスキップ
         if (iPrice >= 0 && !priceRaw) continue;
-        rows.push({ mgr, sku, imageUrl: imgMap[mgr] || '' });
+        rows.push({ mgr, sku, skuMgmt, imageUrl: imgMap[mgr] || '' });
       }
       return { rows, reason: '' };
     }
@@ -9382,7 +9384,7 @@
         return `<tr${trCls} data-sku="${escapeHtml(r.sku)}">
           <td class="sr-col-img">${imageCellHtml(r.imageUrl)}</td>
           <td class="sr-col-mgr">${escapeHtml(r.mgr)}</td>
-          <td class="sr-col-sku">${escapeHtml(r.sku)}</td>
+          <td class="sr-col-sku">${escapeHtml(r.skuMgmt || r.sku)}</td>
           <td class="sr-col-wh"><input type="checkbox" class="sr-wh-check" data-sku="${escapeHtml(r.sku)}"${checked ? ' checked' : ''} aria-label="倉庫入れ"></td>
         </tr>`;
       }).join('');
@@ -9393,7 +9395,7 @@
               <tr>
                 <th class="sr-col-img">商品画像</th>
                 <th class="sr-col-mgr">商品管理番号</th>
-                <th class="sr-col-sku">システム連携用SKU番号</th>
+                <th class="sr-col-sku">SKU管理番号</th>
                 <th class="sr-col-wh">倉庫入れ</th>
               </tr>
             </thead>
@@ -9482,7 +9484,7 @@
         return `<tr${trCls} data-sku="${escapeHtml(r.sku)}">
           <td class="sr-col-img">${imageCellHtml(r.imageUrl)}</td>
           <td class="sr-col-mgr">${escapeHtml(r.mgr)}</td>
-          <td class="sr-col-sku">${escapeHtml(r.sku)}</td>
+          <td class="sr-col-sku">${escapeHtml(r.skuMgmt || r.sku)}</td>
           <td class="sr-col-wh"><input type="checkbox" class="sr-restore-check" data-sku="${escapeHtml(r.sku)}"${checked ? ' checked' : ''} aria-label="倉庫出し"></td>
         </tr>`;
       }).join('');
@@ -9493,7 +9495,7 @@
               <tr>
                 <th class="sr-col-img">商品画像</th>
                 <th class="sr-col-mgr">商品管理番号</th>
-                <th class="sr-col-sku">システム連携用SKU番号</th>
+                <th class="sr-col-sku">SKU管理番号</th>
                 <th class="sr-col-wh">倉庫出し</th>
               </tr>
             </thead>
