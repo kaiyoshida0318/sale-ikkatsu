@@ -655,6 +655,21 @@
       box-shadow: 0 0 0 2px rgba(30,58,95,0.15);
     }
     .st-search-count { font-size: 13px; color: var(--muted); white-space: nowrap; }
+    /* v0.52.207: ⑮⑱ 記録表の検索欄 (見出し+サマリーの下にsticky固定) */
+    .sr-search-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 8px 0;
+    }
+    body[data-view="sku-record"] .sr-search-bar,
+    body[data-view="sku-restore"] .sr-search-bar {
+      position: sticky;
+      top: calc(var(--main-tabs-h, 50px) + 44px + 44px);
+      z-index: 7;
+      background: var(--card);
+      padding: 6px 0;
+    }
     /* v0.52.154: ⑧ 未対応件数バッジ。完了(0件)で光る */
     .st-pending-count {
       font-size: 13px;
@@ -3668,7 +3683,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.206</span>
+      <span class="version">v0.52.207</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4273,6 +4288,10 @@
         <div class="card sku-record-card">
           <h2>2. 倉庫入れSKU記録表</h2>
           <div id="sku-record-status" class="status"></div>
+          <div class="st-search-bar sr-search-bar">
+            <input type="text" id="sku-record-search" class="st-search-input" placeholder="🔍 商品管理番号・SKU管理番号で絞り込み" />
+            <span id="sku-record-search-count" class="st-search-count"></span>
+          </div>
           <div id="sku-record-table-container">
             <div class="empty-state">対象データがありません。「① 参加商品追加」でRMSデータを取り込んでください。</div>
           </div>
@@ -4438,6 +4457,10 @@
         <div class="card sku-record-card">
           <h2>2. 倉庫出しSKU記録表</h2>
           <div id="sku-restore-status" class="status"></div>
+          <div class="st-search-bar sr-search-bar">
+            <input type="text" id="sku-restore-search" class="st-search-input" placeholder="🔍 商品管理番号・SKU管理番号で絞り込み" />
+            <span id="sku-restore-search-count" class="st-search-count"></span>
+          </div>
           <div id="sku-restore-table-container">
             <div class="empty-state">対象データがありません。「① 参加商品追加」でRMSデータを取り込んでください。</div>
           </div>
@@ -9369,6 +9392,39 @@
       }
       return { rows, reason: '' };
     }
+    // v0.52.207: ⑮⑱ 記録表の絞り込み状態 (商品管理番号・SKU管理番号の部分一致)
+    let _skuRecordQuery = '';
+    let _skuRestoreQuery = '';
+    // ⑮⑱ 検索欄のバインド
+    (function bindSkuSearchInputs() {
+      const recIn = document.getElementById('sku-record-search');
+      if (recIn) {
+        let t = null;
+        recIn.addEventListener('input', () => {
+          _skuRecordQuery = recIn.value;
+          if (t) clearTimeout(t);
+          t = setTimeout(() => { if (typeof renderSkuRecordTable === 'function') renderSkuRecordTable(); }, 120);
+        });
+      }
+      const resIn = document.getElementById('sku-restore-search');
+      if (resIn) {
+        let t2 = null;
+        resIn.addEventListener('input', () => {
+          _skuRestoreQuery = resIn.value;
+          if (t2) clearTimeout(t2);
+          t2 = setTimeout(() => { if (typeof renderSkuRestoreTable === 'function') renderSkuRestoreTable(); }, 120);
+        });
+      }
+    })();
+    function _skuMatch(r, q) {
+      if (!q) return true;
+      const s = q.trim().toLowerCase();
+      if (!s) return true;
+      const mgr = (r.mgr || '').toLowerCase();
+      const skuMgmt = (r.skuMgmt || '').toLowerCase();
+      const sku = (r.sku || '').toLowerCase();
+      return mgr.indexOf(s) >= 0 || skuMgmt.indexOf(s) >= 0 || sku.indexOf(s) >= 0;
+    }
     function renderSkuRecordTable() {
       const container = document.getElementById('sku-record-table-container');
       if (!container) return;
@@ -9378,7 +9434,15 @@
         return;
       }
       const whMap = getWarehouseSkuMap();
-      const rowsHtml = rows.map(r => {
+      const filtered = rows.filter(r => _skuMatch(r, _skuRecordQuery));
+      // 件数表示
+      const cntEl = document.getElementById('sku-record-search-count');
+      if (cntEl) cntEl.textContent = _skuRecordQuery.trim() ? `${filtered.length} / ${rows.length} 件` : `${rows.length} 件`;
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="empty-state">該当するSKUがありません（検索条件を変えてください）。</div>`;
+        return;
+      }
+      const rowsHtml = filtered.map(r => {
         const checked = !!whMap[r.sku];
         const trCls = checked ? ' class="is-warehoused"' : '';
         return `<tr${trCls} data-sku="${escapeHtml(r.sku)}">
@@ -9478,7 +9542,16 @@
       } else {
         setSummary(`対応が必要なSKU: <b>${remainCnt}</b> 件（全 ${totalCnt} 件中）`, 'is-pending');
       }
-      const rowsHtml = rows.map(r => {
+      // v0.52.207: 検索絞り込み (サマリーは全体のまま、表示のみ絞る)
+      const filtered = rows.filter(r => _skuMatch(r, _skuRestoreQuery));
+      const cntEl = document.getElementById('sku-restore-search-count');
+      if (cntEl) cntEl.textContent = _skuRestoreQuery.trim() ? `${filtered.length} / ${rows.length} 件` : `${rows.length} 件`;
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="empty-state">該当するSKUがありません（検索条件を変えてください）。</div>`;
+        // 検索でヒット無しでもチェックボックスのバインドは不要なのでここで終了
+        return;
+      }
+      const rowsHtml = filtered.map(r => {
         const checked = !!map[r.sku];
         const trCls = checked ? ' class="is-warehoused"' : '';
         return `<tr${trCls} data-sku="${escapeHtml(r.sku)}">
