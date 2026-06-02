@@ -78,6 +78,27 @@
       height: 65px;
       flex-shrink: 0;
     }
+    /* v0.52.209: ログを取るボタン */
+    .log-capture-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: 12px;
+      padding: 6px 12px;
+      border: 1px solid #c9c9d1;
+      background: #fff;
+      color: #555;
+      border-radius: 8px;
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background .1s, border-color .1s, color .1s;
+      flex-shrink: 0;
+    }
+    .log-capture-btn:hover { background: #f6f7f9; border-color: #999; color: #222; }
+    .log-capture-btn.is-busy { opacity: .6; pointer-events: none; }
+    .log-capture-btn.is-done { background: #e3f7ea; border-color: #9fd9b3; color: #1f7a3d; }
+    .log-capture-btn .lc-icon { font-size: 15px; }
     /* セール種別ドロップダウン */
     .sale-type-wrap {
       display: inline-flex;
@@ -3683,12 +3704,16 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.207</span>
+      <span class="version">v0.52.211</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
         <button type="button" id="fs-up" title="大きく">A+</button>
       </div>
+      <!-- v0.52.211: 不具合報告用のログ取得ボタン (一番右端) -->
+      <button type="button" id="btn-log-capture" class="log-capture-btn" title="エラー情報やツールの状態をログとして取得 (クリップボードコピー＆ファイル保存)">
+        <span class="lc-icon">🐛</span><span class="lc-label">ログを取る</span>
+      </button>
     </div>
   </header>
 
@@ -4270,7 +4295,7 @@
       <!-- サブビュー: ⑪ 倉庫入れSKU記録 -->
       <div id="tool-sku-record" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>⑮ 審査落ちSKU倉庫入れ■■申請日翌日■■</h2>
+          <h2>⑮ 審査落ちSKU倉庫入れ</h2>
         </div>
         <p class="tool-panel-description">セール参加可否の審査は商品コード単位ではなく、中のSKU単位で行われる。<br>
         そのため、審査の結果✕が出たSKUがあった場合でも、そのSKUだけを倉庫に入れることで再度審査を受けることができる。<br>
@@ -4486,6 +4511,167 @@
 
   <!-- 自前のロジック (ExcelJS/merger/builder は ⑬ 撤去に伴い不要に) -->
   <script>
+    // ===== v0.52.209: ログ取得サブシステム (不具合報告用) =====
+    // 起動時から JS エラー / console.error / 操作履歴 を最大100件ずつバッファに蓄積し、
+    // 「ログを取る」ボタンで まとめてクリップボードコピー＆ファイルDL する。
+    (function setupLogCapture(){
+      const MAX = 100;
+      const errors = [];   // {at, type, message, source, line, col, stack}
+      const conLogs = [];  // {at, level, args}
+      const actions = [];  // {at, kind, detail}
+      function nowIso(){ return new Date().toISOString(); }
+      function push(arr, item){ arr.push(item); if (arr.length > MAX) arr.splice(0, arr.length - MAX); }
+      // 未捕捉エラー
+      window.addEventListener('error', (e) => {
+        push(errors, {
+          at: nowIso(), type: 'error',
+          message: e && e.message || String(e),
+          source: e && e.filename || '',
+          line: e && e.lineno || 0,
+          col: e && e.colno || 0,
+          stack: (e && e.error && e.error.stack) ? String(e.error.stack).slice(0, 1500) : ''
+        });
+      });
+      // Promise 未処理拒否
+      window.addEventListener('unhandledrejection', (e) => {
+        const reason = e && e.reason;
+        push(errors, {
+          at: nowIso(), type: 'unhandledrejection',
+          message: (reason && reason.message) ? reason.message : String(reason),
+          stack: (reason && reason.stack) ? String(reason.stack).slice(0, 1500) : ''
+        });
+      });
+      // console.error / console.warn フック
+      ['error','warn'].forEach(level => {
+        const orig = console[level];
+        console[level] = function(){
+          try {
+            const args = Array.from(arguments).map(a => {
+              if (a instanceof Error) return a.message + (a.stack ? '\n'+String(a.stack).slice(0,800) : '');
+              if (typeof a === 'object') { try { return JSON.stringify(a).slice(0, 500); } catch(e){ return String(a); } }
+              return String(a);
+            });
+            push(conLogs, { at: nowIso(), level, args });
+          } catch(e){}
+          return orig.apply(console, arguments);
+        };
+      });
+      // 操作履歴の API を公開 (任意で他コードから記録可能)
+      window._logAction = function(kind, detail){
+        try { push(actions, { at: nowIso(), kind: String(kind||''), detail: detail===undefined ? '' : (typeof detail==='object' ? JSON.stringify(detail).slice(0,300) : String(detail).slice(0,300)) }); } catch(e){}
+      };
+      // 軽量な共通アクションロガー (タブ切替・ボタンクリック・ファイル選択)
+      document.addEventListener('click', (e) => {
+        const t = e.target.closest('button, .main-tab, .wf-btn, .tab, [data-wf-id]');
+        if (!t) return;
+        const label = (t.textContent || '').trim().slice(0, 60);
+        const id = t.id || t.getAttribute('data-wf-id') || t.className || '';
+        window._logAction('click', (id ? '['+id+'] ' : '') + label);
+      }, true);
+      document.addEventListener('change', (e) => {
+        if (e.target && e.target.matches && e.target.matches('input[type=file]')) {
+          const f = e.target.files && e.target.files[0];
+          window._logAction('file-select', (e.target.id||'') + ' → ' + (f ? f.name + ' (' + f.size + 'B)' : '(none)'));
+        }
+      }, true);
+
+      // ログ取得API
+      window._buildDiagnosticsLog = function(){
+        const data = {
+          generatedAt: nowIso(),
+          tool: {
+            version: (function(){ const v = document.querySelector('.version'); return v ? v.textContent.trim() : '?'; })(),
+            url: location.href,
+            view: document.body.getAttribute('data-view') || '',
+            saleType: (function(){ const s = document.getElementById('sale-type'); return s ? s.value : ''; })(),
+            currentYM: (typeof currentYM !== 'undefined') ? currentYM : (typeof getCurrentYM === 'function' ? getCurrentYM() : ''),
+          },
+          env: {
+            userAgent: navigator.userAgent,
+            language: navigator.language,
+            platform: navigator.platform || '',
+            screen: (screen ? (screen.width + 'x' + screen.height) : ''),
+            viewport: (window.innerWidth + 'x' + window.innerHeight),
+            onLine: navigator.onLine,
+            time: new Date().toString(),
+          },
+          storage: {},
+          archiveSummary: {},
+          recentErrors: errors.slice(-30),
+          recentConsole: conLogs.slice(-30),
+          recentActions: actions.slice(-50),
+        };
+        // localStorage 容量
+        try {
+          let total = 0; const keyCounts = {};
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i); const v = localStorage.getItem(k) || '';
+            total += (k.length + v.length);
+            keyCounts[k] = v.length;
+          }
+          data.storage.totalChars = total;
+          data.storage.estimatedBytes = total * 2; // UTF-16 概算
+          data.storage.keys = keyCounts;
+        } catch(e){ data.storage.error = String(e); }
+        // アーカイブのサマリー (各セール月の件数と取り込み状況)
+        try {
+          const archive = (typeof loadArchive === 'function') ? loadArchive() : {};
+          const summary = {};
+          for (const ym of Object.keys(archive)) {
+            const d = archive[ym] || {};
+            const rowsLen = Array.isArray(d.rows) ? d.rows.length : 0;
+            const mgrSet = new Set(); let skuCount = 0;
+            if (Array.isArray(d.rows)) for (const r of d.rows) { if (r && r.mgr){ mgrSet.add(r.mgr); if (r.sku) skuCount++; } }
+            summary[ym] = {
+              productCount: mgrSet.size,
+              skuRowCount: skuCount,
+              rowsArrayLen: rowsLen,
+              hasRmsCsv: !!d.rmsCsvB64,
+              hasSetItemCsv: !!d.setItemCsvB64,
+              hasSetComponentCsv: !!d.setComponentCsvB64,
+              hasNonSetCsv: !!d.nonSetCsvB64,
+              hasAdStatus: !!d.adStatus && Object.keys(d.adStatus).length || 0,
+              titlesCount: d.titles ? Object.keys(d.titles).length : 0,
+              warehouseSkus: d.warehouseSkus ? Object.keys(d.warehouseSkus).length : 0,
+              thumbChangeCount: d.thumbChange ? Object.keys(d.thumbChange).length : 0,
+              topImageBackCount: d.topImageBack ? Object.keys(d.topImageBack).length : 0,
+              startDt: d.startDt || '', endDt: d.endDt || '',
+              uploadedFiles: d.uploadedFiles ? Object.keys(d.uploadedFiles).reduce((o,k)=>{ const u=d.uploadedFiles[k]; o[k]={name:u.name,size:u.size,hasBytes:!!u.dataB64,at:u.at}; return o; }, {}) : {},
+            };
+          }
+          data.archiveSummary = summary;
+        } catch(e){ data.archiveSummary = { error: String(e) }; }
+        return data;
+      };
+      window._diagnosticsLogAsText = function(){
+        try {
+          const data = window._buildDiagnosticsLog();
+          const txt =
+            '===== SALE一括ツール ログ =====\n' +
+            '生成: ' + data.generatedAt + '\n' +
+            'バージョン: ' + data.tool.version + '\n' +
+            '画面(viewId): ' + data.tool.view + '\n' +
+            'セール月: ' + data.tool.currentYM + ' / セール種別: ' + data.tool.saleType + '\n' +
+            'UA: ' + data.env.userAgent + '\n' +
+            '画面: ' + data.env.viewport + ' (screen ' + data.env.screen + ') / online=' + data.env.onLine + '\n' +
+            '---- ストレージ概要 ----\n' +
+            'totalChars=' + data.storage.totalChars + ' / approxBytes=' + data.storage.estimatedBytes + '\n' +
+            'キー別サイズ(文字数):\n' + Object.keys(data.storage.keys||{}).map(k=>'  '+k+': '+data.storage.keys[k]).join('\n') + '\n' +
+            '---- アーカイブ概要 ----\n' +
+            JSON.stringify(data.archiveSummary, null, 2) + '\n' +
+            '---- 最近のエラー (' + data.recentErrors.length + '件) ----\n' +
+            data.recentErrors.map(e => '['+e.at+'] '+e.type+': '+e.message + (e.source?(' @'+e.source+':'+e.line+':'+e.col):'') + (e.stack?('\n'+e.stack):'')).join('\n\n') + '\n' +
+            '---- 最近のconsole (' + data.recentConsole.length + '件) ----\n' +
+            data.recentConsole.map(c => '['+c.at+'] '+c.level+': '+(c.args||[]).join(' | ')).join('\n') + '\n' +
+            '---- 最近の操作 (' + data.recentActions.length + '件) ----\n' +
+            data.recentActions.map(a => '['+a.at+'] '+a.kind+': '+a.detail).join('\n') + '\n' +
+            '===== ここまで =====\n';
+          return txt;
+        } catch(e){ return 'ログ生成失敗: ' + String(e); }
+      };
+    })();
+    // ===== ここまで ログ取得サブシステム =====
+
     // ---- 状態管理 ----
     // 起動準備のステータス表示のみ
     function setPyStatus(text, state) {
@@ -12433,6 +12619,65 @@
       } finally {
         _suppressPushState = false;
       }
+    })();
+
+    // v0.52.209: ログを取るボタンのバインド (クリップボードコピー + ファイルDL)
+    (function bindLogCaptureBtn(){
+      const btn = document.getElementById('btn-log-capture');
+      if (!btn) return;
+      const labelEl = btn.querySelector('.lc-label');
+      const origLabel = labelEl ? labelEl.textContent : 'ログを取る';
+      btn.addEventListener('click', async () => {
+        if (btn.classList.contains('is-busy')) return;
+        btn.classList.add('is-busy');
+        try {
+          const text = (typeof window._diagnosticsLogAsText === 'function')
+            ? window._diagnosticsLogAsText()
+            : 'ログ生成関数が見つかりません';
+          // クリップボードコピー
+          let copied = false;
+          try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              await navigator.clipboard.writeText(text);
+              copied = true;
+            }
+          } catch(e) { copied = false; }
+          if (!copied) {
+            // フォールバック: 一時 textarea で execCommand
+            try {
+              const ta = document.createElement('textarea');
+              ta.value = text; ta.style.position='fixed'; ta.style.left='-9999px';
+              document.body.appendChild(ta); ta.select();
+              copied = document.execCommand('copy');
+              document.body.removeChild(ta);
+            } catch(e) { copied = false; }
+          }
+          // ファイルDL
+          const now = new Date();
+          const pad = n => String(n).padStart(2,'0');
+          const fname = `sale-ikkatsu-log_${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.txt`;
+          try {
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = fname;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+          } catch(e) { console.error('ログDL失敗', e); }
+          // フィードバック表示
+          btn.classList.remove('is-busy');
+          btn.classList.add('is-done');
+          if (labelEl) labelEl.textContent = copied ? '✓ コピー＆DL完了' : '✓ DL完了 (コピー失敗)';
+          setTimeout(() => {
+            btn.classList.remove('is-done');
+            if (labelEl) labelEl.textContent = origLabel;
+          }, 2500);
+        } catch (err) {
+          btn.classList.remove('is-busy');
+          console.error('ログ取得失敗', err);
+          alert('ログ取得に失敗しました: ' + (err && err.message || String(err)));
+        }
+      });
     })();
   </script>
 </body>
