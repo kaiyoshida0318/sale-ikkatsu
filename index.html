@@ -3352,8 +3352,8 @@
       z-index: 9;
       background: var(--card);
       margin: 0;
-      /* v0.52.213: 左にborder-left(4px)があるので、その分の余白を確保してテキストが密着しないようにする */
-      padding: 10px 0 10px 10px;
+      /* v0.52.214: 1.見出しと同じくらいの上余白を確保 (カードのpadding-topが効かないため明示) */
+      padding: 22px 0 12px 10px;
     }
     /* ⑫⑱ サマリー(status)バー: 見出しの直下にsticky固定 */
     body[data-view="sku-record"] #sku-record-status.sku-restore-summary,
@@ -3728,7 +3728,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.213</span>
+      <span class="version">v0.52.214</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
