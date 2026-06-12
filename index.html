@@ -3521,6 +3521,29 @@
       cursor: pointer;
       accent-color: var(--brand);
     }
+    /* v0.52.212: ⑱ 商品単位の対応件数列 */
+    .sr-table th.sr-col-cnt,
+    .sr-table td.sr-col-cnt {
+      width: 160px;
+      text-align: center;
+    }
+    .sr-mgr-count {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .sr-mgr-count.is-pending {
+      color: #b3531b;
+      background: #fdecd9;
+      border: 1px solid #f3c89a;
+    }
+    .sr-mgr-count.is-done {
+      color: #1f7a3d;
+      background: #e3f7ea;
+      border: 1px solid #9fd9b3;
+    }
     /* 倉庫入れチェック済み行は薄い色付け */
     .sr-table tr.is-warehoused td {
       background: #fff8e7;
@@ -3704,7 +3727,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.211</span>
+      <span class="version">v0.52.212</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4483,7 +4506,7 @@
           <h2>2. 倉庫出しSKU記録表</h2>
           <div id="sku-restore-status" class="status"></div>
           <div class="st-search-bar sr-search-bar">
-            <input type="text" id="sku-restore-search" class="st-search-input" placeholder="🔍 商品管理番号・SKU管理番号で絞り込み" />
+            <input type="text" id="sku-restore-search" class="st-search-input" placeholder="🔍 商品管理番号で絞り込み" />
             <span id="sku-restore-search-count" class="st-search-count"></span>
           </div>
           <div id="sku-restore-table-container">
@@ -9693,6 +9716,20 @@
       archive[ym].skuRestore = map;
       saveArchive(archive);
     }
+    // v0.52.212: 複数SKUを一括で倉庫出し状態に設定 (商品単位のチェックで使用)
+    function setSkuRestoreBatch(skus, checked) {
+      const ym = currentYM || getCurrentYM();
+      if (!ym || !Array.isArray(skus) || skus.length === 0) return;
+      const archive = loadArchive();
+      if (!archive[ym]) return;
+      const map = (archive[ym].skuRestore && typeof archive[ym].skuRestore === 'object') ? archive[ym].skuRestore : {};
+      for (const sku of skus) {
+        if (!sku) continue;
+        if (checked) map[sku] = true; else delete map[sku];
+      }
+      archive[ym].skuRestore = map;
+      saveArchive(archive);
+    }
     function renderSkuRestoreTable() {
       const container = document.getElementById('sku-restore-table-container');
       if (!container) return;
@@ -9728,23 +9765,35 @@
       } else {
         setSummary(`対応が必要なSKU: <b>${remainCnt}</b> 件（全 ${totalCnt} 件中）`, 'is-pending');
       }
-      // v0.52.207: 検索絞り込み (サマリーは全体のまま、表示のみ絞る)
-      const filtered = rows.filter(r => _skuMatch(r, _skuRestoreQuery));
+      // v0.52.212: 商品管理番号単位に集計 (商品ごとに1行・チェックで配下全SKUを一括処理)
+      // mgr → { mgr, imageUrl, skus:[sku...] }  (倉庫入れ済みSKUのみ)
+      const mgrMap = new Map();
+      for (const r of rows) {
+        if (!mgrMap.has(r.mgr)) mgrMap.set(r.mgr, { mgr: r.mgr, imageUrl: r.imageUrl, skus: [] });
+        mgrMap.get(r.mgr).skus.push(r.sku);
+      }
+      const mgrList = Array.from(mgrMap.values());
+      // 検索絞り込み (商品管理番号で部分一致 / SKU管理番号は商品単位なので無視)
+      const q = (_skuRestoreQuery || '').trim().toLowerCase();
+      const filteredMgrs = q ? mgrList.filter(m => (m.mgr || '').toLowerCase().indexOf(q) >= 0) : mgrList;
       const cntEl = document.getElementById('sku-restore-search-count');
-      if (cntEl) cntEl.textContent = _skuRestoreQuery.trim() ? `${filtered.length} / ${rows.length} 件` : `${rows.length} 件`;
-      if (filtered.length === 0) {
-        container.innerHTML = `<div class="empty-state">該当するSKUがありません（検索条件を変えてください）。</div>`;
-        // 検索でヒット無しでもチェックボックスのバインドは不要なのでここで終了
+      if (cntEl) cntEl.textContent = q ? `${filteredMgrs.length} / ${mgrList.length} 商品` : `${mgrList.length} 商品`;
+      if (filteredMgrs.length === 0) {
+        container.innerHTML = `<div class="empty-state">該当する商品がありません（検索条件を変えてください）。</div>`;
         return;
       }
-      const rowsHtml = filtered.map(r => {
-        const checked = !!map[r.sku];
-        const trCls = checked ? ' class="is-warehoused"' : '';
-        return `<tr${trCls} data-sku="${escapeHtml(r.sku)}">
-          <td class="sr-col-img">${imageCellHtml(r.imageUrl)}</td>
-          <td class="sr-col-mgr">${escapeHtml(r.mgr)}</td>
-          <td class="sr-col-sku">${escapeHtml(r.skuMgmt || r.sku)}</td>
-          <td class="sr-col-wh"><input type="checkbox" class="sr-restore-check" data-sku="${escapeHtml(r.sku)}"${checked ? ' checked' : ''} aria-label="倉庫出し"></td>
+      const rowsHtml = filteredMgrs.map(m => {
+        const total = m.skus.length;
+        const remain = m.skus.reduce((n, s) => n + (map[s] ? 0 : 1), 0);
+        const done = remain === 0; // 0なら全部対応済み / それ以外は未対応扱い (0か100の二値)
+        const trCls = done ? ' class="is-warehoused"' : '';
+        const cntCls = done ? 'sr-mgr-count is-done' : 'sr-mgr-count is-pending';
+        const cntText = done ? `0 / ${total} ✓` : `${total} / ${total}`;
+        return `<tr${trCls} data-mgr="${escapeHtml(m.mgr)}">
+          <td class="sr-col-img">${imageCellHtml(m.imageUrl)}</td>
+          <td class="sr-col-mgr">${escapeHtml(m.mgr)}</td>
+          <td class="sr-col-cnt"><span class="${cntCls}">${cntText}</span></td>
+          <td class="sr-col-wh"><input type="checkbox" class="sr-restore-check-mgr" data-mgr="${escapeHtml(m.mgr)}"${done ? ' checked' : ''} aria-label="倉庫出し"></td>
         </tr>`;
       }).join('');
       container.innerHTML = `
@@ -9754,7 +9803,7 @@
               <tr>
                 <th class="sr-col-img">商品画像</th>
                 <th class="sr-col-mgr">商品管理番号</th>
-                <th class="sr-col-sku">SKU管理番号</th>
+                <th class="sr-col-cnt">対応件数</th>
                 <th class="sr-col-wh">倉庫出し</th>
               </tr>
             </thead>
@@ -9762,21 +9811,48 @@
           </table>
         </div>
       `;
-      container.querySelectorAll('input.sr-restore-check').forEach(cb => {
+      container.querySelectorAll('input.sr-restore-check-mgr').forEach(cb => {
         cb.addEventListener('change', () => {
-          const sku = cb.getAttribute('data-sku');
-          if (!sku) return;
-          setSkuRestore(sku, cb.checked);
+          const mgr = cb.getAttribute('data-mgr');
+          if (!mgr) return;
+          const grp = mgrMap.get(mgr);
+          if (!grp) return;
+          // チェック=全SKUを倉庫出し済みに / 解除=全SKUを未対応に戻す
+          setSkuRestoreBatch(grp.skus, cb.checked);
+          // 行の見た目を更新
           const tr = cb.closest('tr');
-          if (tr) tr.classList.toggle('is-warehoused', cb.checked);
-          // v0.52.161: サマリーの「対応が必要なSKU数」を再計算
-          const allCb = container.querySelectorAll('input.sr-restore-check');
-          let total = 0, remain = 0;
-          allCb.forEach(c => { total++; if (!c.checked) remain++; });
-          if (remain === 0) {
-            setSummary(`✓ 対応が必要なSKU: <b>0</b> 件（全 ${total} 件 倉庫出し済み）`, 'is-done');
+          if (tr) {
+            tr.classList.toggle('is-warehoused', cb.checked);
+            const cntCell = tr.querySelector('.sr-mgr-count');
+            if (cntCell) {
+              const total = grp.skus.length;
+              if (cb.checked) {
+                cntCell.className = 'sr-mgr-count is-done';
+                cntCell.textContent = `0 / ${total} ✓`;
+              } else {
+                cntCell.className = 'sr-mgr-count is-pending';
+                cntCell.textContent = `${total} / ${total}`;
+              }
+            }
+          }
+          // サマリーを再集計 (SKU単位の合計)
+          let totalAll = 0, remainAll = 0;
+          for (const m of mgrList) {
+            totalAll += m.skus.length;
+            // 表示状態とストレージは同じなので、チェック=全SKU済み として扱う
+            // 解除=全SKU未対応 (0か100なので合計に直接反映できる)
+          }
+          // 直接 storage を読み直して正確に集計 (バッチ書き換え後)
+          const reMap = getSkuRestoreMap();
+          for (const m of mgrList) {
+            for (const s of m.skus) {
+              if (!reMap[s]) remainAll++;
+            }
+          }
+          if (remainAll === 0) {
+            setSummary(`✓ 対応が必要なSKU: <b>0</b> 件（全 ${totalAll} 件 倉庫出し済み）`, 'is-done');
           } else {
-            setSummary(`対応が必要なSKU: <b>${remain}</b> 件（全 ${total} 件中）`, 'is-pending');
+            setSummary(`対応が必要なSKU: <b>${remainAll}</b> 件（全 ${totalAll} 件中）`, 'is-pending');
           }
         });
       });
