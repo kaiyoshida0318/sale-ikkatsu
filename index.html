@@ -3896,7 +3896,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.222</span>
+      <span class="version">v0.52.223</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -5483,10 +5483,8 @@
         for (const ym of yms) {
           const opt = document.createElement('option');
           opt.value = ym;
-          // 表示: 2026/06 → 2026年6月
           const m = ym.match(/^(\d{4})\/(\d{2})$/);
           opt.textContent = m ? `${m[1]}年${parseInt(m[2],10)}月` : ym;
-          if (ym === cur) opt.selected = true;
           saleYmSelectEl.appendChild(opt);
         }
       }
@@ -5495,6 +5493,8 @@
       optNew.value = '__create__';
       optNew.textContent = '+ 新規作成';
       saleYmSelectEl.appendChild(optNew);
+      // v0.52.223: appendChild後にvalueを明示設定 (selected属性に頼らず確実に反映)
+      saleYmSelectEl.value = cur || '';
       // currentYM をこの値に合わせる
       currentYM = cur || null;
       if (cur) localStorage.setItem(SALE_ARCHIVE_CURRENT, cur);
@@ -13169,6 +13169,20 @@
 
 
     refreshArchiveSelect();
+    // v0.52.223: 初期化時、ヘッダーの新ym selectと旧archive-selectの値ズレを補正
+    //   両方とも localStorage の SALE_ARCHIVE_CURRENT を信頼して同期
+    try {
+      if (typeof refreshYmSelector === 'function') refreshYmSelector();
+      const _oldSel = document.getElementById('archive-select');
+      if (_oldSel && currentYM) {
+        if (_oldSel.value !== currentYM) {
+          _oldSel.value = currentYM;
+          // 旧chainの再描画を起動
+          try { _oldSel.dispatchEvent(new Event('change', { bubbles: true })); } catch(e) {}
+        }
+      }
+      if (typeof refreshSalePeriodChip === 'function') refreshSalePeriodChip();
+    } catch (e) { console.warn('初期同期失敗:', e); }
     renderProductTable();
     if (typeof renderWorkflow === "function") renderWorkflow();
     if (typeof bindTopImageDlButtons === "function") bindTopImageDlButtons();
