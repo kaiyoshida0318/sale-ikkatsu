@@ -3896,7 +3896,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.221</span>
+      <span class="version">v0.52.222</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -5520,17 +5520,30 @@
       refreshSalePeriodChip();
       // 旧 .sale-period-legacy にも値を反映 (互換のため)
       if (typeof reflectPeriodToLegacyInputs === 'function') reflectPeriodToLegacyInputs();
-      // v0.52.218: 現在の画面をshowViewで丸ごと再描画 (各画面が個別に正しい描画を行う)
+      // v0.52.222: 旧アーカイブセレクト(archive-select)も新しい年月一覧で再構築し、
+      //            currentYMを反映してchangeイベントを発火 → 既存の全画面再描画ロジックが走る
+      if (typeof refreshArchiveSelect === 'function') {
+        try { refreshArchiveSelect(); } catch (e) { console.warn('refreshArchiveSelect失敗:', e); }
+      }
+      const oldSel = document.getElementById('archive-select');
+      if (oldSel && currentYM) {
+        // refreshArchiveSelect は yms[0] (最新) を選ぶことがあるので、改めて currentYM を強制適用
+        oldSel.value = currentYM;
+        try {
+          oldSel.dispatchEvent(new Event('change', { bubbles: true }));
+        } catch (e) { /* fallback: 個別呼び出し */
+          if (typeof renderProductTable === 'function') renderProductTable();
+          if (typeof renderWorkflow === 'function') renderWorkflow();
+        }
+      } else if (oldSel && !currentYM) {
+        // 年月なし(KAIRY新規等): セレクトを空にして同様に変更通知
+        oldSel.value = '';
+        try { oldSel.dispatchEvent(new Event('change', { bubbles: true })); } catch (e) {}
+      }
+      // 現在のビューも念のため showView で再描画 (showView 内部のbind/hook が必要なため)
       const v = document.body.getAttribute('data-view');
       if (v && typeof showView === 'function') {
-        try { showView(v); } catch (e) { console.warn('再描画失敗:', e); }
-      }
-      // 参加商品表は showView('products') の経路でなくても呼ばれるよう保険
-      if (typeof renderProductTable === 'function') {
-        try { renderProductTable(); } catch (e) {}
-      }
-      if (typeof renderWorkflow === 'function') {
-        try { renderWorkflow(); } catch (e) {}
+        try { showView(v); } catch (e) { console.warn('showView失敗:', e); }
       }
     }
 
