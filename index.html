@@ -145,6 +145,146 @@
       outline: none;
       box-shadow: inset 0 0 0 3px rgba(30, 58, 95, 0.15);
     }
+    /* v0.52.216: ショップ選択 */
+    .shop-wrap {
+      display: inline-flex;
+      align-items: stretch;
+      border: 3px solid #185fa5;
+      border-radius: 10px;
+      background: #fff;
+      overflow: hidden;
+    }
+    .shop-wrap .shop-tag {
+      background: #185fa5;
+      color: #fff;
+      padding: 0 12px;
+      font-weight: 700;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+    .shop-select {
+      font-size: 19px;
+      font-weight: 700;
+      padding: 8px 36px 8px 14px;
+      border: 0;
+      background: #fff;
+      color: #185fa5;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='10' viewBox='0 0 14 10'><path d='M1 1l6 6 6-6' stroke='%23185fa5' stroke-width='2.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      min-width: 130px;
+      font-family: inherit;
+    }
+    .shop-select:focus { outline: none; box-shadow: inset 0 0 0 3px rgba(30, 58, 95, 0.15); }
+    /* v0.52.216: セール期間(年月) 選択 */
+    .sale-ym-wrap {
+      display: inline-flex;
+      align-items: stretch;
+      border: 3px solid #7e57c2;
+      border-radius: 10px;
+      background: #fff;
+      overflow: hidden;
+    }
+    .sale-ym-wrap .sale-ym-tag {
+      background: #7e57c2;
+      color: #fff;
+      padding: 0 12px;
+      font-weight: 700;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+    .sale-ym-select {
+      font-size: 18px;
+      font-weight: 700;
+      padding: 8px 32px 8px 14px;
+      border: 0;
+      background: #fff;
+      color: #4a2c83;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='10' viewBox='0 0 14 10'><path d='M1 1l6 6 6-6' stroke='%237e57c2' stroke-width='2.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      min-width: 150px;
+      font-family: inherit;
+    }
+    .sale-ym-select:focus { outline: none; box-shadow: inset 0 0 0 3px rgba(30, 58, 95, 0.15); }
+    /* v0.52.216: 開始-終了日時 表示チップ (クリックで編集モーダル) */
+    .sale-period-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 14px;
+      border: 2px solid #c0dd97;
+      background: #f0f7e6;
+      border-radius: 10px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+      color: #3b6d11;
+      transition: background .1s, border-color .1s;
+    }
+    .sale-period-chip:hover { background: #e6f1d5; border-color: #9fc16a; }
+    .sale-period-chip .spc-label { font-size: 11px; color: #639922; font-weight: 600; }
+    .sale-period-chip .spc-value { font-size: 14px; font-weight: 700; color: #3b6d11; }
+    .sale-period-chip .spc-arrow { color: #999; font-size: 12px; }
+    .sale-period-chip .spc-edit-icon { margin-left: 4px; color: #639922; font-size: 13px; }
+    .sale-period-chip.is-empty .spc-value { color: #999; font-weight: 500; }
+    .sale-period-chip.is-empty { border-color: #ccc; background: #fafafa; color: #999; }
+    /* v0.52.216: モーダル */
+    .period-edit-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+    }
+    .period-edit-modal .pem-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+    }
+    .period-edit-modal .pem-dialog {
+      position: absolute;
+      top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: #fff;
+      border-radius: 12px;
+      padding: 22px 24px;
+      min-width: 380px;
+      max-width: 92vw;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+    .pem-title { margin: 0 0 14px; font-size: 18px; font-weight: 700; color: #1e3a5f; }
+    .pem-help { margin: 0 0 12px; font-size: 13px; color: #666; }
+    .pem-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .pem-label { font-size: 13px; color: #444; min-width: 72px; font-weight: 600; }
+    .pem-dt-wrap { display: inline-flex; align-items: center; gap: 2px; }
+    .pem-dt {
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      padding: 6px 4px;
+      font-size: 15px;
+      text-align: center;
+      font-family: inherit;
+    }
+    .pem-dt:focus { outline: none; border-color: #185fa5; box-shadow: 0 0 0 2px rgba(24,95,165,0.15); }
+    .pem-year { width: 60px; }
+    .pem-2d { width: 38px; }
+    .pem-error { color: #d83838; font-size: 13px; margin: 6px 0 12px; }
+    .pem-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+    .pem-btn { padding: 8px 16px; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 600; }
+    .pem-btn-cancel { background: #fff; border: 1px solid #ccc; color: #555; }
+    .pem-btn-cancel:hover { background: #f6f7f9; }
+    .pem-btn-save { background: #185fa5; border: 1px solid #185fa5; color: #fff; }
+    .pem-btn-save:hover { background: #124a82; }
 
     /* セール期間入力 (年/月/日/時/分の独立ブロック) */
     .sale-period {
@@ -3684,6 +3824,15 @@
       </svg>
     </div>
 
+    <!-- v0.52.216: ショップ選択 (ヘッダー) -->
+    <div id="shop-wrap" class="shop-wrap">
+      <span class="shop-tag">ショップ</span>
+      <select id="shop-select" class="shop-select" aria-label="ショップ">
+        <option value="ゆかい屋">ゆかい屋</option>
+        <option value="KAIRY">KAIRY</option>
+      </select>
+    </div>
+
     <div id="sale-type-wrap" class="sale-type-wrap type-super-sale">
       <span class="sale-type-tag">セール名</span>
       <select id="sale-type" class="sale-type-select" aria-label="セール種別">
@@ -3692,7 +3841,26 @@
       </select>
     </div>
 
-    <div class="sale-period" role="group" aria-label="セール期間">
+    <!-- v0.52.216: セール期間 (年月) 選択 -->
+    <div id="sale-ym-wrap" class="sale-ym-wrap">
+      <span class="sale-ym-tag">セール期間</span>
+      <select id="sale-ym-select" class="sale-ym-select" aria-label="セール期間">
+        <!-- 動的生成: 既存の年月 + 末尾に「+ 新規作成」 -->
+      </select>
+    </div>
+
+    <!-- v0.52.216: 開始-終了日時の表示チップ (クリックで編集モーダル) -->
+    <button type="button" id="sale-period-chip" class="sale-period-chip" aria-label="セール期間 開始-終了日時 編集">
+      <span class="spc-label">開始</span>
+      <span class="spc-value" id="spc-start-display">----/--/-- --:--</span>
+      <span class="spc-arrow">→</span>
+      <span class="spc-label">終了</span>
+      <span class="spc-value" id="spc-end-display">----/--/-- --:--</span>
+      <span class="spc-edit-icon" aria-hidden="true">✎</span>
+    </button>
+
+    <!-- v0.52.216: 旧 .sale-period のインライン入力欄は非表示で残置 (互換のためDOMには存在させる) -->
+    <div class="sale-period sale-period-legacy" role="group" aria-label="セール期間" style="display:none;">
       <div class="period-cell">
         <span class="period-label">開始日時</span>
         <div class="period-input-wrap" data-dt="start">
@@ -3728,7 +3896,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.215</span>
+      <span class="version">v0.52.216</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -5165,12 +5333,237 @@
     }
     saleTypeEl.addEventListener('change', () => {
       updateSaleTypeColor();
+      // v0.52.216: セール名(saleType)が変わるとアーカイブのスライスが変わるので全体を切替
+      if (typeof onShopOrSaleNameOrYmChanged === 'function') onShopOrSaleNameOrYmChanged({ saleNameChanged: true });
       // v0.52.121: ⑤画面表示中なら、新しいセール種別で割引率不一致を再評価
       if (document.body.getAttribute('data-view') === 'decide-title') {
         if (typeof renderDecideTitleTable === 'function') renderDecideTitleTable();
       }
     });
     updateSaleTypeColor();
+
+    // v0.52.216: ショップ選択 + セール期間(年月) 選択 + 開始-終了日時チップ + モーダル
+    const shopSelectEl = document.getElementById('shop-select');
+    const saleYmSelectEl = document.getElementById('sale-ym-select');
+    const salePeriodChipEl = document.getElementById('sale-period-chip');
+    const spcStartDisplay = document.getElementById('spc-start-display');
+    const spcEndDisplay = document.getElementById('spc-end-display');
+
+    // 初期: 保存されたショップを反映
+    if (shopSelectEl) shopSelectEl.value = getCurrentShop();
+
+    // 年月セレクトを再描画 (現在のショップ×セール名のスライスから取得)
+    function refreshYmSelector() {
+      if (!saleYmSelectEl) return;
+      const arc = loadArchive();
+      const yms = Object.keys(arc).sort(); // 昇順
+      // 「現在の年月」: localStorage の保存値 / fallback で先頭
+      let cur = localStorage.getItem(SALE_ARCHIVE_CURRENT) || '';
+      if (!cur || yms.indexOf(cur) < 0) cur = yms[0] || '';
+      saleYmSelectEl.innerHTML = '';
+      if (yms.length === 0) {
+        const opt = document.createElement('option');
+        opt.value = ''; opt.textContent = '(セール期間なし)';
+        saleYmSelectEl.appendChild(opt);
+      } else {
+        for (const ym of yms) {
+          const opt = document.createElement('option');
+          opt.value = ym;
+          // 表示: 2026/06 → 2026年6月
+          const m = ym.match(/^(\d{4})\/(\d{2})$/);
+          opt.textContent = m ? `${m[1]}年${parseInt(m[2],10)}月` : ym;
+          if (ym === cur) opt.selected = true;
+          saleYmSelectEl.appendChild(opt);
+        }
+      }
+      // 末尾に「+ 新規作成」
+      const optNew = document.createElement('option');
+      optNew.value = '__create__';
+      optNew.textContent = '+ 新規作成';
+      saleYmSelectEl.appendChild(optNew);
+      // currentYM をこの値に合わせる
+      currentYM = cur || null;
+      if (cur) localStorage.setItem(SALE_ARCHIVE_CURRENT, cur);
+    }
+
+    // 開始-終了チップ表示の更新 (現在の年月のstartDt/endDtを取得)
+    function refreshSalePeriodChip() {
+      if (!salePeriodChipEl) return;
+      const arc = loadArchive();
+      const d = (currentYM && arc[currentYM]) ? arc[currentYM] : null;
+      const s = d && d.startDt ? d.startDt : '';
+      const e = d && d.endDt ? d.endDt : '';
+      const empty = !s && !e;
+      salePeriodChipEl.classList.toggle('is-empty', empty);
+      if (spcStartDisplay) spcStartDisplay.textContent = s || '----/--/-- --:--';
+      if (spcEndDisplay) spcEndDisplay.textContent = e || '----/--/-- --:--';
+    }
+
+    // ショップ/セール名/年月 変更時の共通フック: アーカイブのスライスが変わるので
+    // 年月セレクトとチップを更新し、現在開いている画面を再描画
+    function onShopOrSaleNameOrYmChanged(opt) {
+      refreshYmSelector();
+      refreshSalePeriodChip();
+      // 旧 .sale-period-legacy にも値を反映 (互換のため)
+      if (typeof reflectPeriodToLegacyInputs === 'function') reflectPeriodToLegacyInputs();
+      // 現在の画面を再描画
+      const v = document.body.getAttribute('data-view');
+      if (v === 'products' && typeof renderProductTable === 'function') renderProductTable();
+      if (v === 'workflow' && typeof renderWorkflow === 'function') renderWorkflow();
+      if (v === 'sale-thumb' && typeof window._renderSaleThumbTable === 'function') window._renderSaleThumbTable();
+      // 各サブビューも開いていれば最新化
+      if (v === 'decide-price' && typeof window._renderDecidePriceAll === 'function') window._renderDecidePriceAll();
+      if (v === 'decide-title' && typeof renderDecideTitleTable === 'function') renderDecideTitleTable();
+      if (v === 'sku-record' && typeof window._renderSkuRecordTable === 'function') window._renderSkuRecordTable();
+      if (v === 'sku-restore' && typeof renderSkuRestoreTable === 'function') renderSkuRestoreTable();
+      if (v === 'thumb-change' && typeof window._renderThumbChangeTable === 'function') window._renderThumbChangeTable();
+    }
+
+    // ショップ選択 change
+    if (shopSelectEl) {
+      shopSelectEl.addEventListener('change', () => {
+        setCurrentShop(shopSelectEl.value);
+        onShopOrSaleNameOrYmChanged({ shopChanged: true });
+      });
+    }
+    // 年月セレクト change
+    if (saleYmSelectEl) {
+      saleYmSelectEl.addEventListener('change', () => {
+        const v = saleYmSelectEl.value;
+        if (v === '__create__') {
+          // 新規作成モーダルを開く (値は前の選択に戻す)
+          const arc = loadArchive();
+          const yms = Object.keys(arc).sort();
+          saleYmSelectEl.value = currentYM || yms[0] || '';
+          openYmCreateModal();
+          return;
+        }
+        if (!v) return;
+        currentYM = v;
+        localStorage.setItem(SALE_ARCHIVE_CURRENT, v);
+        onShopOrSaleNameOrYmChanged({ ymChanged: true });
+      });
+    }
+
+    // 期間編集モーダル
+    function openPeriodEditModal() {
+      const m = document.getElementById('period-edit-modal');
+      if (!m || !currentYM) {
+        if (!currentYM) alert('セール期間が選択されていません。先に「+ 新規作成」で作成してください。');
+        return;
+      }
+      const arc = loadArchive();
+      const d = arc[currentYM] || {};
+      const parseDt = (s) => {
+        const mt = (s || '').match(/^(\d{4})\/(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})$/);
+        return mt ? { year: mt[1], month: mt[2], day: mt[3], hour: mt[4], minute: mt[5] } : { year:'', month:'', day:'', hour:'', minute:'' };
+      };
+      const sObj = parseDt(d.startDt);
+      const eObj = parseDt(d.endDt);
+      for (const p of ['year','month','day','hour','minute']) {
+        m.querySelector(`.pem-dt[data-part="start-${p}"]`).value = sObj[p];
+        m.querySelector(`.pem-dt[data-part="end-${p}"]`).value = eObj[p];
+      }
+      m.style.display = '';
+      m.setAttribute('aria-hidden', 'false');
+    }
+    function closePeriodEditModal() {
+      const m = document.getElementById('period-edit-modal');
+      if (m) { m.style.display = 'none'; m.setAttribute('aria-hidden', 'true'); }
+    }
+    function savePeriodEditModal() {
+      const m = document.getElementById('period-edit-modal');
+      if (!m || !currentYM) return;
+      const getDt = (prefix) => {
+        const get = (p) => (m.querySelector(`.pem-dt[data-part="${prefix}-${p}"]`).value || '').trim();
+        const y = get('year').padStart(4,'0');
+        const mo = get('month').padStart(2,'0');
+        const d = get('day').padStart(2,'0');
+        const h = get('hour').padStart(2,'0');
+        const mi = get('minute').padStart(2,'0');
+        if (y === '0000' || mo === '00' || d === '00') return '';
+        return `${y}/${mo}/${d} ${h}:${mi}`;
+      };
+      const startDt = getDt('start');
+      const endDt = getDt('end');
+      const arc = loadArchive();
+      if (!arc[currentYM]) arc[currentYM] = { rows: [], titles: {}, workflow: {} };
+      arc[currentYM].startDt = startDt;
+      arc[currentYM].endDt = endDt;
+      saveArchive(arc);
+      // 旧互換キーにも反映 (他コード参照用)
+      try { if (startDt) localStorage.setItem(SALE_PERIOD_START, startDt); else localStorage.removeItem(SALE_PERIOD_START); } catch(e){}
+      try { if (endDt) localStorage.setItem(SALE_PERIOD_END, endDt); else localStorage.removeItem(SALE_PERIOD_END); } catch(e){}
+      closePeriodEditModal();
+      refreshSalePeriodChip();
+      if (typeof reflectPeriodToLegacyInputs === 'function') reflectPeriodToLegacyInputs();
+    }
+    if (salePeriodChipEl) salePeriodChipEl.addEventListener('click', openPeriodEditModal);
+    document.getElementById('pem-cancel')?.addEventListener('click', closePeriodEditModal);
+    document.getElementById('pem-save')?.addEventListener('click', savePeriodEditModal);
+    document.querySelector('#period-edit-modal .pem-backdrop')?.addEventListener('click', closePeriodEditModal);
+
+    // 新規作成モーダル
+    function openYmCreateModal() {
+      const m = document.getElementById('ym-create-modal');
+      if (!m) return;
+      m.querySelector('#ymc-year').value = '';
+      m.querySelector('#ymc-month').value = '';
+      m.querySelector('#ymc-error').style.display = 'none';
+      m.style.display = '';
+      m.setAttribute('aria-hidden', 'false');
+      setTimeout(() => m.querySelector('#ymc-year').focus(), 0);
+    }
+    function closeYmCreateModal() {
+      const m = document.getElementById('ym-create-modal');
+      if (m) { m.style.display = 'none'; m.setAttribute('aria-hidden', 'true'); }
+    }
+    function createNewYm() {
+      const m = document.getElementById('ym-create-modal');
+      if (!m) return;
+      const y = (m.querySelector('#ymc-year').value || '').trim().padStart(4,'0');
+      const mo = (m.querySelector('#ymc-month').value || '').trim().padStart(2,'0');
+      const errEl = m.querySelector('#ymc-error');
+      const showErr = (msg) => { errEl.textContent = msg; errEl.style.display = ''; };
+      if (!/^\d{4}$/.test(y) || !/^\d{2}$/.test(mo)) { showErr('年(4桁)と月(2桁)を入力してください'); return; }
+      const monNum = parseInt(mo, 10);
+      if (monNum < 1 || monNum > 12) { showErr('月は 01〜12 で入力してください'); return; }
+      const ym = `${y}/${mo}`;
+      const arc = loadArchive();
+      if (arc[ym]) { showErr('そのセール期間は既に存在します'); return; }
+      arc[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
+      saveArchive(arc);
+      currentYM = ym;
+      localStorage.setItem(SALE_ARCHIVE_CURRENT, ym);
+      closeYmCreateModal();
+      onShopOrSaleNameOrYmChanged({ ymChanged: true, created: true });
+    }
+    document.getElementById('ymc-cancel')?.addEventListener('click', closeYmCreateModal);
+    document.getElementById('ymc-create')?.addEventListener('click', createNewYm);
+    document.querySelector('#ym-create-modal .pem-backdrop')?.addEventListener('click', closeYmCreateModal);
+
+    // 旧 .sale-period-legacy への反映 (他コードがDOMから読む可能性に備える)
+    function reflectPeriodToLegacyInputs() {
+      const arc = loadArchive();
+      const d = (currentYM && arc[currentYM]) ? arc[currentYM] : null;
+      const fill = (which, dt) => {
+        const wrap = document.querySelector(`.sale-period-legacy .period-input-wrap[data-dt="${which}"]`);
+        if (!wrap) return;
+        const mt = (dt || '').match(/^(\d{4})\/(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})$/);
+        const obj = mt ? { year: mt[1], month: mt[2], day: mt[3], hour: mt[4], minute: mt[5] } : { year:'', month:'', day:'', hour:'', minute:'' };
+        for (const p of ['year','month','day','hour','minute']) {
+          const inp = wrap.querySelector(`.dt-input[data-part="${p}"]`);
+          if (inp) inp.value = obj[p];
+        }
+      };
+      fill('start', d && d.startDt);
+      fill('end', d && d.endDt);
+    }
+
+    // 初期表示: 年月セレクトを構築 + チップ表示
+    refreshYmSelector();
+    refreshSalePeriodChip();
+    reflectPeriodToLegacyInputs();
 
     // セール期間 永続化＋分割ブロック入力 (年/月/日/時/分)
     const SALE_PERIOD_START = 'sale-ikkatsu-period-start';
@@ -12857,5 +13250,68 @@
       });
     })();
   </script>
+
+  <!-- v0.52.216: セール期間 (開始-終了日時) 編集モーダル -->
+  <div id="period-edit-modal" class="period-edit-modal" style="display:none;" aria-hidden="true">
+    <div class="pem-backdrop"></div>
+    <div class="pem-dialog" role="dialog" aria-labelledby="pem-title" aria-modal="true">
+      <h3 id="pem-title" class="pem-title">セール期間 編集</h3>
+      <div class="pem-row">
+        <label class="pem-label">開始日時</label>
+        <div class="pem-dt-wrap">
+          <input type="text" inputmode="numeric" maxlength="4" class="pem-dt pem-year" data-part="start-year" placeholder="0000" />
+          <span>/</span>
+          <input type="text" inputmode="numeric" maxlength="2" class="pem-dt pem-2d" data-part="start-month" placeholder="00" />
+          <span>/</span>
+          <input type="text" inputmode="numeric" maxlength="2" class="pem-dt pem-2d" data-part="start-day" placeholder="00" />
+          <span style="padding-left:6px;"></span>
+          <input type="text" inputmode="numeric" maxlength="2" class="pem-dt pem-2d" data-part="start-hour" placeholder="00" />
+          <span>:</span>
+          <input type="text" inputmode="numeric" maxlength="2" class="pem-dt pem-2d" data-part="start-minute" placeholder="00" />
+        </div>
+      </div>
+      <div class="pem-row">
+        <label class="pem-label">終了日時</label>
+        <div class="pem-dt-wrap">
+          <input type="text" inputmode="numeric" maxlength="4" class="pem-dt pem-year" data-part="end-year" placeholder="0000" />
+          <span>/</span>
+          <input type="text" inputmode="numeric" maxlength="2" class="pem-dt pem-2d" data-part="end-month" placeholder="00" />
+          <span>/</span>
+          <input type="text" inputmode="numeric" maxlength="2" class="pem-dt pem-2d" data-part="end-day" placeholder="00" />
+          <span style="padding-left:6px;"></span>
+          <input type="text" inputmode="numeric" maxlength="2" class="pem-dt pem-2d" data-part="end-hour" placeholder="00" />
+          <span>:</span>
+          <input type="text" inputmode="numeric" maxlength="2" class="pem-dt pem-2d" data-part="end-minute" placeholder="00" />
+        </div>
+      </div>
+      <div class="pem-actions">
+        <button type="button" id="pem-cancel" class="pem-btn pem-btn-cancel">キャンセル</button>
+        <button type="button" id="pem-save" class="pem-btn pem-btn-save">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- v0.52.216: セール期間 新規作成ダイアログ -->
+  <div id="ym-create-modal" class="period-edit-modal" style="display:none;" aria-hidden="true">
+    <div class="pem-backdrop"></div>
+    <div class="pem-dialog" role="dialog" aria-labelledby="ymc-title" aria-modal="true">
+      <h3 id="ymc-title" class="pem-title">セール期間 新規作成</h3>
+      <p class="pem-help">新しいセール期間の年月を入力してください。</p>
+      <div class="pem-row">
+        <label class="pem-label">年月</label>
+        <div class="pem-dt-wrap">
+          <input type="text" inputmode="numeric" maxlength="4" class="pem-dt pem-year" id="ymc-year" placeholder="0000" />
+          <span>/</span>
+          <input type="text" inputmode="numeric" maxlength="2" class="pem-dt pem-2d" id="ymc-month" placeholder="00" />
+        </div>
+      </div>
+      <div id="ymc-error" class="pem-error" style="display:none;"></div>
+      <div class="pem-actions">
+        <button type="button" id="ymc-cancel" class="pem-btn pem-btn-cancel">キャンセル</button>
+        <button type="button" id="ymc-create" class="pem-btn pem-btn-save">作成</button>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>
