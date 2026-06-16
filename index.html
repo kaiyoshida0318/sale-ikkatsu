@@ -3728,7 +3728,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.214</span>
+      <span class="version">v0.52.215</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -5351,13 +5351,94 @@
     // ---- 商品一覧タブ ----
     // セールアーカイブ: 年月キー(YYYY/MM)別に rows と セール用タイトル を保存
     // 構造: { "2026/03": { rows: [...], titles: { mgrCode: "セール用タイトル" }, startDt: "2026/03/04 20:00", endDt: "2026/03/11 01:59" } }
-    const SALE_ARCHIVE_KEY = 'sale-ikkatsu-archive';
+    const SALE_ARCHIVE_KEY = 'sale-ikkatsu-archive';            // 旧: フラット (ym→data)
+    const SALE_ARCHIVE_KEY_V2 = 'sale-ikkatsu-archive-v2';      // 新: archive[shop][saleName][ym] = data
+    const SALE_ARCHIVE_PRE_MIGRATION_BACKUP = 'sale-ikkatsu-archive-pre-migration-backup';
+    const SALE_THUMBS_KEY = 'sale-ikkatsu-thumbs';              // 旧: フラットなサムネ配列/オブジェクト
+    const SALE_THUMBS_KEY_V2 = 'sale-ikkatsu-thumbs-v2';        // 新: thumbs[shop] = ...
+    const SALE_THUMBS_PRE_MIGRATION_BACKUP = 'sale-ikkatsu-thumbs-pre-migration-backup';
+    const SALE_CURRENT_SHOP_KEY = 'sale-ikkatsu-current-shop';
+    const SHOPS = ['ゆかい屋', 'KAIRY'];
+    const SALE_NAMES = ['super-sale', 'marathon']; // 内部値 (UIラベルは「楽天スーパーSALE」「お買い物マラソン」)
+    const DEFAULT_SHOP = 'ゆかい屋';
+    const DEFAULT_SALE_NAME = 'super-sale';
     const SALE_ARCHIVE_CURRENT = 'sale-ikkatsu-archive-current';
     let currentOffRate = 'all';
     let currentYM = null; // 現在表示中の年月
 
+    // === v0.52.215: 3階層データ層 (shop × saleName × ym) ===
+    // 設計方針: loadArchive() / saveArchive() の戻り値は従来どおり {ym → data} のフラット形
+    //          内部で「現在のショップ × 現在のセール名」のスライスを読み書きする (既存コード互換)
+    function getCurrentShop() {
+      const v = localStorage.getItem(SALE_CURRENT_SHOP_KEY);
+      return (v && SHOPS.indexOf(v) >= 0) ? v : DEFAULT_SHOP;
+    }
+    function setCurrentShop(shop) {
+      if (SHOPS.indexOf(shop) < 0) return;
+      localStorage.setItem(SALE_CURRENT_SHOP_KEY, shop);
+    }
+    function getCurrentSaleName() {
+      const v = localStorage.getItem(SALE_TYPE_KEY);
+      return (v === 'super-sale' || v === 'marathon') ? v : DEFAULT_SALE_NAME;
+    }
+    // 旧データの自動移行 (1回だけ実行): 旧キー → 新キーの ゆかい屋/super-sale の下へ
+    function ensureMigrationV2() {
+      try {
+        const v2raw = localStorage.getItem(SALE_ARCHIVE_KEY_V2);
+        if (v2raw) return; // すでに移行済み
+        const oldRaw = localStorage.getItem(SALE_ARCHIVE_KEY);
+        // 安全策: 移行前バックアップを別キーに保存
+        if (oldRaw !== null && !localStorage.getItem(SALE_ARCHIVE_PRE_MIGRATION_BACKUP)) {
+          localStorage.setItem(SALE_ARCHIVE_PRE_MIGRATION_BACKUP, oldRaw);
+        }
+        let oldArchive = {};
+        if (oldRaw) { try { oldArchive = JSON.parse(oldRaw) || {}; } catch(e) { oldArchive = {}; } }
+        const v2 = {};
+        for (const shop of SHOPS) { v2[shop] = {}; for (const sn of SALE_NAMES) v2[shop][sn] = {}; }
+        // 旧データを ゆかい屋 / super-sale の下へ丸ごと
+        v2[DEFAULT_SHOP][DEFAULT_SALE_NAME] = oldArchive;
+        localStorage.setItem(SALE_ARCHIVE_KEY_V2, JSON.stringify(v2));
+      } catch (e) { console.warn('archive移行失敗:', e); }
+      // thumbs 移行
+      try {
+        const v2raw = localStorage.getItem(SALE_THUMBS_KEY_V2);
+        if (v2raw) return;
+        const oldRaw = localStorage.getItem(SALE_THUMBS_KEY);
+        if (oldRaw !== null && !localStorage.getItem(SALE_THUMBS_PRE_MIGRATION_BACKUP)) {
+          localStorage.setItem(SALE_THUMBS_PRE_MIGRATION_BACKUP, oldRaw);
+        }
+        let oldThumbs = null;
+        if (oldRaw) { try { oldThumbs = JSON.parse(oldRaw); } catch(e) { oldThumbs = null; } }
+        const v2 = {};
+        for (const shop of SHOPS) v2[shop] = null;
+        v2[DEFAULT_SHOP] = oldThumbs; // ゆかい屋にぶら下げる
+        localStorage.setItem(SALE_THUMBS_KEY_V2, JSON.stringify(v2));
+      } catch (e) { console.warn('thumbs移行失敗:', e); }
+    }
+    // V2全体構造を読む
+    function _loadArchiveV2() {
+      try {
+        const raw = localStorage.getItem(SALE_ARCHIVE_KEY_V2);
+        if (!raw) return null;
+        return JSON.parse(raw);
+      } catch (e) { return null; }
+    }
+    function _saveArchiveV2(v2) {
+      try { localStorage.setItem(SALE_ARCHIVE_KEY_V2, JSON.stringify(v2)); }
+      catch (e) { console.warn('archive-v2保存失敗:', e); }
+    }
+
     function loadArchive() {
       try {
+        ensureMigrationV2();
+        const v2 = _loadArchiveV2();
+        if (v2) {
+          const shop = getCurrentShop();
+          const sn = getCurrentSaleName();
+          if (v2[shop] && v2[shop][sn]) return v2[shop][sn];
+          return {};
+        }
+        // フォールバック (旧形式)
         return JSON.parse(localStorage.getItem(SALE_ARCHIVE_KEY) || '{}');
       } catch (e) {
         return {};
@@ -5365,7 +5446,13 @@
     }
     function saveArchive(archive) {
       try {
-        localStorage.setItem(SALE_ARCHIVE_KEY, JSON.stringify(archive));
+        ensureMigrationV2();
+        const v2 = _loadArchiveV2() || {};
+        const shop = getCurrentShop();
+        const sn = getCurrentSaleName();
+        if (!v2[shop]) v2[shop] = {};
+        v2[shop][sn] = archive;
+        _saveArchiveV2(v2);
       } catch (e) {
         console.warn('アーカイブ保存失敗:', e);
       }
@@ -7190,6 +7277,15 @@
 
     function loadSaleThumbs() {
       try {
+        ensureMigrationV2();
+        const v2raw = localStorage.getItem(SALE_THUMBS_KEY_V2);
+        if (v2raw) {
+          const v2 = JSON.parse(v2raw) || {};
+          const shop = getCurrentShop();
+          const data = v2[shop];
+          return (data && typeof data === 'object') ? data : {};
+        }
+        // フォールバック
         const raw = localStorage.getItem(SALE_THUMB_KEY);
         if (!raw) return {};
         const obj = JSON.parse(raw);
@@ -7198,10 +7294,14 @@
     }
     function saveSaleThumbs(data) {
       try {
-        localStorage.setItem(SALE_THUMB_KEY, JSON.stringify(data));
+        ensureMigrationV2();
+        let v2 = null;
+        try { v2 = JSON.parse(localStorage.getItem(SALE_THUMBS_KEY_V2) || '{}') || {}; } catch(e) { v2 = {}; }
+        const shop = getCurrentShop();
+        v2[shop] = data;
+        localStorage.setItem(SALE_THUMBS_KEY_V2, JSON.stringify(v2));
         return true;
       } catch (e) {
-        // 容量オーバーなどの場合
         alert('保存に失敗しました。画像が大きすぎるか、保存容量の上限に達した可能性があります。\n（' + (e && e.name ? e.name : 'error') + '）');
         return false;
       }
