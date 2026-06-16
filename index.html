@@ -3896,7 +3896,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.217</span>
+      <span class="version">v0.52.219</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -5346,37 +5346,49 @@
       return (v === 'super-sale' || v === 'marathon') ? v : DEFAULT_SALE_NAME;
     }
     function ensureMigrationV2() {
+      // v0.52.219: 容量超過対策 — pre-migration-backupは保存しない (ユーザー側で別ファイルにバックアップ済)
+      //            移行成功後は旧キーを削除して容量を節約
       try {
         const v2raw = localStorage.getItem(SALE_ARCHIVE_KEY_V2);
-        if (v2raw) {
-          // archive移行済み → thumbs だけ未移行ならそちらだけ走らせる
-        } else {
+        if (!v2raw) {
           const oldRaw = localStorage.getItem(SALE_ARCHIVE_KEY);
-          if (oldRaw !== null && !localStorage.getItem(SALE_ARCHIVE_PRE_MIGRATION_BACKUP)) {
-            localStorage.setItem(SALE_ARCHIVE_PRE_MIGRATION_BACKUP, oldRaw);
-          }
           let oldArchive = {};
           if (oldRaw) { try { oldArchive = JSON.parse(oldRaw) || {}; } catch(e) { oldArchive = {}; } }
           const v2 = {};
           for (const shop of SHOPS) { v2[shop] = {}; for (const sn of SALE_NAMES) v2[shop][sn] = {}; }
           v2[DEFAULT_SHOP][DEFAULT_SALE_NAME] = oldArchive;
-          localStorage.setItem(SALE_ARCHIVE_KEY_V2, JSON.stringify(v2));
+          // 旧キーを先に削除して容量を空けてから新キーを書く
+          try { localStorage.removeItem(SALE_ARCHIVE_KEY); } catch(e){}
+          try {
+            localStorage.setItem(SALE_ARCHIVE_KEY_V2, JSON.stringify(v2));
+          } catch (e) {
+            // 失敗したら旧キーを戻す (古いchromeでは removeItem 後のロールバック必要)
+            if (oldRaw !== null) { try { localStorage.setItem(SALE_ARCHIVE_KEY, oldRaw); } catch(e2){} }
+            console.warn('archive-v2書込失敗:', e);
+          }
         }
       } catch (e) { console.warn('archive移行失敗:', e); }
       try {
         const v2raw = localStorage.getItem(SALE_THUMBS_KEY_V2);
-        if (v2raw) return;
-        const oldRaw = localStorage.getItem(SALE_THUMBS_KEY);
-        if (oldRaw !== null && !localStorage.getItem(SALE_THUMBS_PRE_MIGRATION_BACKUP)) {
-          localStorage.setItem(SALE_THUMBS_PRE_MIGRATION_BACKUP, oldRaw);
+        if (!v2raw) {
+          const oldRaw = localStorage.getItem(SALE_THUMBS_KEY);
+          let oldThumbs = null;
+          if (oldRaw) { try { oldThumbs = JSON.parse(oldRaw); } catch(e) { oldThumbs = null; } }
+          const v2 = {};
+          for (const shop of SHOPS) v2[shop] = null;
+          v2[DEFAULT_SHOP] = oldThumbs;
+          try { localStorage.removeItem(SALE_THUMBS_KEY); } catch(e){}
+          try {
+            localStorage.setItem(SALE_THUMBS_KEY_V2, JSON.stringify(v2));
+          } catch (e) {
+            if (oldRaw !== null) { try { localStorage.setItem(SALE_THUMBS_KEY, oldRaw); } catch(e2){} }
+            console.warn('thumbs-v2書込失敗:', e);
+          }
         }
-        let oldThumbs = null;
-        if (oldRaw) { try { oldThumbs = JSON.parse(oldRaw); } catch(e) { oldThumbs = null; } }
-        const v2 = {};
-        for (const shop of SHOPS) v2[shop] = null;
-        v2[DEFAULT_SHOP] = oldThumbs;
-        localStorage.setItem(SALE_THUMBS_KEY_V2, JSON.stringify(v2));
       } catch (e) { console.warn('thumbs移行失敗:', e); }
+      // 移行前バックアップキーがもし残っていたら削除 (容量解放)
+      try { localStorage.removeItem(SALE_ARCHIVE_PRE_MIGRATION_BACKUP); } catch(e){}
+      try { localStorage.removeItem(SALE_THUMBS_PRE_MIGRATION_BACKUP); } catch(e){}
     }
     function _loadArchiveV2() {
       try {
@@ -5507,17 +5519,18 @@
       refreshSalePeriodChip();
       // 旧 .sale-period-legacy にも値を反映 (互換のため)
       if (typeof reflectPeriodToLegacyInputs === 'function') reflectPeriodToLegacyInputs();
-      // 現在の画面を再描画
+      // v0.52.218: 現在の画面をshowViewで丸ごと再描画 (各画面が個別に正しい描画を行う)
       const v = document.body.getAttribute('data-view');
-      if (v === 'products' && typeof renderProductTable === 'function') renderProductTable();
-      if (v === 'workflow' && typeof renderWorkflow === 'function') renderWorkflow();
-      if (v === 'sale-thumb' && typeof window._renderSaleThumbTable === 'function') window._renderSaleThumbTable();
-      // 各サブビューも開いていれば最新化
-      if (v === 'decide-price' && typeof window._renderDecidePriceAll === 'function') window._renderDecidePriceAll();
-      if (v === 'decide-title' && typeof renderDecideTitleTable === 'function') renderDecideTitleTable();
-      if (v === 'sku-record' && typeof window._renderSkuRecordTable === 'function') window._renderSkuRecordTable();
-      if (v === 'sku-restore' && typeof renderSkuRestoreTable === 'function') renderSkuRestoreTable();
-      if (v === 'thumb-change' && typeof window._renderThumbChangeTable === 'function') window._renderThumbChangeTable();
+      if (v && typeof showView === 'function') {
+        try { showView(v); } catch (e) { console.warn('再描画失敗:', e); }
+      }
+      // 参加商品表は showView('products') の経路でなくても呼ばれるよう保険
+      if (typeof renderProductTable === 'function') {
+        try { renderProductTable(); } catch (e) {}
+      }
+      if (typeof renderWorkflow === 'function') {
+        try { renderWorkflow(); } catch (e) {}
+      }
     }
 
     // ショップ選択 change
@@ -5600,9 +5613,23 @@
       if (typeof reflectPeriodToLegacyInputs === 'function') reflectPeriodToLegacyInputs();
     }
     if (salePeriodChipEl) salePeriodChipEl.addEventListener('click', openPeriodEditModal);
-    document.getElementById('pem-cancel')?.addEventListener('click', closePeriodEditModal);
-    document.getElementById('pem-save')?.addEventListener('click', savePeriodEditModal);
-    document.querySelector('#period-edit-modal .pem-backdrop')?.addEventListener('click', closePeriodEditModal);
+    // v0.52.218: モーダルのbindはdelegationで(modal HTMLが</script>の後にあってもクリックを拾える)
+    document.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!t || !t.id) return;
+      if (t.id === 'pem-cancel') { closePeriodEditModal(); }
+      else if (t.id === 'pem-save') { savePeriodEditModal(); }
+      else if (t.id === 'ymc-cancel') { closeYmCreateModal(); }
+      else if (t.id === 'ymc-create') { createNewYm(); }
+      else if (t.classList && t.classList.contains('pem-backdrop')) {
+        // どちらのモーダルのバックドロップか判定
+        const parentModal = t.closest('.period-edit-modal');
+        if (parentModal) {
+          if (parentModal.id === 'period-edit-modal') closePeriodEditModal();
+          else if (parentModal.id === 'ym-create-modal') closeYmCreateModal();
+        }
+      }
+    });
 
     // 新規作成モーダル
     function openYmCreateModal() {
@@ -5639,9 +5666,7 @@
       closeYmCreateModal();
       onShopOrSaleNameOrYmChanged({ ymChanged: true, created: true });
     }
-    document.getElementById('ymc-cancel')?.addEventListener('click', closeYmCreateModal);
-    document.getElementById('ymc-create')?.addEventListener('click', createNewYm);
-    document.querySelector('#ym-create-modal .pem-backdrop')?.addEventListener('click', closeYmCreateModal);
+    // v0.52.218: ymc bind は上の delegation で吸収済みなので個別bindは削除
 
     // 旧 .sale-period-legacy への反映 (他コードがDOMから読む可能性に備える)
     function reflectPeriodToLegacyInputs() {
