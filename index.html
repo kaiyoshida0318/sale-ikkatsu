@@ -3896,7 +3896,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.220</span>
+      <span class="version">v0.52.221</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -3963,8 +3963,9 @@
       <!-- メインタブ: セール参加商品 (デフォルト表示) -->
       <div id="tool-products" class="tool-panel active">
         <div class="archive-selector-bar">
-          <label for="archive-select" class="archive-label">セール期間：</label>
-          <select id="archive-select" class="archive-select">
+          <!-- v0.52.221: セール期間選択はヘッダー側に一本化したため非表示 (DOMはJS互換のため残置) -->
+          <label for="archive-select" class="archive-label" style="display:none;">セール期間：</label>
+          <select id="archive-select" class="archive-select" style="display:none;">
             <option value="">（履歴なし）</option>
           </select>
           <button type="button" id="btn-delete-selected-products" class="clear-month-btn" title="チェックを入れた商品のデータをこの月から削除します" disabled>チェックした商品を削除</button>
