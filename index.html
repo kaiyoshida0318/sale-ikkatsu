@@ -3896,7 +3896,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.219</span>
+      <span class="version">v0.52.220</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -5613,7 +5613,7 @@
       if (typeof reflectPeriodToLegacyInputs === 'function') reflectPeriodToLegacyInputs();
     }
     if (salePeriodChipEl) salePeriodChipEl.addEventListener('click', openPeriodEditModal);
-    // v0.52.218: モーダルのbindはdelegationで(modal HTMLが</script>の後にあってもクリックを拾える)
+    // v0.52.218: モーダルのbindはdelegationで(modal HTMLがscript閉じタグの後にあってもクリックを拾える)
     document.addEventListener('click', (e) => {
       const t = e.target;
       if (!t || !t.id) return;
