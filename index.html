@@ -3958,7 +3958,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.230</span>
+      <span class="version">v0.52.231</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -13604,14 +13604,33 @@
       bindZone(slotGenreZone, slotGenreInput, 'genre');
       bindZone(slotCandZone, slotCandInput, 'cand');
 
-      // CSVから列名で値を取得 (部分一致対応)
+      // CSVから列名で値を取得
+      //   v0.52.231: 表記ゆれに強くする。BOM・前後空白・引用符を除去し、
+      //   ASCIIは大文字小文字を無視。まず完全一致、無ければ部分一致で探す。
+      //   ('genre_id' と 'ジャンルID' を同一として扱う)
+      function _normHeader(h) {
+        return String(h == null ? '' : h)
+          .replace(/^\uFEFF/, '')      // BOM
+          .replace(/^["']+|["']+$/g, '') // 前後の引用符
+          .trim()
+          .toLowerCase();
+      }
       function findCol(headers, names) {
-        for (const n of names) {
-          const idx = headers.findIndex(h => h && h.trim().indexOf(n) >= 0);
+        const norm = headers.map(_normHeader);
+        const wants = names.map(n => _normHeader(n));
+        // 1) 完全一致を優先
+        for (const w of wants) {
+          const idx = norm.findIndex(h => h === w);
+          if (idx >= 0) return idx;
+        }
+        // 2) 部分一致 (どちらかが他方を含む)
+        for (const w of wants) {
+          const idx = norm.findIndex(h => h && (h.indexOf(w) >= 0 || w.indexOf(h) >= 0));
           if (idx >= 0) return idx;
         }
         return -1;
       }
+      const GENRE_ID_ALIASES = ['ジャンルID', 'genre_id', 'genreId', 'genre id', 'ジャンルＩＤ', 'ジャンルid'];
       // 取り込んで反映
       btnIngest.addEventListener('click', () => {
         try {
@@ -13620,8 +13639,8 @@
           const gRows = parseCsvText(slots.genre.text);
           if (gRows.length < 2) { setStatus('RMS対象ジャンルCSVに有効なデータがありません', 'error'); return; }
           const gHead = gRows[0];
-          const gIdIdx = findCol(gHead, ['ジャンルID', 'genre_id', 'genreId', 'ジャンルＩＤ']);
-          if (gIdIdx < 0) { setStatus('RMS対象ジャンルCSVに「ジャンルID」列が見つかりません', 'error'); return; }
+          const gIdIdx = findCol(gHead, GENRE_ID_ALIASES);
+          if (gIdIdx < 0) { setStatus('RMS対象ジャンルCSVに「ジャンルID」(genre_id) 列が見つかりません。先頭行の列名を確認してください: ' + gHead.join(', '), 'error'); return; }
           const targetGenres = new Set();
           for (let i = 1; i < gRows.length; i++) {
             const v = (gRows[i][gIdIdx] || '').trim();
@@ -13633,7 +13652,7 @@
           if (cRows.length < 2) { setStatus('ADcheck候補商品CSVに有効なデータがありません', 'error'); return; }
           const cHead = cRows[0];
           const cMgrIdx = findCol(cHead, ['商品管理番号', '商品管理ID', 'item_url']);
-          const cGidIdx = findCol(cHead, ['ジャンルID', 'genre_id', 'genreId', 'ジャンルＩＤ']);
+          const cGidIdx = findCol(cHead, GENRE_ID_ALIASES);
           if (cMgrIdx < 0) { setStatus('ADcheck候補商品CSVに「商品管理番号」列が見つかりません', 'error'); return; }
           if (cGidIdx < 0) { setStatus('ADcheck候補商品CSVに「ジャンルID」列が見つかりません', 'error'); return; }
           // 突き合わせ
