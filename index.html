@@ -3961,7 +3961,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.234</span>
+      <span class="version">v0.52.235</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -13745,7 +13745,10 @@
             ? `　/　広告状況 ${adReflected} 件を反映`
             : '　/　広告状況列なし(反映なし)';
           if (matched.length === 0) {
-            setStatus('⚠ 候補商品の中に対象ジャンルと一致する商品がありませんでした' + adMsg, 'error');
+            setStatus('⚠ 候補商品の中に対象ジャンルと一致する商品がありませんでした'
+              + `（対象ジャンル ${targetGenres.size} 件 / 候補 ${cRows.length - 1} 件）。`
+              + 'スロットAにRMS対象ジャンル(genre_id)、スロットBに候補商品(商品管理番号/ジャンルID)が入っているか、'
+              + 'バージョンが v0.52.235 以降か確認してください。' + adMsg, 'error');
           } else {
             setStatus(`✅ ${matched.length} 件の参加可能商品を特定しました${adMsg}`, 'success');
           }
