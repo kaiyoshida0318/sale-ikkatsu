@@ -3920,7 +3920,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.227</span>
+      <span class="version">v0.52.228</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -13436,6 +13436,26 @@
         statusEl.className = 'status' + (kind ? ' ' + kind : '');
       }
       function updateBtn() { btnIngest.disabled = !(slots.genre && slots.cand); }
+
+      // v0.52.228: ① 参加可能商品特定 専用のエンコーディング自動判定リーダー
+      //   (従来は別IIFE内の readAsTextAutoDetect を参照しており ReferenceError で
+      //    ファイル投入時に「読み込み失敗」になっていた。decodeShiftJIS はトップレベル定義)
+      async function readAsTextAutoDetect(file) {
+        const buf = await file.arrayBuffer();
+        const u8 = new Uint8Array(buf);
+        // BOM (EF BB BF) があれば確実に UTF-8
+        if (u8.length >= 3 && u8[0] === 0xEF && u8[1] === 0xBB && u8[2] === 0xBF) {
+          return new TextDecoder('utf-8').decode(u8.subarray(3));
+        }
+        // ヒューリスティック: 行頭バイトに高頻度で 0x81-0x9F が出るなら Shift_JIS
+        let sjisHits = 0;
+        const sampleLen = Math.min(2048, u8.length);
+        for (let i = 0; i < sampleLen; i++) {
+          if (u8[i] >= 0x81 && u8[i] <= 0x9F) sjisHits++;
+        }
+        if (sjisHits > 20) return decodeShiftJIS(u8);
+        return new TextDecoder('utf-8').decode(u8);
+      }
 
       function renderZone(zone, slotKey) {
         const data = slots[slotKey];
