@@ -1838,13 +1838,51 @@
       font-size: 14px;
       flex-shrink: 0;
     }
-    .wf-btn .wf-check {
-      width: 20px;
-      height: 20px;
+    .wf-btn .wf-checks {
+      display: flex;
+      flex-direction: row;
+      gap: 10px;
+      align-items: center;
+      align-self: stretch;
+      flex-shrink: 0;
+      padding-left: 10px;
+      border-left: 1px solid rgba(0,0,0,.14);
+    }
+    .wf-btn .wf-chk {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1px;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .wf-btn .wf-chk input {
+      width: 18px;
+      height: 18px;
       flex-shrink: 0;
       cursor: pointer;
-      accent-color: currentColor;
+      margin: 0;
     }
+    .wf-btn .wf-chk-done input { accent-color: currentColor; }
+    .wf-btn .wf-chk-skip input { accent-color: #8a9099; }
+    .wf-btn .wf-chk-cap {
+      font-size: 9px;
+      font-weight: 600;
+      opacity: .7;
+      white-space: nowrap;
+    }
+    /* v0.52.229: スキップ(今回は使わない) — ブロック色を上書きしてグレーに沈める */
+    .wf-btn.is-skip {
+      background: #eceef0 !important;
+      border-color: #d2d6da !important;
+      color: #969ca3 !important;
+      outline: none !important;
+      box-shadow: none !important;
+      opacity: .9;
+    }
+    .wf-btn.is-skip .wf-label { text-decoration: line-through; }
+    .wf-btn.is-skip .wf-checks { border-left-color: rgba(0,0,0,.10); }
+    .wf-btn.is-skip .wf-chk-skip input { accent-color: #6b7178; }
 
     /* ブロック1: セール開始準備 (青系) */
     .workflow-block.block-prep .workflow-block-label {
@@ -3920,7 +3958,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.228</span>
+      <span class="version">v0.52.230</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -3976,9 +4014,6 @@
        3ブロックの幅は影響を受けず常に同じサイズに保たれる。
        セール参加商品タブでは display:none で非表示。 -->
   <div id="workflow-shared">
-    <div class="workflow-toolbar">
-      <button type="button" id="btn-clear-checks" class="secondary">全てのチェックを外す</button>
-    </div>
     <div class="workflow" id="workflow"></div>
   </div>
 
@@ -8161,13 +8196,40 @@
       const archive = loadArchive();
       if (!archive[currentYM]) archive[currentYM] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
       const wf = archive[currentYM].workflow || {};
+      const sk = archive[currentYM].workflowSkip || {};
       if (done) {
         wf[btnId] = true;
+        delete sk[btnId];               // 完了と排他: 完了したらスキップは外す
         // チェック入れた瞬間に「進行中(外枠)」も外す
         if (_inProgressBtnId === btnId) _inProgressBtnId = null;
       } else {
         delete wf[btnId];
       }
+      archive[currentYM].workflow = wf;
+      archive[currentYM].workflowSkip = sk;
+      saveArchive(archive);
+    }
+    // v0.52.229: スキップ(今回は使わない) 状態。done と排他。
+    //   構造: archive[YYYY/MM].workflowSkip = { 'prep-add-products': true, ... }
+    function getWorkflowSkipState() {
+      if (!currentYM) return {};
+      const archive = loadArchive();
+      return (archive[currentYM] && archive[currentYM].workflowSkip) || {};
+    }
+    function setWorkflowSkip(btnId, skip) {
+      if (!currentYM) return;
+      const archive = loadArchive();
+      if (!archive[currentYM]) archive[currentYM] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {}, workflowSkip: {} };
+      const sk = archive[currentYM].workflowSkip || {};
+      const wf = archive[currentYM].workflow || {};
+      if (skip) {
+        sk[btnId] = true;
+        delete wf[btnId];                 // 完了と排他: スキップしたら完了は外す
+        if (_inProgressBtnId === btnId) _inProgressBtnId = null;
+      } else {
+        delete sk[btnId];
+      }
+      archive[currentYM].workflowSkip = sk;
       archive[currentYM].workflow = wf;
       saveArchive(archive);
     }
@@ -8212,19 +8274,31 @@
       const root = document.getElementById('workflow');
       if (!root) return;
       const state = getWorkflowState();
+      const skipState = getWorkflowSkipState();
       let _wfNum = 0; // v0.52.187: 全ブロック通し番号
       const html = getWorkflowBlocks().map(block => {
         const btnsHtml = block.buttons.map((btn, idx) => {
           const done = !!state[btn.id];
-          const inProgress = !done && (_inProgressBtnId === btn.id);
+          const skip = !!skipState[btn.id];
+          const inProgress = !done && !skip && (_inProgressBtnId === btn.id);
           const classes = ['wf-btn'];
           if (done) classes.push('is-done');
+          if (skip) classes.push('is-skip');
           if (inProgress) classes.push('is-active');
           const numMark = WF_NUMBER_MARKS[_wfNum] || `(${_wfNum+1})`;
           _wfNum++;
           return `<button type="button" class="${classes.join(' ')}" data-wf-id="${btn.id}" ${btn.action ? `data-wf-action="${btn.action}"` : ''}>
             <span class="wf-label"><span class="wf-num">${numMark}</span>${escapeHtml(btn.label)}</span>
-            <input type="checkbox" class="wf-check" data-wf-check="${btn.id}" ${done ? 'checked' : ''} aria-label="完了" />
+            <span class="wf-checks">
+              <label class="wf-chk wf-chk-done" title="完了したらチェック">
+                <input type="checkbox" class="wf-check" data-wf-check="${btn.id}" ${done ? 'checked' : ''} aria-label="完了" />
+                <span class="wf-chk-cap">完了</span>
+              </label>
+              <label class="wf-chk wf-chk-skip" title="今回は使わない（スキップ）">
+                <input type="checkbox" class="wf-skip" data-wf-skip="${btn.id}" ${skip ? 'checked' : ''} aria-label="今回は使わない" />
+                <span class="wf-chk-cap">スキップ</span>
+              </label>
+            </span>
           </button>`;
         }).join('');
         return `<div class="workflow-block ${block.className}">
@@ -8234,18 +8308,40 @@
       }).join('');
       root.innerHTML = html;
 
-      // チェックボックス: クリック時に伝播止めてトグル
+      // チェックボックス(完了): クリック時に伝播止めてトグル
       root.querySelectorAll('.wf-check').forEach(chk => {
-        chk.addEventListener('click', (e) => {
-          e.stopPropagation();
-        });
+        chk.addEventListener('click', (e) => { e.stopPropagation(); });
         chk.addEventListener('change', (e) => {
           const id = chk.getAttribute('data-wf-check');
           setWorkflowDone(id, chk.checked);
           const btn = chk.closest('.wf-btn');
           if (btn) {
             btn.classList.toggle('is-done', chk.checked);
-            if (chk.checked) btn.classList.remove('is-active'); // 進行中外枠を外す
+            if (chk.checked) {
+              btn.classList.remove('is-active'); // 進行中外枠を外す
+              btn.classList.remove('is-skip');   // 完了と排他: スキップ表示を外す
+              const sk = btn.querySelector('.wf-skip');
+              if (sk) sk.checked = false;
+            }
+          }
+        });
+      });
+
+      // チェックボックス(スキップ=今回は使わない): done と排他
+      root.querySelectorAll('.wf-skip').forEach(chk => {
+        chk.addEventListener('click', (e) => { e.stopPropagation(); });
+        chk.addEventListener('change', (e) => {
+          const id = chk.getAttribute('data-wf-skip');
+          setWorkflowSkip(id, chk.checked);
+          const btn = chk.closest('.wf-btn');
+          if (btn) {
+            btn.classList.toggle('is-skip', chk.checked);
+            if (chk.checked) {
+              btn.classList.remove('is-active'); // 進行中外枠を外す
+              btn.classList.remove('is-done');   // スキップと排他: 完了表示を外す
+              const dn = btn.querySelector('.wf-check');
+              if (dn) dn.checked = false;
+            }
           }
         });
       });
@@ -8297,29 +8393,8 @@
       });
     }
 
-    // 全てのチェックを外す: 現在の年月のチェックのみクリア
-    function clearAllWorkflowChecks() {
-      if (!currentYM) return;
-      const archive = loadArchive();
-      if (!archive[currentYM]) return;
-      archive[currentYM].workflow = {};
-      saveArchive(archive);
-      _inProgressBtnId = null;
-      renderWorkflow();
-    }
-    const _clearChecksBtn = document.getElementById('btn-clear-checks');
-    if (_clearChecksBtn) {
-      _clearChecksBtn.addEventListener('click', () => {
-        if (!currentYM) {
-          alert('チェック対象の年月がありません。');
-          return;
-        }
-        const label = currentYM.replace('/', '年') + '月';
-        if (confirm(`${label} の全てのチェックを外しますか？`)) {
-          clearAllWorkflowChecks();
-        }
-      });
-    }
+    // v0.52.229: 「全てのチェックを外す」ボタンは廃止。
+    //   各ボタンの「完了」「スキップ」チェックを個別に操作する運用に変更。
 
     // セール作業手順パネルの背景クリックで進行中マークを外す
     // (wf-btn の中をクリックした場合は除外、それ以外なら外す)
@@ -8330,8 +8405,6 @@
         if (!_inProgressBtnId) return;
         // wf-btn内のクリックは別ハンドラが処理するのでスキップ
         if (e.target.closest('.wf-btn')) return;
-        // 「全てのチェックを外す」ボタンも対象外
-        if (e.target.closest('#btn-clear-checks')) return;
         clearInProgress();
       });
     })();
