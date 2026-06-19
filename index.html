@@ -3949,7 +3949,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.238</span>
+      <span class="version">v0.52.239</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4088,9 +4088,9 @@
               <div id="ps-slot-genre-zone" class="archive-dropzone" tabindex="0" role="button" aria-label="クリックまたはドラッグでファイルをセット">
                 <div class="archive-dropzone-empty">
                   <div class="archive-dropzone-icon">📂</div>
-                  <div class="archive-dropzone-text">クリックまたはここにドラッグ</div>
+                  <div class="archive-dropzone-text">クリックまたはここにドラッグ<br><span class="archive-dropzone-sub">CSV / ZIP どちらでも可</span></div>
                 </div>
-                <input type="file" id="ps-slot-genre-input" accept=".csv,.txt" hidden />
+                <input type="file" id="ps-slot-genre-input" accept=".csv,.txt,.zip" hidden />
               </div>
             </div>
             <div class="mk-slot" data-slot="cand">
@@ -4099,9 +4099,9 @@
               <div id="ps-slot-cand-zone" class="archive-dropzone" tabindex="0" role="button" aria-label="クリックまたはドラッグでファイルをセット">
                 <div class="archive-dropzone-empty">
                   <div class="archive-dropzone-icon">📂</div>
-                  <div class="archive-dropzone-text">クリックまたはここにドラッグ</div>
+                  <div class="archive-dropzone-text">クリックまたはここにドラッグ<br><span class="archive-dropzone-sub">CSV / ZIP どちらでも可</span></div>
                 </div>
-                <input type="file" id="ps-slot-cand-input" accept=".csv,.txt" hidden />
+                <input type="file" id="ps-slot-cand-input" accept=".csv,.txt,.zip" hidden />
               </div>
             </div>
           </div>
@@ -13546,9 +13546,60 @@
       // v0.52.228: ① 参加可能商品特定 専用のエンコーディング自動判定リーダー
       //   (従来は別IIFE内の readAsTextAutoDetect を参照しており ReferenceError で
       //    ファイル投入時に「読み込み失敗」になっていた。decodeShiftJIS はトップレベル定義)
+      // v0.52.239: ZIP内の最初のCSV(なければtxt/先頭)を取り出して Uint8Array で返す
+      async function unzipFirstCsv(arrayBuffer) {
+        const u8 = new Uint8Array(arrayBuffer);
+        const dv = new DataView(arrayBuffer);
+        // End Of Central Directory (0x06054b50) を末尾から探す
+        let eocd = -1;
+        const minPos = Math.max(0, u8.length - 22 - 65536);
+        for (let i = u8.length - 22; i >= minPos; i--) {
+          if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+        }
+        if (eocd < 0) throw new Error('ZIPの構造が読めません（EOCDなし）');
+        const cdCount = dv.getUint16(eocd + 10, true);
+        const cdOffset = dv.getUint32(eocd + 16, true);
+        const entries = [];
+        let p = cdOffset;
+        for (let n = 0; n < cdCount && p + 46 <= u8.length; n++) {
+          if (dv.getUint32(p, true) !== 0x02014b50) break;
+          const method = dv.getUint16(p + 10, true);
+          const compSize = dv.getUint32(p + 20, true);
+          const nameLen = dv.getUint16(p + 28, true);
+          const extraLen = dv.getUint16(p + 30, true);
+          const commentLen = dv.getUint16(p + 32, true);
+          const localOffset = dv.getUint32(p + 42, true);
+          const name = new TextDecoder('utf-8').decode(u8.subarray(p + 46, p + 46 + nameLen));
+          entries.push({ method, compSize, localOffset, name });
+          p += 46 + nameLen + extraLen + commentLen;
+        }
+        if (entries.length === 0) throw new Error('ZIP内にファイルがありません');
+        const ent = entries.find(e => /\.csv$/i.test(e.name))
+                 || entries.find(e => /\.txt$/i.test(e.name))
+                 || entries[0];
+        const lp = ent.localOffset;
+        if (dv.getUint32(lp, true) !== 0x04034b50) throw new Error('ZIPローカルヘッダ不正');
+        const lNameLen = dv.getUint16(lp + 26, true);
+        const lExtraLen = dv.getUint16(lp + 28, true);
+        const dataStart = lp + 30 + lNameLen + lExtraLen;
+        const compData = u8.subarray(dataStart, dataStart + ent.compSize);
+        if (ent.method === 0) return compData; // 無圧縮
+        if (ent.method === 8) {                // deflate
+          if (typeof DecompressionStream === 'undefined') {
+            throw new Error('このブラウザはZIP展開(deflate)に未対応です。CSVを解凍してから入れてください。');
+          }
+          const stream = new Blob([compData]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+          return new Uint8Array(await new Response(stream).arrayBuffer());
+        }
+        throw new Error('未対応のZIP圧縮方式です(method ' + ent.method + ')');
+      }
       async function readAsTextAutoDetect(file) {
         const buf = await file.arrayBuffer();
-        const u8 = new Uint8Array(buf);
+        let u8 = new Uint8Array(buf);
+        // v0.52.239: ZIP (PK\x03\x04) なら中のCSVを展開してから判定
+        if (u8.length >= 4 && u8[0] === 0x50 && u8[1] === 0x4B && u8[2] === 0x03 && u8[3] === 0x04) {
+          u8 = await unzipFirstCsv(buf);
+        }
         // BOM (EF BB BF) があれば確実に UTF-8
         if (u8.length >= 3 && u8[0] === 0xEF && u8[1] === 0xBB && u8[2] === 0xBF) {
           return new TextDecoder('utf-8').decode(u8.subarray(3));
@@ -13569,11 +13620,11 @@
           zone.classList.remove('has-file');
           zone.innerHTML = `<div class="archive-dropzone-empty">
             <div class="archive-dropzone-icon">📂</div>
-            <div class="archive-dropzone-text">クリックまたはここにドラッグ</div>
+            <div class="archive-dropzone-text">クリックまたはここにドラッグ<br><span class="archive-dropzone-sub">CSV / ZIP どちらでも可</span></div>
           </div>`;
           // 入力欄を戻す
           const input = document.createElement('input');
-          input.type = 'file'; input.accept = '.csv,.txt'; input.hidden = true;
+          input.type = 'file'; input.accept = '.csv,.txt,.zip'; input.hidden = true;
           input.id = slotKey === 'genre' ? 'ps-slot-genre-input' : 'ps-slot-cand-input';
           zone.appendChild(input);
           bindInputChange(input, slotKey);
@@ -13598,7 +13649,7 @@
               if (act === 'clear') { slots[slotKey] = null; renderZone(zone, slotKey); updateBtn(); setStatus('', ''); }
               else if (act === 'replace') {
                 const fi = document.createElement('input');
-                fi.type = 'file'; fi.accept = '.csv,.txt';
+                fi.type = 'file'; fi.accept = '.csv,.txt,.zip';
                 fi.addEventListener('change', async (e2) => { if (e2.target.files[0]) await ingest(slotKey, e2.target.files[0]); });
                 fi.click();
               }
