@@ -2614,6 +2614,22 @@
     @media (max-width: 720px) {
       .mk-slots { grid-template-columns: 1fr; }
     }
+    /* v0.52.224: 参加可能商品特定 結果表示 */
+    .ps-result-card .ps-result-actions {
+      display: flex; align-items: center; gap: 10px; margin: 10px 0 6px;
+    }
+    .ps-result-card .ps-result-count {
+      font-size: 13px; color: var(--muted); margin-left: 6px;
+    }
+    .ps-result-textarea {
+      width: 100%; box-sizing: border-box;
+      font-family: monospace, "Consolas", "Menlo", sans-serif;
+      font-size: 14px;
+      padding: 12px; border: 1px solid var(--border);
+      border-radius: 8px; background: #fafbfc;
+      line-height: 1.6; resize: vertical; min-height: 200px;
+    }
+    .ps-result-textarea:focus { outline: 2px solid var(--brand); }
     .mk-slot {
       display: flex;
       flex-direction: column;
@@ -3896,7 +3912,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.223</span>
+      <span class="version">v0.52.224</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4006,6 +4022,71 @@
         </div>
         <div id="sale-thumb-table-container" class="st-table-scroll">
           <div class="empty-state">まだ参加商品がありません。「セール作業手順」の「① 参加商品追加」から取り込んでください。</div>
+        </div>
+      </div>
+
+      <!-- v0.52.224: サブビュー: 参加可能商品特定 (マラソン専用) -->
+      <div id="tool-pre-select" class="tool-panel">
+        <div class="tool-panel-header">
+          <h2>① 参加可能商品特定</h2>
+        </div>
+        <p class="tool-panel-description">マラソンは対象ジャンルが限られているため、該当するジャンルの商品でなければセールに参加できない。<br>
+        そこで、RMSからダウンロードする対象ジャンルデータと、ADcheckからダウンロードする参加候補商品データを突き合わせることで、今回のマラソンに参加可能な商品を特定していく。</p>
+
+        <div class="card">
+          <h2>1. RMS-対象ジャンルデータダウンロード</h2>
+          <p class="card-lead">RMS → 店舗様向け情報・サービス → 1店舗様向け情報(お知らせ・ご依頼) → お知らせ → 店舗運営 →「対象ジャンル限定SALEサーチ」に関するページにて、対象ジャンルが記載されたCSVファイルをダウンロード。</p>
+        </div>
+
+        <div class="card">
+          <h2>2. ADcheck-候補商品データダウンロード</h2>
+          <p class="card-lead">ADcheckヘッダー【マラソン】の「候補」内にある「SALE一括用ファイル出力」を押下。ジャンルIDを含んだ候補商品の一覧がダウンロードされる。</p>
+        </div>
+
+        <div class="card">
+          <h2>3. 突き合わせと商品特定</h2>
+          <p class="card-lead">上記の1と2でダウンロードした2つのCSVファイルを下のスロットにアップロードし、「取り込んで反映」を押すと、参加可能な商品の商品管理番号が下部に表示されます（ジャンルIDで突き合わせ）。</p>
+
+          <div class="mk-slots ps-slots">
+            <div class="mk-slot" data-slot="genre">
+              <div class="mk-slot-label"><span class="mk-slot-badge">A</span>RMS-対象ジャンルデータ</div>
+              <div class="mk-slot-sub">手順1でRMSからDLしたCSV</div>
+              <div id="ps-slot-genre-zone" class="archive-dropzone" tabindex="0" role="button" aria-label="クリックまたはドラッグでファイルをセット">
+                <div class="archive-dropzone-empty">
+                  <div class="archive-dropzone-icon">📂</div>
+                  <div class="archive-dropzone-text">クリックまたはここにドラッグ</div>
+                </div>
+                <input type="file" id="ps-slot-genre-input" accept=".csv,.txt" hidden />
+              </div>
+            </div>
+            <div class="mk-slot" data-slot="cand">
+              <div class="mk-slot-label"><span class="mk-slot-badge">B</span>ADcheck-候補商品データ</div>
+              <div class="mk-slot-sub">手順2でADcheckからDLしたCSV</div>
+              <div id="ps-slot-cand-zone" class="archive-dropzone" tabindex="0" role="button" aria-label="クリックまたはドラッグでファイルをセット">
+                <div class="archive-dropzone-empty">
+                  <div class="archive-dropzone-icon">📂</div>
+                  <div class="archive-dropzone-text">クリックまたはここにドラッグ</div>
+                </div>
+                <input type="file" id="ps-slot-cand-input" accept=".csv,.txt" hidden />
+              </div>
+            </div>
+          </div>
+
+          <div class="actions" style="margin-top:14px;">
+            <button type="button" id="btn-ps-ingest" class="dl-ready" disabled>取り込んで反映</button>
+          </div>
+          <div id="ps-status" class="status"></div>
+        </div>
+
+        <div class="card ps-result-card">
+          <h2>参加可能商品 商品管理番号</h2>
+          <p class="card-lead">下のテキストボックスをクリックすると全選択されます。Ctrl+Cでコピーしてください。</p>
+          <div class="ps-result-actions">
+            <button type="button" id="btn-ps-select-all" class="dl-ready">全選択</button>
+            <button type="button" id="btn-ps-copy" class="dl-ready">クリップボードにコピー</button>
+            <span id="ps-result-count" class="ps-result-count"></span>
+          </div>
+          <textarea id="ps-result-textarea" class="ps-result-textarea" readonly placeholder="まだ突き合わせを行っていません。上の手順1〜3を実施してください。" rows="20"></textarea>
         </div>
       </div>
 
@@ -5022,7 +5103,7 @@
     // ※旧 cost-non-set は v0.52.88 で廃止(②のセクション1=単一商品 に統合)
     // ※サブビュー間は forward/back で履歴を残す。同一サブビュー間は履歴に積まない。
     // 履歴に積まれた viewId は、ブラウザ戻る/進むで復元される。
-    const VALID_VIEWS = ['products','workflow','sale-thumb','add-products','ad-info','decide-price','decide-title','dl-rms-csv','make-rms-csv','make-thumb','cost-set-item','cost-set-component','upload-rms','rms-event','sku-record','ad-delete','ad-restore','upload-original','sku-restore','thumb-change','sp-banner','top-image-back'];
+    const VALID_VIEWS = ['products','workflow','sale-thumb','pre-select','add-products','ad-info','decide-price','decide-title','dl-rms-csv','make-rms-csv','make-thumb','cost-set-item','cost-set-component','upload-rms','rms-event','sku-record','ad-delete','ad-restore','upload-original','sku-restore','thumb-change','sp-banner','top-image-back'];
     // ブラウザ/マウスの「戻る」でサブビューから戻れるよう、サブビュー遷移時は history.pushState する
     let _suppressPushState = false; // popstate由来の呼び出しでは積まない
     const MAIN_TABS = ['products', 'workflow', 'sale-thumb'];
@@ -5050,6 +5131,10 @@
       // success として永続化されたメッセージがあれば該当 status DOM に再表示する
       if (viewId === 'add-products') {
         if (typeof restoreStatusMessage === 'function') restoreStatusMessage('add-products-status');
+      }
+      // v0.52.224: 参加可能商品特定 (マラソン専用) を開いたら結果を復元
+      if (viewId === 'pre-select') {
+        if (typeof window._restorePreSelect === 'function') window._restorePreSelect();
       }
       // v0.52.141: セール用サムネイルタブを開いたとき描画
       if (viewId === 'sale-thumb') {
@@ -8090,12 +8175,28 @@
     // 丸付き数字 ①〜⑳
     const WF_NUMBER_MARKS = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫','⑬','⑭','⑮','⑯','⑰','⑱','⑲','⑳'];
 
+    // v0.52.224: マラソン選択時のみ「① 参加可能商品特定」を先頭に追加
+    function getWorkflowBlocks() {
+      const saleType = (typeof getCurrentSaleName === 'function') ? getCurrentSaleName() : '';
+      if (saleType !== 'marathon') return WORKFLOW_BLOCKS;
+      // マラソン専用: 「セール開始準備」ブロック先頭に prep-pre-select を挿入
+      return WORKFLOW_BLOCKS.map(block => {
+        if (block.id !== 'prep') return block;
+        return Object.assign({}, block, {
+          buttons: [
+            { id: 'prep-pre-select', label: '参加可能商品特定', action: 'open-pre-select' },
+            ...block.buttons,
+          ],
+        });
+      });
+    }
+
     function renderWorkflow() {
       const root = document.getElementById('workflow');
       if (!root) return;
       const state = getWorkflowState();
       let _wfNum = 0; // v0.52.187: 全ブロック通し番号
-      const html = WORKFLOW_BLOCKS.map(block => {
+      const html = getWorkflowBlocks().map(block => {
         const btnsHtml = block.buttons.map((btn, idx) => {
           const done = !!state[btn.id];
           const inProgress = !done && (_inProgressBtnId === btn.id);
@@ -13295,6 +13396,202 @@
           alert('ログ取得に失敗しました: ' + (err && err.message || String(err)));
         }
       });
+    })();
+
+    // v0.52.224: ① 参加可能商品特定 (マラソン専用) — RMS対象ジャンルCSVとADcheck候補CSVを突き合わせ
+    (function bindPreSelect() {
+      const slotGenreZone = document.getElementById('ps-slot-genre-zone');
+      const slotCandZone = document.getElementById('ps-slot-cand-zone');
+      const slotGenreInput = document.getElementById('ps-slot-genre-input');
+      const slotCandInput = document.getElementById('ps-slot-cand-input');
+      const btnIngest = document.getElementById('btn-ps-ingest');
+      const statusEl = document.getElementById('ps-status');
+      const resultArea = document.getElementById('ps-result-textarea');
+      const resultCount = document.getElementById('ps-result-count');
+      const btnSelAll = document.getElementById('btn-ps-select-all');
+      const btnCopy = document.getElementById('btn-ps-copy');
+      if (!slotGenreZone || !slotCandZone || !btnIngest) return;
+
+      const slots = { genre: null, cand: null }; // {name, size, text}
+      function setStatus(msg, kind) {
+        if (!statusEl) return;
+        statusEl.innerHTML = msg || '';
+        statusEl.className = 'status' + (kind ? ' ' + kind : '');
+      }
+      function updateBtn() { btnIngest.disabled = !(slots.genre && slots.cand); }
+
+      function renderZone(zone, slotKey) {
+        const data = slots[slotKey];
+        if (!data) {
+          zone.classList.remove('has-file');
+          zone.innerHTML = `<div class="archive-dropzone-empty">
+            <div class="archive-dropzone-icon">📂</div>
+            <div class="archive-dropzone-text">クリックまたはここにドラッグ</div>
+          </div>`;
+          // 入力欄を戻す
+          const input = document.createElement('input');
+          input.type = 'file'; input.accept = '.csv,.txt'; input.hidden = true;
+          input.id = slotKey === 'genre' ? 'ps-slot-genre-input' : 'ps-slot-cand-input';
+          zone.appendChild(input);
+          bindInputChange(input, slotKey);
+        } else {
+          zone.classList.add('has-file');
+          const fmt = (n) => n < 1024 ? n + 'B' : n < 1024*1024 ? (n/1024).toFixed(1)+'KB' : (n/1024/1024).toFixed(2)+'MB';
+          zone.innerHTML = `<div class="mk-slot-loaded">
+            <div class="ml-icon">📄</div>
+            <div class="ml-info">
+              <div class="ml-name">${escapeHtml(data.name)}</div>
+              <div class="ml-meta">${fmt(data.size)}</div>
+            </div>
+            <div class="ml-actions">
+              <button type="button" class="ml-btn" data-act="replace">差し替え</button>
+              <button type="button" class="ml-btn" data-act="clear">クリア</button>
+            </div>
+          </div>`;
+          zone.querySelectorAll('button[data-act]').forEach(b => {
+            b.addEventListener('click', (ev) => {
+              ev.stopPropagation();
+              const act = b.getAttribute('data-act');
+              if (act === 'clear') { slots[slotKey] = null; renderZone(zone, slotKey); updateBtn(); setStatus('', ''); }
+              else if (act === 'replace') {
+                const fi = document.createElement('input');
+                fi.type = 'file'; fi.accept = '.csv,.txt';
+                fi.addEventListener('change', async (e2) => { if (e2.target.files[0]) await ingest(slotKey, e2.target.files[0]); });
+                fi.click();
+              }
+            });
+          });
+        }
+      }
+      async function ingest(slotKey, file) {
+        if (!file) return;
+        try {
+          const text = await readAsTextAutoDetect(file);
+          slots[slotKey] = { name: file.name, size: file.size, text };
+          setStatus('', '');
+        } catch (err) {
+          setStatus('❌ 読み込み失敗: ' + (err.message || String(err)), 'error');
+          slots[slotKey] = null;
+        }
+        renderZone(slotKey === 'genre' ? slotGenreZone : slotCandZone, slotKey);
+        updateBtn();
+      }
+      function bindInputChange(input, slotKey) {
+        input.addEventListener('change', async (e) => { if (e.target.files[0]) await ingest(slotKey, e.target.files[0]); });
+      }
+      function bindZone(zone, input, slotKey) {
+        zone.addEventListener('click', (e) => { if (e.target.closest('button')) return; input.click(); });
+        zone.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } });
+        zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('is-dragover'); });
+        zone.addEventListener('dragleave', () => zone.classList.remove('is-dragover'));
+        zone.addEventListener('drop', async (e) => {
+          e.preventDefault(); zone.classList.remove('is-dragover');
+          const f = e.dataTransfer.files && e.dataTransfer.files[0];
+          if (f) await ingest(slotKey, f);
+        });
+        bindInputChange(input, slotKey);
+      }
+      bindZone(slotGenreZone, slotGenreInput, 'genre');
+      bindZone(slotCandZone, slotCandInput, 'cand');
+
+      // CSVから列名で値を取得 (部分一致対応)
+      function findCol(headers, names) {
+        for (const n of names) {
+          const idx = headers.findIndex(h => h && h.trim().indexOf(n) >= 0);
+          if (idx >= 0) return idx;
+        }
+        return -1;
+      }
+      // 取り込んで反映
+      btnIngest.addEventListener('click', () => {
+        try {
+          if (!slots.genre || !slots.cand) { setStatus('2つのCSVをセットしてください', 'error'); return; }
+          // RMS対象ジャンルCSV → ジャンルIDの集合
+          const gRows = parseCsvText(slots.genre.text);
+          if (gRows.length < 2) { setStatus('RMS対象ジャンルCSVに有効なデータがありません', 'error'); return; }
+          const gHead = gRows[0];
+          const gIdIdx = findCol(gHead, ['ジャンルID', 'genre_id', 'genreId', 'ジャンルＩＤ']);
+          if (gIdIdx < 0) { setStatus('RMS対象ジャンルCSVに「ジャンルID」列が見つかりません', 'error'); return; }
+          const targetGenres = new Set();
+          for (let i = 1; i < gRows.length; i++) {
+            const v = (gRows[i][gIdIdx] || '').trim();
+            if (v) targetGenres.add(v);
+          }
+          if (targetGenres.size === 0) { setStatus('RMS対象ジャンルCSVに有効なジャンルIDがありません', 'error'); return; }
+          // ADcheck候補CSV → 商品管理番号 × ジャンルID
+          const cRows = parseCsvText(slots.cand.text);
+          if (cRows.length < 2) { setStatus('ADcheck候補商品CSVに有効なデータがありません', 'error'); return; }
+          const cHead = cRows[0];
+          const cMgrIdx = findCol(cHead, ['商品管理番号', '商品管理ID', 'item_url']);
+          const cGidIdx = findCol(cHead, ['ジャンルID', 'genre_id', 'genreId', 'ジャンルＩＤ']);
+          if (cMgrIdx < 0) { setStatus('ADcheck候補商品CSVに「商品管理番号」列が見つかりません', 'error'); return; }
+          if (cGidIdx < 0) { setStatus('ADcheck候補商品CSVに「ジャンルID」列が見つかりません', 'error'); return; }
+          // 突き合わせ
+          const matched = [];
+          const seen = new Set();
+          for (let i = 1; i < cRows.length; i++) {
+            const mgr = (cRows[i][cMgrIdx] || '').trim();
+            const gid = (cRows[i][cGidIdx] || '').trim();
+            if (!mgr || !gid) continue;
+            if (targetGenres.has(gid) && !seen.has(mgr)) { matched.push(mgr); seen.add(mgr); }
+          }
+          // textarea反映
+          resultArea.value = matched.join('\n');
+          resultCount.textContent = `${matched.length} 件 / 候補 ${cRows.length - 1} 件中`;
+          // セール月配下に保存
+          try {
+            const ym = (typeof currentYM !== 'undefined') ? currentYM : null;
+            if (ym) {
+              const arc = loadArchive();
+              if (!arc[ym]) arc[ym] = { rows: [], titles: {}, workflow: {} };
+              arc[ym].preSelectMgrs = matched;
+              arc[ym].preSelectAt = Date.now();
+              saveArchive(arc);
+            }
+          } catch(e) { console.warn('preSelect保存失敗', e); }
+          if (matched.length === 0) {
+            setStatus('⚠ 候補商品の中に対象ジャンルと一致する商品がありませんでした', 'error');
+          } else {
+            setStatus(`✅ ${matched.length} 件の参加可能商品を特定しました`, 'success');
+          }
+        } catch (e) {
+          console.error('参加可能商品特定 失敗', e);
+          setStatus('❌ エラー: ' + (e.message || String(e)), 'error');
+        }
+      });
+
+      // 全選択 / コピー
+      if (btnSelAll) btnSelAll.addEventListener('click', () => { resultArea.focus(); resultArea.select(); });
+      if (btnCopy) btnCopy.addEventListener('click', async () => {
+        const text = resultArea.value || '';
+        if (!text) { setStatus('コピーする商品がありません', 'error'); return; }
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(text);
+          else { resultArea.focus(); resultArea.select(); document.execCommand('copy'); }
+          const orig = btnCopy.textContent;
+          btnCopy.textContent = '✓ コピー完了';
+          setTimeout(() => { btnCopy.textContent = orig; }, 2000);
+        } catch (e) { setStatus('コピーに失敗しました', 'error'); }
+      });
+
+      // textareaクリックで全選択 (使い勝手)
+      if (resultArea) {
+        resultArea.addEventListener('focus', () => { setTimeout(() => resultArea.select(), 0); });
+      }
+
+      // 表示時にアーカイブから復元
+      function _restorePreSelect() {
+        try {
+          const ym = (typeof currentYM !== 'undefined') ? currentYM : null;
+          if (!ym) { resultArea.value = ''; resultCount.textContent = ''; return; }
+          const arc = loadArchive();
+          const d = arc[ym] || {};
+          const list = Array.isArray(d.preSelectMgrs) ? d.preSelectMgrs : [];
+          resultArea.value = list.join('\n');
+          resultCount.textContent = list.length > 0 ? `${list.length} 件 (保存済)` : '';
+        } catch (e) {}
+      }
+      window._restorePreSelect = _restorePreSelect;
     })();
   </script>
 
