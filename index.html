@@ -1774,27 +1774,12 @@
       grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
       gap: 10px;
     }
-    /* 全ブロック共通: 5列固定 (ボタン幅をブロック間で揃える)
-       上段 5個 / 中段 5個 / 下段 3個 (セール開始準備の場合)
-       セール当日 1個 / セール後 3個 も同じ5列グリッドの左から配置 */
+    /* v0.52.236: 各ブロック内でボタンを等幅にし、横幅を広げて折り返し(高さ)を抑える。
+       最低幅を確保しつつ画面幅に応じて列数を自動調整。1fr なのでブロック内は全て同じ幅。 */
     .workflow-block.block-prep .workflow-block-buttons,
     .workflow-block.block-day .workflow-block-buttons,
     .workflow-block.block-after .workflow-block-buttons {
-      grid-template-columns: repeat(5, 1fr);
-    }
-    @media (max-width: 980px) {
-      .workflow-block.block-prep .workflow-block-buttons,
-      .workflow-block.block-day .workflow-block-buttons,
-      .workflow-block.block-after .workflow-block-buttons {
-        grid-template-columns: repeat(3, 1fr);
-      }
-    }
-    @media (max-width: 720px) {
-      .workflow-block.block-prep .workflow-block-buttons,
-      .workflow-block.block-day .workflow-block-buttons,
-      .workflow-block.block-after .workflow-block-buttons {
-        grid-template-columns: repeat(2, 1fr);
-      }
+      grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 1fr));
     }
     .wf-btn {
       display: flex;
@@ -3961,7 +3946,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.235</span>
+      <span class="version">v0.52.236</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
