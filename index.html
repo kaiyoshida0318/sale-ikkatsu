@@ -1834,16 +1834,16 @@
       padding-left: 9px;
       border-left: 1px solid rgba(0,0,0,.14);
     }
-    /* v0.52.234: 完了/スキップを文字ピル化 (四角チェック廃止)。未選択=無色、押すと点灯 */
+    /* v0.52.238: パターン3 — 非選択は枠なしの薄文字、選択は ✓付き+ベタ塗り+太字 */
     .wf-btn .wf-pill {
       font-size: 10px;
       font-weight: 600;
       cursor: pointer;
       color: #9aa1a8;
-      border: 1px solid #d4d8dc;
+      border: 1px solid transparent;
       border-radius: 999px;
       padding: 2px 9px;
-      background: #fff;
+      background: transparent;
       text-align: center;
       line-height: 1.25;
       font-family: inherit;
@@ -1852,12 +1852,15 @@
     }
     .wf-btn .wf-pill:active,
     .wf-btn .wf-pill:active:not(:disabled) { transform: none; }
-    /* スキップ点灯: グレーで塗りつぶし */
-    .wf-btn .wf-pill-skip.on { background: #7c828a; border-color: #7c828a; color: #fff; }
-    /* 完了点灯: ボタンがブロック色で塗り潰されるので、白ピル+ブロック色文字で映えさせる */
-    .workflow-block.block-prep .wf-pill-done.on { background: #fff; border-color: #fff; color: #2d6cb8; }
-    .workflow-block.block-day  .wf-pill-done.on { background: #fff; border-color: #fff; color: #d36916; }
-    .workflow-block.block-after .wf-pill-done.on { background: #fff; border-color: #fff; color: #2a8a45; }
+    /* 非選択ピル: ボタンが塗り潰されている時は文字を薄く (可読性確保) */
+    .wf-btn.is-done .wf-pill { color: rgba(255,255,255,.72); }
+    .wf-btn.is-skip .wf-pill { color: #b3b8bd; }
+    /* 点灯(選択)ピル: 先頭に ✓、太字、ベタ塗り */
+    .wf-btn .wf-pill.on::before { content: "✓ "; }
+    .wf-btn.is-skip .wf-pill-skip.on { background: #6b7178; border-color: #6b7178; color: #fff; font-weight: 700; }
+    .workflow-block.block-prep .wf-pill-done.on { background: #fff; border-color: #fff; color: #2d6cb8; font-weight: 700; }
+    .workflow-block.block-day  .wf-pill-done.on { background: #fff; border-color: #fff; color: #d36916; font-weight: 700; }
+    .workflow-block.block-after .wf-pill-done.on { background: #fff; border-color: #fff; color: #2a8a45; font-weight: 700; }
     /* v0.52.229: スキップ(今回は使わない) — ブロック色を上書きしてグレーに沈める */
     .wf-btn.is-skip {
       background: #eceef0 !important;
@@ -3946,7 +3949,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.237</span>
+      <span class="version">v0.52.238</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
