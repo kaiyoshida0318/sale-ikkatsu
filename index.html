@@ -1840,7 +1840,7 @@
       font-weight: 600;
       cursor: pointer;
       color: #9aa1a8;
-      border: 1px solid transparent;
+      border: 1px solid rgba(0,0,0,.18);
       border-radius: 999px;
       padding: 2px 9px;
       background: transparent;
@@ -1852,9 +1852,9 @@
     }
     .wf-btn .wf-pill:active,
     .wf-btn .wf-pill:active:not(:disabled) { transform: none; }
-    /* 非選択ピル: ボタンが塗り潰されている時は文字を薄く (可読性確保) */
-    .wf-btn.is-done .wf-pill { color: rgba(255,255,255,.72); }
-    .wf-btn.is-skip .wf-pill { color: #b3b8bd; }
+    /* 非選択ピル: ボタンが塗り潰されている時は文字・枠を薄く (可読性確保) */
+    .wf-btn.is-done .wf-pill { color: rgba(255,255,255,.72); border-color: rgba(255,255,255,.5); }
+    .wf-btn.is-skip .wf-pill { color: #b3b8bd; border-color: rgba(0,0,0,.18); }
     /* 点灯(選択)ピル: 先頭に ✓、太字、ベタ塗り */
     .wf-btn .wf-pill.on::before { content: "✓ "; }
     .wf-btn.is-skip .wf-pill-skip.on { background: #6b7178; border-color: #6b7178; color: #fff; font-weight: 700; }
@@ -3949,7 +3949,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.239</span>
+      <span class="version">v0.52.240</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
