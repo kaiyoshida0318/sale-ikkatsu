@@ -3949,7 +3949,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.240</span>
+      <span class="version">v0.52.241</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4118,6 +4118,7 @@
           <div class="ps-result-actions">
             <button type="button" id="btn-ps-select-all" class="dl-ready">全選択</button>
             <button type="button" id="btn-ps-copy" class="dl-ready">クリップボードにコピー</button>
+            <button type="button" id="btn-ps-clear" class="secondary">クリア</button>
             <span id="ps-result-count" class="ps-result-count"></span>
           </div>
           <textarea id="ps-result-textarea" class="ps-result-textarea" readonly placeholder="まだ突き合わせを行っていません。上の手順1〜3を実施してください。" rows="20"></textarea>
@@ -13533,6 +13534,7 @@
       const resultCount = document.getElementById('ps-result-count');
       const btnSelAll = document.getElementById('btn-ps-select-all');
       const btnCopy = document.getElementById('btn-ps-copy');
+      const btnClear = document.getElementById('btn-ps-clear');
       if (!slotGenreZone || !slotCandZone || !btnIngest) return;
 
       const slots = { genre: null, cand: null }; // {name, size, text}
@@ -13822,6 +13824,25 @@
           btnCopy.textContent = '✓ コピー完了';
           setTimeout(() => { btnCopy.textContent = orig; }, 2000);
         } catch (e) { setStatus('コピーに失敗しました', 'error'); }
+      });
+
+      // v0.52.241: 結果(参加可能商品の商品管理番号)をクリア
+      if (btnClear) btnClear.addEventListener('click', () => {
+        if (resultArea) resultArea.value = '';
+        if (resultCount) resultCount.textContent = '';
+        // 保存済みの参加可能商品リストも削除 (再表示で復活しないように)
+        try {
+          const ym = (typeof currentYM !== 'undefined') ? currentYM : null;
+          if (ym) {
+            const arc = loadArchive();
+            if (arc[ym]) {
+              delete arc[ym].preSelectMgrs;
+              delete arc[ym].preSelectAt;
+              saveArchive(arc);
+            }
+          }
+        } catch (e) { console.warn('preSelectクリア失敗', e); }
+        setStatus('参加可能商品の一覧をクリアしました', '');
       });
 
       // textareaクリックで全選択 (使い勝手)
