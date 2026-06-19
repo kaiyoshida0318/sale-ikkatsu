@@ -1840,37 +1840,39 @@
     }
     .wf-btn .wf-checks {
       display: flex;
-      flex-direction: row;
-      gap: 10px;
-      align-items: center;
+      flex-direction: column;
+      gap: 4px;
+      align-items: stretch;
+      justify-content: center;
       align-self: stretch;
       flex-shrink: 0;
-      padding-left: 10px;
+      padding-left: 9px;
       border-left: 1px solid rgba(0,0,0,.14);
     }
-    .wf-btn .wf-chk {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 1px;
-      cursor: pointer;
-      line-height: 1;
-    }
-    .wf-btn .wf-chk input {
-      width: 18px;
-      height: 18px;
-      flex-shrink: 0;
-      cursor: pointer;
-      margin: 0;
-    }
-    .wf-btn .wf-chk-done input { accent-color: currentColor; }
-    .wf-btn .wf-chk-skip input { accent-color: #8a9099; }
-    .wf-btn .wf-chk-cap {
-      font-size: 9px;
+    /* v0.52.234: 完了/スキップを文字ピル化 (四角チェック廃止)。未選択=無色、押すと点灯 */
+    .wf-btn .wf-pill {
+      font-size: 10px;
       font-weight: 600;
-      opacity: .7;
+      cursor: pointer;
+      color: #9aa1a8;
+      border: 1px solid #d4d8dc;
+      border-radius: 999px;
+      padding: 2px 9px;
+      background: #fff;
+      text-align: center;
+      line-height: 1.25;
+      font-family: inherit;
       white-space: nowrap;
+      transition: background .12s, color .12s, border-color .12s;
     }
+    .wf-btn .wf-pill:active,
+    .wf-btn .wf-pill:active:not(:disabled) { transform: none; }
+    /* スキップ点灯: グレーで塗りつぶし */
+    .wf-btn .wf-pill-skip.on { background: #7c828a; border-color: #7c828a; color: #fff; }
+    /* 完了点灯: ボタンがブロック色で塗り潰されるので、白ピル+ブロック色文字で映えさせる */
+    .workflow-block.block-prep .wf-pill-done.on { background: #fff; border-color: #fff; color: #2d6cb8; }
+    .workflow-block.block-day  .wf-pill-done.on { background: #fff; border-color: #fff; color: #d36916; }
+    .workflow-block.block-after .wf-pill-done.on { background: #fff; border-color: #fff; color: #2a8a45; }
     /* v0.52.229: スキップ(今回は使わない) — ブロック色を上書きしてグレーに沈める */
     .wf-btn.is-skip {
       background: #eceef0 !important;
@@ -1882,7 +1884,7 @@
     }
     .wf-btn.is-skip .wf-label { text-decoration: line-through; }
     .wf-btn.is-skip .wf-checks { border-left-color: rgba(0,0,0,.10); }
-    .wf-btn.is-skip .wf-chk-skip input { accent-color: #6b7178; }
+    .wf-btn.is-done .wf-checks { border-left-color: rgba(255,255,255,.4); }
 
     /* ブロック1: セール開始準備 (青系) */
     .workflow-block.block-prep .workflow-block-label {
@@ -3959,7 +3961,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.232</span>
+      <span class="version">v0.52.234</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -8300,13 +8302,14 @@
       const saleType = (typeof getCurrentSaleName === 'function') ? getCurrentSaleName() : '';
       if (!saleType) return []; // v0.52.232: 未選択時は手順を出さない
       if (saleType !== 'marathon') return WORKFLOW_BLOCKS;
-      // マラソン専用: 「セール開始準備」ブロック先頭に prep-pre-select を挿入
+      // マラソン専用: 「セール開始準備」ブロック先頭に prep-pre-select を挿入し、
+      //   広告出稿情報追加(prep-ad-info)は ① で広告状況を取得するため除外 (v0.52.233)
       return WORKFLOW_BLOCKS.map(block => {
         if (block.id !== 'prep') return block;
         return Object.assign({}, block, {
           buttons: [
             { id: 'prep-pre-select', label: '参加可能商品特定', action: 'open-pre-select' },
-            ...block.buttons,
+            ...block.buttons.filter(b => b.id !== 'prep-ad-info'),
           ],
         });
       });
@@ -8332,14 +8335,8 @@
           return `<button type="button" class="${classes.join(' ')}" data-wf-id="${btn.id}" ${btn.action ? `data-wf-action="${btn.action}"` : ''}>
             <span class="wf-label"><span class="wf-num">${numMark}</span>${escapeHtml(btn.label)}</span>
             <span class="wf-checks">
-              <label class="wf-chk wf-chk-done" title="完了したらチェック">
-                <input type="checkbox" class="wf-check" data-wf-check="${btn.id}" ${done ? 'checked' : ''} aria-label="完了" />
-                <span class="wf-chk-cap">完了</span>
-              </label>
-              <label class="wf-chk wf-chk-skip" title="今回は使わない（スキップ）">
-                <input type="checkbox" class="wf-skip" data-wf-skip="${btn.id}" ${skip ? 'checked' : ''} aria-label="今回は使わない" />
-                <span class="wf-chk-cap">スキップ</span>
-              </label>
+              <button type="button" class="wf-pill wf-pill-done${done ? ' on' : ''}" data-wf-check="${btn.id}" aria-pressed="${done ? 'true' : 'false'}" title="完了">完了</button>
+              <button type="button" class="wf-pill wf-pill-skip${skip ? ' on' : ''}" data-wf-skip="${btn.id}" aria-pressed="${skip ? 'true' : 'false'}" title="今回は使わない（スキップ）">スキップ</button>
             </span>
           </button>`;
         }).join('');
@@ -8350,39 +8347,45 @@
       }).join('');
       root.innerHTML = html;
 
-      // チェックボックス(完了): クリック時に伝播止めてトグル
-      root.querySelectorAll('.wf-check').forEach(chk => {
-        chk.addEventListener('click', (e) => { e.stopPropagation(); });
-        chk.addEventListener('change', (e) => {
-          const id = chk.getAttribute('data-wf-check');
-          setWorkflowDone(id, chk.checked);
-          const btn = chk.closest('.wf-btn');
+      // 完了ピル: クリックでトグル (done と skip は排他)
+      root.querySelectorAll('.wf-pill-done').forEach(pill => {
+        pill.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const id = pill.getAttribute('data-wf-check');
+          const next = !pill.classList.contains('on');
+          setWorkflowDone(id, next);
+          pill.classList.toggle('on', next);
+          pill.setAttribute('aria-pressed', next ? 'true' : 'false');
+          const btn = pill.closest('.wf-btn');
           if (btn) {
-            btn.classList.toggle('is-done', chk.checked);
-            if (chk.checked) {
+            btn.classList.toggle('is-done', next);
+            if (next) {
               btn.classList.remove('is-active'); // 進行中外枠を外す
-              btn.classList.remove('is-skip');   // 完了と排他: スキップ表示を外す
-              const sk = btn.querySelector('.wf-skip');
-              if (sk) sk.checked = false;
+              btn.classList.remove('is-skip');   // 完了と排他
+              const sk = btn.querySelector('.wf-pill-skip');
+              if (sk) { sk.classList.remove('on'); sk.setAttribute('aria-pressed', 'false'); }
             }
           }
         });
       });
 
-      // チェックボックス(スキップ=今回は使わない): done と排他
-      root.querySelectorAll('.wf-skip').forEach(chk => {
-        chk.addEventListener('click', (e) => { e.stopPropagation(); });
-        chk.addEventListener('change', (e) => {
-          const id = chk.getAttribute('data-wf-skip');
-          setWorkflowSkip(id, chk.checked);
-          const btn = chk.closest('.wf-btn');
+      // スキップ(今回は使わない)ピル: done と排他
+      root.querySelectorAll('.wf-pill-skip').forEach(pill => {
+        pill.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const id = pill.getAttribute('data-wf-skip');
+          const next = !pill.classList.contains('on');
+          setWorkflowSkip(id, next);
+          pill.classList.toggle('on', next);
+          pill.setAttribute('aria-pressed', next ? 'true' : 'false');
+          const btn = pill.closest('.wf-btn');
           if (btn) {
-            btn.classList.toggle('is-skip', chk.checked);
-            if (chk.checked) {
+            btn.classList.toggle('is-skip', next);
+            if (next) {
               btn.classList.remove('is-active'); // 進行中外枠を外す
-              btn.classList.remove('is-done');   // スキップと排他: 完了表示を外す
-              const dn = btn.querySelector('.wf-check');
-              if (dn) dn.checked = false;
+              btn.classList.remove('is-done');   // スキップと排他
+              const dn = btn.querySelector('.wf-pill-done');
+              if (dn) { dn.classList.remove('on'); dn.setAttribute('aria-pressed', 'false'); }
             }
           }
         });
@@ -8391,8 +8394,8 @@
       // 遷移は「wf-label (文字部分)」をクリックした時のみ
       root.querySelectorAll('.wf-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-          // チェックボックス自体は除外
-          if (e.target.classList.contains('wf-check')) return;
+          // ピル(完了/スキップ)は除外
+          if (e.target.closest('.wf-pill')) return;
           // 文字ラベル (wf-label とその子) の上以外は無視
           if (!e.target.closest('.wf-label')) return;
           const id = btn.getAttribute('data-wf-id');
@@ -11556,7 +11559,7 @@
             if (typeof getAdStatus === 'function' && getAdStatus(m) === 'yes') { seen.add(m); mgrs.push(m); }
           }
           if (mgrs.length === 0) {
-            setStatus('❌ 広告状況「出稿中」の商品がありません。「② 広告出稿情報追加」でADcheckデータを取り込んでください。', 'is-error');
+            setStatus('❌ 広告状況「出稿中」の商品がありません。' + ((typeof getCurrentSaleName === 'function' && getCurrentSaleName() === 'marathon') ? '「① 参加可能商品特定」で候補CSVを取り込んでください。' : '「② 広告出稿情報追加」でADcheckデータを取り込んでください。'), 'is-error');
             return;
           }
           // テンプレと同形式: ヘッダー + 「n,<商品管理番号>」、LF改行、Shift_JIS
@@ -11611,7 +11614,7 @@
             if (typeof getAdStatus === 'function' && getAdStatus(m) === 'yes') { seen.add(m); mgrs.push(m); }
           }
           if (mgrs.length === 0) {
-            setStatus('❌ 広告状況「出稿中」の商品がありません。「② 広告出稿情報追加」でADcheckデータを取り込んでください。', 'is-error');
+            setStatus('❌ 広告状況「出稿中」の商品がありません。' + ((typeof getCurrentSaleName === 'function' && getCurrentSaleName() === 'marathon') ? '「① 参加可能商品特定」で候補CSVを取り込んでください。' : '「② 広告出稿情報追加」でADcheckデータを取り込んでください。'), 'is-error');
             return;
           }
           // テンプレと同形式: ヘッダー + 「d,<商品管理番号>」、LF改行、Shift_JIS
@@ -13697,19 +13700,28 @@
           const cGidIdx = findCol(cHead, GENRE_ID_ALIASES);
           if (cMgrIdx < 0) { setStatus('ADcheck候補商品CSVに「商品管理番号」列が見つかりません', 'error'); return; }
           if (cGidIdx < 0) { setStatus('ADcheck候補商品CSVに「ジャンルID」列が見つかりません', 'error'); return; }
-          // 突き合わせ
+          // v0.52.233: 候補CSVの「広告状況」列(3列目) → そのままセール参加商品の広告状況へ反映
+          const cAdIdx = findCol(cHead, ['広告状況', '広告状態', '広告出稿', 'ad_status']);
+          // 突き合わせ + 広告状況マップ作成
           const matched = [];
           const seen = new Set();
+          const adMap = {};
           for (let i = 1; i < cRows.length; i++) {
             const mgr = (cRows[i][cMgrIdx] || '').trim();
             const gid = (cRows[i][cGidIdx] || '').trim();
-            if (!mgr || !gid) continue;
+            if (!mgr) continue;
+            if (cAdIdx >= 0) {
+              const av = (cRows[i][cAdIdx] || '').trim();
+              adMap[mgr] = (av === '出稿中') ? 'yes' : 'no';
+            }
+            if (!gid) continue;
             if (targetGenres.has(gid) && !seen.has(mgr)) { matched.push(mgr); seen.add(mgr); }
           }
           // textarea反映
           resultArea.value = matched.join('\n');
           resultCount.textContent = `${matched.length} 件 / 候補 ${cRows.length - 1} 件中`;
-          // セール月配下に保存
+          // セール月配下に保存 (参加可能商品 + 広告状況)
+          let adReflected = 0;
           try {
             const ym = (typeof currentYM !== 'undefined') ? currentYM : null;
             if (ym) {
@@ -13717,13 +13729,25 @@
               if (!arc[ym]) arc[ym] = { rows: [], titles: {}, workflow: {} };
               arc[ym].preSelectMgrs = matched;
               arc[ym].preSelectAt = Date.now();
+              // 広告状況をマージ (既存を保持しつつ最新で上書き)
+              if (cAdIdx >= 0) {
+                const cur = (arc[ym].adStatus && typeof arc[ym].adStatus === 'object') ? arc[ym].adStatus : {};
+                for (const k in adMap) cur[k] = adMap[k];
+                arc[ym].adStatus = cur;
+                adReflected = Object.keys(adMap).length;
+              }
               saveArchive(arc);
+              // 参加商品表に即時反映
+              if (typeof renderProductTable === 'function') { try { renderProductTable(); } catch(e){} }
             }
           } catch(e) { console.warn('preSelect保存失敗', e); }
+          const adMsg = (cAdIdx >= 0)
+            ? `　/　広告状況 ${adReflected} 件を反映`
+            : '　/　広告状況列なし(反映なし)';
           if (matched.length === 0) {
-            setStatus('⚠ 候補商品の中に対象ジャンルと一致する商品がありませんでした', 'error');
+            setStatus('⚠ 候補商品の中に対象ジャンルと一致する商品がありませんでした' + adMsg, 'error');
           } else {
-            setStatus(`✅ ${matched.length} 件の参加可能商品を特定しました`, 'success');
+            setStatus(`✅ ${matched.length} 件の参加可能商品を特定しました${adMsg}`, 'success');
           }
         } catch (e) {
           console.error('参加可能商品特定 失敗', e);
