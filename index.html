@@ -1409,6 +1409,14 @@
       display: flex;
       flex-direction: column;
     }
+    /* v0.52.225: ②参加商品追加 のセール名別表示切替 (デフォルトはスーパーSALE) */
+    .ap-h2-marathon,
+    .ap-li-marathon { display: none; }
+    body[data-sale-name="marathon"] .ap-h2-supersale,
+    body[data-sale-name="marathon"] .ap-li-supersale { display: none; }
+    body[data-sale-name="marathon"] .ap-h2-marathon { display: block; }
+    body[data-sale-name="marathon"] .ap-li-marathon { display: list-item; }
+    body[data-sale-name="marathon"] .ap-card-adcheck { display: none; }
     /* チェックボックス風リスト (取り込み手順内の "✔項目") */
     .howto-checklist {
       list-style: none;
@@ -3912,7 +3920,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.224</span>
+      <span class="version">v0.52.225</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4093,11 +4101,13 @@
       <!-- サブビュー: 参加商品追加 (RMSデータCSV → 商品一覧) -->
       <div id="tool-add-products" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>① 参加商品追加</h2>
+          <h2 class="ap-h2-supersale">① 参加商品追加</h2>
+          <h2 class="ap-h2-marathon">② 参加商品追加</h2>
         </div>
         <p class="tool-panel-description">セール参加商品のデータをRMSからダウンロードし、それをSALE一括内に取り込んでいく。</p>
 
-        <div class="card">
+        <!-- v0.52.225: マラソン時は1.ADcheckの手順を非表示 -->
+        <div class="card ap-card-adcheck">
           <h2>1. ADcheckからデータダウンロード</h2>
           <ol class="howto-list">
             <li>ADcheckの<b>SS列</b>でセール参加希望商品を選定。</li>
@@ -4107,10 +4117,14 @@
         </div>
 
         <div class="card">
-          <h2>2. RMSデータのダウンロード</h2>
+          <!-- 見出しはマラソン/スーパーSALEで番号が異なる (ADcheck非表示分繰り上げ) -->
+          <h2 class="ap-h2-supersale">2. RMSデータのダウンロード</h2>
+          <h2 class="ap-h2-marathon">1. RMSデータのダウンロード</h2>
           <ol class="howto-list">
             <li>RMS - 店舗設定 - <b>1 商品管理</b> - <b>2 CSV一括編集</b> - <b>CSVダウンロード</b></li>
-            <li>上でダウンロードしたADcheckデータの商品管理番号をコピーし、「<b>商品管理番号で絞り込む</b>」に一括貼り付け</li>
+            <!-- 手順2: ソースが異なる (スーパーSALE=ADcheck, マラソン=①参加可能商品特定) -->
+            <li class="ap-li-supersale">上でダウンロードしたADcheckデータの商品管理番号をコピーし、「<b>商品管理番号で絞り込む</b>」に一括貼り付け</li>
+            <li class="ap-li-marathon"><b>①参加可能商品特定</b>で抽出した商品管理番号一覧をコピーし、「<b>商品管理番号で絞り込む</b>」に一括貼り付け</li>
             <li>以下の項目にチェックを入れてダウンロード
               <ul class="howto-checklist">
                 <li class="auto">商品管理番号<span class="howto-note">（必須-自動でDLされる）</span></li>
@@ -4128,8 +4142,9 @@
         </div>
 
         <div class="card">
-          <h2>3. RMSデータのアップロード</h2>
-          <p class="card-lead">上記「2. RMSデータのダウンロード」で取得したCSVファイルをここでアップロードしてください。</p>
+          <h2 class="ap-h2-supersale">3. RMSデータのアップロード</h2>
+          <h2 class="ap-h2-marathon">2. RMSデータのアップロード</h2>
+          <p class="card-lead">上記「RMSデータのダウンロード」で取得したCSVファイルをここでアップロードしてください。</p>
           <form id="add-products-form">
             <div class="grid">
               <div class="file-input" data-target="rms-products" style="grid-column: 1 / -1;">
@@ -5524,6 +5539,8 @@
       } else {
         saleTypeWrap.classList.add('type-super-sale');
       }
+      // v0.52.225: body の data-sale-name を更新 → CSS分岐でページ表記がセール名に応じて切替
+      document.body.setAttribute('data-sale-name', saleTypeEl.value);
       localStorage.setItem(SALE_TYPE_KEY, saleTypeEl.value);
     }
     const savedType = localStorage.getItem(SALE_TYPE_KEY);
