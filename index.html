@@ -3898,6 +3898,7 @@
     <div id="sale-type-wrap" class="sale-type-wrap type-super-sale">
       <span class="sale-type-tag">セール名</span>
       <select id="sale-type" class="sale-type-select" aria-label="セール種別">
+        <option value="">-</option>
         <option value="super-sale" selected>楽天スーパーSALE</option>
         <option value="marathon">楽天お買い物マラソン</option>
       </select>
@@ -3958,7 +3959,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.231</span>
+      <span class="version">v0.52.232</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -5479,7 +5480,9 @@
     }
     function getCurrentSaleName() {
       const v = localStorage.getItem(SALE_TYPE_KEY);
-      return (v === 'super-sale' || v === 'marathon') ? v : DEFAULT_SALE_NAME;
+      if (v === 'super-sale' || v === 'marathon') return v;
+      if (v === '') return ''; // v0.52.232: 明示的な未選択
+      return DEFAULT_SALE_NAME; // 初回(未設定)は従来通り
     }
     function ensureMigrationV2() {
       // v0.52.219: 容量超過対策 — pre-migration-backupは保存しない (ユーザー側で別ファイルにバックアップ済)
@@ -5552,10 +5555,11 @@
     }
     function saveArchive(archive) {
       try {
+        const sn = getCurrentSaleName();
+        if (SALE_NAMES.indexOf(sn) < 0) return; // v0.52.232: 未選択時は保存しない
         ensureMigrationV2();
         const v2 = _loadArchiveV2() || {};
         const shop = getCurrentShop();
-        const sn = getCurrentSaleName();
         if (!v2[shop]) v2[shop] = {};
         v2[shop][sn] = archive;
         _saveArchiveV2(v2);
@@ -5569,22 +5573,31 @@
       saleTypeWrap.classList.remove('type-super-sale', 'type-marathon');
       const tag = saleTypeWrap.querySelector('.sale-type-tag');
       if (tag) tag.textContent = 'セール名';
-      if (saleTypeEl.value === 'marathon') {
+      const v = saleTypeEl.value;
+      if (v === 'marathon') {
         saleTypeWrap.classList.add('type-marathon');
-      } else {
+      } else if (v === 'super-sale') {
         saleTypeWrap.classList.add('type-super-sale');
       }
+      // v === '' (未選択) はどちらの色も付けずニュートラル
       // v0.52.225: body の data-sale-name を更新 → CSS分岐でページ表記がセール名に応じて切替
-      document.body.setAttribute('data-sale-name', saleTypeEl.value);
-      localStorage.setItem(SALE_TYPE_KEY, saleTypeEl.value);
+      document.body.setAttribute('data-sale-name', v);
+      localStorage.setItem(SALE_TYPE_KEY, v);
     }
     const savedType = localStorage.getItem(SALE_TYPE_KEY);
     if (savedType === 'super-sale' || savedType === 'marathon') {
       saleTypeEl.value = savedType;
+    } else if (savedType === '') {
+      saleTypeEl.value = ''; // v0.52.232: 未選択を復元
     }
     saleTypeEl.addEventListener('change', () => {
       updateSaleTypeColor();
-      // v0.52.216: セール名(saleType)が変わるとアーカイブのスライスが変わるので全体を切替
+      // v0.52.232: セール名変更 → セール期間は最新に (「-」選択時は未選択のまま)
+      if (saleTypeEl.value) {
+        selectLatestYm();
+      } else {
+        setYmUnselected();
+      }
       if (typeof onShopOrSaleNameOrYmChanged === 'function') onShopOrSaleNameOrYmChanged({ saleNameChanged: true });
       // v0.52.121: ⑤画面表示中なら、新しいセール種別で割引率不一致を再評価
       if (document.body.getAttribute('data-view') === 'decide-title') {
@@ -5608,33 +5621,39 @@
       if (!saleYmSelectEl) return;
       const arc = loadArchive();
       const yms = Object.keys(arc).sort(); // 昇順
-      // 「現在の年月」: localStorage の保存値 / fallback で先頭
-      let cur = localStorage.getItem(SALE_ARCHIVE_CURRENT) || '';
-      if (!cur || yms.indexOf(cur) < 0) cur = yms[0] || '';
+      // v0.52.232: SALE_ARCHIVE_CURRENT === '' は明示的な未選択(「-」)
+      const stored = localStorage.getItem(SALE_ARCHIVE_CURRENT);
+      const unselected = (stored === '');
+      let cur = stored || '';
+      if (!unselected) {
+        if (!cur || yms.indexOf(cur) < 0) cur = yms[0] || '';
+      }
       saleYmSelectEl.innerHTML = '';
-      if (yms.length === 0) {
+      // 先頭に「-」(未選択)
+      const optDash = document.createElement('option');
+      optDash.value = ''; optDash.textContent = '-';
+      saleYmSelectEl.appendChild(optDash);
+      for (const ym of yms) {
         const opt = document.createElement('option');
-        opt.value = ''; opt.textContent = '(セール期間なし)';
+        opt.value = ym;
+        const m = ym.match(/^(\d{4})\/(\d{2})$/);
+        opt.textContent = m ? `${m[1]}年${parseInt(m[2],10)}月` : ym;
         saleYmSelectEl.appendChild(opt);
-      } else {
-        for (const ym of yms) {
-          const opt = document.createElement('option');
-          opt.value = ym;
-          const m = ym.match(/^(\d{4})\/(\d{2})$/);
-          opt.textContent = m ? `${m[1]}年${parseInt(m[2],10)}月` : ym;
-          saleYmSelectEl.appendChild(opt);
-        }
       }
       // 末尾に「+ 新規作成」
       const optNew = document.createElement('option');
       optNew.value = '__create__';
       optNew.textContent = '+ 新規作成';
       saleYmSelectEl.appendChild(optNew);
-      // v0.52.223: appendChild後にvalueを明示設定 (selected属性に頼らず確実に反映)
-      saleYmSelectEl.value = cur || '';
-      // currentYM をこの値に合わせる
-      currentYM = cur || null;
-      if (cur) localStorage.setItem(SALE_ARCHIVE_CURRENT, cur);
+      // appendChild後にvalueを明示設定
+      if (unselected) {
+        saleYmSelectEl.value = '';
+        currentYM = null;
+      } else {
+        saleYmSelectEl.value = cur || '';
+        currentYM = cur || null;
+        if (cur) localStorage.setItem(SALE_ARCHIVE_CURRENT, cur);
+      }
     }
 
     // 開始-終了チップ表示の更新 (現在の年月のstartDt/endDtを取得)
@@ -5650,45 +5669,64 @@
       if (spcEndDisplay) spcEndDisplay.textContent = e || '----/--/-- --:--';
     }
 
+    // v0.52.232: セール名未選択 / マラソン専用ビューの妥当性判定
+    function isViewAllowedForCurrentSale(viewId) {
+      const sn = getCurrentSaleName();
+      if (!sn) return MAIN_TABS.includes(viewId);       // 未選択: メインタブのみ
+      if (viewId === 'pre-select' && sn !== 'marathon') return false; // ①参加可能商品特定はマラソン専用
+      return true;
+    }
+    function setYmUnselected() {
+      currentYM = null;
+      localStorage.setItem(SALE_ARCHIVE_CURRENT, '');
+    }
+    function selectLatestYm() {
+      const arc = loadArchive();
+      const yms = (typeof sortYMs === 'function') ? sortYMs(Object.keys(arc)) : Object.keys(arc).sort().reverse();
+      const latest = yms.length ? yms[0] : '';
+      currentYM = latest || null;
+      localStorage.setItem(SALE_ARCHIVE_CURRENT, latest || '');
+    }
+
     // ショップ/セール名/年月 変更時の共通フック: アーカイブのスライスが変わるので
-    // 年月セレクトとチップを更新し、現在開いている画面を再描画
+    // 年月セレクト・チップを更新し、下のサブビューを文脈に合わせて再描画(無効なら退避)
     function onShopOrSaleNameOrYmChanged(opt) {
       refreshYmSelector();
       refreshSalePeriodChip();
       // 旧 .sale-period-legacy にも値を反映 (互換のため)
       if (typeof reflectPeriodToLegacyInputs === 'function') reflectPeriodToLegacyInputs();
-      // v0.52.222: 旧アーカイブセレクト(archive-select)も新しい年月一覧で再構築し、
-      //            currentYMを反映してchangeイベントを発火 → 既存の全画面再描画ロジックが走る
+      // 旧アーカイブセレクト(archive-select)も再構築し、currentYMを反映してchange発火
       if (typeof refreshArchiveSelect === 'function') {
         try { refreshArchiveSelect(); } catch (e) { console.warn('refreshArchiveSelect失敗:', e); }
       }
       const oldSel = document.getElementById('archive-select');
-      if (oldSel && currentYM) {
-        // refreshArchiveSelect は yms[0] (最新) を選ぶことがあるので、改めて currentYM を強制適用
-        oldSel.value = currentYM;
+      if (oldSel) {
+        oldSel.value = currentYM || '';
         try {
           oldSel.dispatchEvent(new Event('change', { bubbles: true }));
-        } catch (e) { /* fallback: 個別呼び出し */
+        } catch (e) {
           if (typeof renderProductTable === 'function') renderProductTable();
           if (typeof renderWorkflow === 'function') renderWorkflow();
         }
-      } else if (oldSel && !currentYM) {
-        // 年月なし(KAIRY新規等): セレクトを空にして同様に変更通知
-        oldSel.value = '';
-        try { oldSel.dispatchEvent(new Event('change', { bubbles: true })); } catch (e) {}
       }
-      // 現在のビューも念のため showView で再描画 (showView 内部のbind/hook が必要なため)
-      const v = document.body.getAttribute('data-view');
-      if (v && typeof showView === 'function') {
+      // v0.52.232: 下のサブビュー(説明画面)を文脈に合わせて切替。
+      //   現在開いているビューが今のセールで無効なら「セール作業手順」に戻す。
+      let v = document.body.getAttribute('data-view') || 'workflow';
+      if (!isViewAllowedForCurrentSale(v)) v = 'workflow';
+      if (typeof showView === 'function') {
         try { showView(v); } catch (e) { console.warn('showView失敗:', e); }
       }
     }
 
-    // ショップ選択 change
+    // ショップ選択 change → セール名・期間とも未選択「-」にリセット
     if (shopSelectEl) {
       shopSelectEl.addEventListener('change', () => {
         setCurrentShop(shopSelectEl.value);
-        onShopOrSaleNameOrYmChanged({ shopChanged: true });
+        // セール名を未選択に
+        if (saleTypeEl) { saleTypeEl.value = ''; if (typeof updateSaleTypeColor === 'function') updateSaleTypeColor(); }
+        // セール期間を未選択に
+        setYmUnselected();
+        onShopOrSaleNameOrYmChanged({ shopChanged: true, reset: true });
       });
     }
     // 年月セレクト change
@@ -5697,13 +5735,16 @@
         const v = saleYmSelectEl.value;
         if (v === '__create__') {
           // 新規作成モーダルを開く (値は前の選択に戻す)
-          const arc = loadArchive();
-          const yms = Object.keys(arc).sort();
-          saleYmSelectEl.value = currentYM || yms[0] || '';
+          saleYmSelectEl.value = currentYM || '';
           openYmCreateModal();
           return;
         }
-        if (!v) return;
+        if (v === '') {
+          // 「-」= 未選択
+          setYmUnselected();
+          onShopOrSaleNameOrYmChanged({ ymUnselected: true });
+          return;
+        }
         currentYM = v;
         localStorage.setItem(SALE_ARCHIVE_CURRENT, v);
         onShopOrSaleNameOrYmChanged({ ymChanged: true });
@@ -8257,6 +8298,7 @@
     // v0.52.224: マラソン選択時のみ「① 参加可能商品特定」を先頭に追加
     function getWorkflowBlocks() {
       const saleType = (typeof getCurrentSaleName === 'function') ? getCurrentSaleName() : '';
+      if (!saleType) return []; // v0.52.232: 未選択時は手順を出さない
       if (saleType !== 'marathon') return WORKFLOW_BLOCKS;
       // マラソン専用: 「セール開始準備」ブロック先頭に prep-pre-select を挿入
       return WORKFLOW_BLOCKS.map(block => {
