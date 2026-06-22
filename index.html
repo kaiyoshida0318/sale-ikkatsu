@@ -3949,7 +3949,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.241</span>
+      <span class="version">v0.52.242</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4191,12 +4191,12 @@
         </div>
       </div>
 
-      <!-- サブビュー: ② 広告出稿情報追加 (v0.52.165 新規追加) -->
+      <!-- サブビュー: ② 区分＆広告状況追加 (v0.52.165 新規追加 / v0.52.242 区分対応) -->
       <div id="tool-ad-info" class="tool-panel">
         <div class="tool-panel-header">
-          <h2>② 広告出稿情報追加</h2>
+          <h2>② 区分＆広告状況追加</h2>
         </div>
-        <p class="tool-panel-description">セール参加準備①でダウンロードしたADcheckのデータを取り込み、広告出稿状況を反映させる。</p>
+        <p class="tool-panel-description">セール参加準備①でダウンロードしたADcheckのデータを取り込み、区分と広告出稿状況を反映させる。</p>
 
         <div class="card">
           <h2>CSVデータのアップロード</h2>
@@ -4205,7 +4205,7 @@
             <div class="grid">
               <div class="file-input" data-target="ad-info-csv" style="grid-column: 1 / -1;">
                 <label>ADcheckデータCSV</label>
-                <div class="desc">ADcheckからダウンロードした広告出稿状況のCSV</div>
+                <div class="desc">ADcheckからダウンロードした区分・広告出稿状況のCSV</div>
                 <input type="file" name="ad_info_csv" accept=".csv" required />
                 <div class="filename"></div>
               </div>
@@ -6494,7 +6494,7 @@
         const message =
           `${ymLabel} から、選択した ${checked.length}件 の商品データを削除します。\n\n` +
           `▼ 削除されるもの (選択商品のみ)\n` +
-          `・参加商品リスト / RMSデータ / 割引率 / 編集内容 / セール用タイトル / 商品状態\n` +
+          `・参加商品リスト / RMSデータ / 割引率 / 編集内容 / セール用タイトル / 区分\n` +
           `・原価データ (単一・セット・構成物)\n\n` +
           `他の商品はそのまま残ります。\n` +
           `この操作は取り消せません。本当に削除しますか?`;
@@ -7577,6 +7577,26 @@
       saveArchive(archive);
     }
 
+    // v0.52.242: 区分(productStatus)と広告状況(adStatus)を1回の保存でまとめて反映。
+    //   既存値は保持し、渡されたぶんだけ上書き (既存スーパーSALE分は触らない)
+    function saveAdAndStatusMaps(adMap, statusMap) {
+      const ym = currentYM || getCurrentYM();
+      if (!ym) throw new Error('セール期間(年月)が未選択です。先に「① 参加商品追加」でデータを取り込んでください。');
+      const archive = loadArchive();
+      if (!archive[ym]) archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
+      if (adMap && Object.keys(adMap).length) {
+        const curAd = (archive[ym].adStatus && typeof archive[ym].adStatus === 'object') ? archive[ym].adStatus : {};
+        for (const k in adMap) curAd[k] = adMap[k];
+        archive[ym].adStatus = curAd;
+      }
+      if (statusMap && Object.keys(statusMap).length) {
+        const curSt = (archive[ym].productStatus && typeof archive[ym].productStatus === 'object') ? archive[ym].productStatus : {};
+        for (const k in statusMap) curSt[k] = statusMap[k];
+        archive[ym].productStatus = curSt;
+      }
+      saveArchive(archive);
+    }
+
     function renderProductTable() {
       const container = document.getElementById('product-table-container');
       if (!container) return;
@@ -7593,7 +7613,7 @@
         <th class="col-mgr">商品管理番号</th>
         <th class="col-itemcode">商品コード</th>
         <th class="col-img">商品画像</th>
-        <th class="col-pstatus">商品状態 <button type="button" class="pstatus-sort-btn${sortActiveClass}" title="商品状態でソート" aria-label="商品状態でソート">${sortMark}</button></th>
+        <th class="col-pstatus">区分 <button type="button" class="pstatus-sort-btn${sortActiveClass}" title="区分でソート" aria-label="区分でソート">${sortMark}</button></th>
         <th class="col-adstatus">広告状況 <button type="button" class="adstatus-sort-btn${adSortActiveClass}" title="広告状況でソート" aria-label="広告状況でソート">${adSortMark}</button></th>
         <th class="col-discount" colspan="2">割引率</th>
       </tr>`;
@@ -7733,7 +7753,7 @@
             <td class="mgr">${escapeHtml(r.mgr || '')}</td>
             <td class="mgr">${escapeHtml(r.itemCode || '')}</td>
             <td class="img-cell">${imageCellHtml(r.imageUrl)}</td>
-            <td class="col-pstatus pstatus-${st}"><select class="pstatus-select" data-mgr="${escapeHtml(r.mgr || '')}" aria-label="商品状態">${optsHtml}</select></td>
+            <td class="col-pstatus pstatus-${st}"><select class="pstatus-select" data-mgr="${escapeHtml(r.mgr || '')}" aria-label="区分">${optsHtml}</select></td>
             <td class="col-adstatus adstatus-${r.adStatus === 'yes' ? 'yes' : 'no'}">${r.adStatus === 'yes' ? '出稿中' : '未出稿'}</td>
             <td class="col-discount${discClass}">${discLabel}</td>
             <td class="col-decide-link"><a href="?view=decide-price&mgr=${encodeURIComponent(r.mgr || '')}" class="decide-link-btn" data-mgr="${escapeHtml(r.mgr || '')}" title="この商品の割引率決定表へ">割引率決定表へ</a></td>
@@ -8177,7 +8197,7 @@
         className: 'block-prep',
         buttons: [
           { id: 'prep-add-products', label: '参加商品追加', action: 'open-add-products' },
-          { id: 'prep-ad-info', label: '広告出稿情報追加', action: 'open-ad-info' },
+          { id: 'prep-ad-info', label: '区分＆広告状況追加', action: 'open-ad-info' },
           { id: 'prep-cost-set-item', label: '原価特定-NE-単一orセット商品仕分け', action: 'open-cost-set-item' },
           { id: 'prep-cost-set-component', label: '原価特定-NE-セット構成物原価特定', action: 'open-cost-set-component' },
           { id: 'prep-decide-price', label: '割引率決定', action: 'open-decide-price' },
@@ -8516,28 +8536,44 @@
           const header = rows[0].map(h => (h || '').trim());
           const iMgr = header.findIndex(h => h.indexOf('商品管理番号') >= 0);
           const iAd = header.findIndex(h => h.indexOf('広告状況') >= 0);
+          const iKubun = header.findIndex(h => h.indexOf('区分') >= 0);
           if (iMgr < 0 || iAd < 0) {
             setSt('❌ 「商品管理番号」「広告状況」列が見つかりません。ADcheckのCSVか確認してください。', 'error');
             return;
           }
+          // v0.52.242: ADcheckの「区分」→ セール参加商品の区分(productStatus) へマッピング
+          //   新商品→new / 健常・中立→keep(既存-伸ばし) / 撤退→withdraw(既存-撤退)
+          function mapKubun(v) {
+            const s = (v || '').trim();
+            if (!s) return null;
+            if (s.indexOf('新商品') >= 0) return 'new';
+            if (s.indexOf('健常') >= 0 || s.indexOf('中立') >= 0) return 'keep';
+            if (s.indexOf('撤退') >= 0) return 'withdraw';
+            return null; // それ以外は変更しない
+          }
           const map = {};
-          let yes = 0, no = 0;
+          const statusMap = {};
+          let yes = 0, no = 0, kubunCount = 0;
           for (let i = 1; i < rows.length; i++) {
             const mgr = (rows[i][iMgr] || '').trim();
             if (!mgr) continue;
             const v = (rows[i][iAd] || '').trim();
             if (v === '出稿中') { map[mgr] = 'yes'; yes++; }
             else { map[mgr] = 'no'; no++; }
+            if (iKubun >= 0) {
+              const st = mapKubun(rows[i][iKubun]);
+              if (st) { statusMap[mgr] = st; kubunCount++; }
+            }
           }
           if (Object.keys(map).length === 0) { setSt('❌ 有効な行がありませんでした。', 'error'); return; }
-          saveAdStatusMap(map);
+          saveAdAndStatusMaps(map, statusMap);
           // v0.52.204: アップロードファイルを保持表示 (元CSVの中身も保存しDL可能に)
           try {
             const _b64 = ab2b64(new Uint8Array(await file.arrayBuffer()));
             recordUploadedFile('adInfo', file, _b64, file.type || 'text/csv');
           } catch (e) { recordUploadedFile('adInfo', file); }
           renderUploadedFileSlot('adInfo', 'uf-slot-adInfo', () => { if (typeof renderProductTable === 'function') renderProductTable(); });
-          setSt(`✅ ${Object.keys(map).length}件を取り込みました（出稿中 ${yes}件 / 未出稿 ${no}件）。「セール参加商品」表の「広告状況」列に反映されます。`, 'success');
+          setSt(`✅ ${Object.keys(map).length}件を取り込みました（出稿中 ${yes}件 / 未出稿 ${no}件${iKubun >= 0 ? ` / 区分 ${kubunCount}件` : '（区分列なし）'}）。「セール参加商品」表の「区分」「広告状況」列に反映されます。`, 'success');
           // 参加商品表を即時再描画して反映
           if (typeof renderProductTable === 'function') renderProductTable();
         } catch (err) {
@@ -11548,7 +11584,7 @@
             if (typeof getAdStatus === 'function' && getAdStatus(m) === 'yes') { seen.add(m); mgrs.push(m); }
           }
           if (mgrs.length === 0) {
-            setStatus('❌ 広告状況「出稿中」の商品がありません。' + ((typeof getCurrentSaleName === 'function' && getCurrentSaleName() === 'marathon') ? '「① 参加可能商品特定」で候補CSVを取り込んでください。' : '「② 広告出稿情報追加」でADcheckデータを取り込んでください。'), 'is-error');
+            setStatus('❌ 広告状況「出稿中」の商品がありません。' + ((typeof getCurrentSaleName === 'function' && getCurrentSaleName() === 'marathon') ? '「① 参加可能商品特定」で候補CSVを取り込んでください。' : '「② 区分＆広告状況追加」でADcheckデータを取り込んでください。'), 'is-error');
             return;
           }
           // テンプレと同形式: ヘッダー + 「n,<商品管理番号>」、LF改行、Shift_JIS
@@ -11603,7 +11639,7 @@
             if (typeof getAdStatus === 'function' && getAdStatus(m) === 'yes') { seen.add(m); mgrs.push(m); }
           }
           if (mgrs.length === 0) {
-            setStatus('❌ 広告状況「出稿中」の商品がありません。' + ((typeof getCurrentSaleName === 'function' && getCurrentSaleName() === 'marathon') ? '「① 参加可能商品特定」で候補CSVを取り込んでください。' : '「② 広告出稿情報追加」でADcheckデータを取り込んでください。'), 'is-error');
+            setStatus('❌ 広告状況「出稿中」の商品がありません。' + ((typeof getCurrentSaleName === 'function' && getCurrentSaleName() === 'marathon') ? '「① 参加可能商品特定」で候補CSVを取り込んでください。' : '「② 区分＆広告状況追加」でADcheckデータを取り込んでください。'), 'is-error');
             return;
           }
           // テンプレと同形式: ヘッダー + 「d,<商品管理番号>」、LF改行、Shift_JIS
