@@ -3228,6 +3228,25 @@
     .group-header-namecol .group-name {
       width: 100%;
     }
+    /* v0.52.251: 商品名の位置に出す「過去割引率」 (直近3件・率ごとの色) */
+    .pd-hist-col { flex-direction: column; align-items: flex-start; gap: 6px; }
+    .pd-hist-title {
+      font-size: 12px; font-weight: 600; color: var(--brand);
+      letter-spacing: .04em; white-space: nowrap;
+    }
+    .pd-hist-boxes { display: flex; flex-wrap: wrap; gap: 8px; }
+    .pd-hist-box {
+      display: inline-flex; flex-direction: column; align-items: center;
+      min-width: 84px; padding: 5px 10px; border-radius: 8px;
+      border: 1.5px solid currentColor; line-height: 1.35; white-space: nowrap;
+    }
+    .pd-hist-box .pd-hist-ym { font-size: 12px; font-weight: 600; }
+    .pd-hist-box .pd-hist-rate { font-size: 14px; font-weight: 700; }
+    .pd-hist-box.disc-10 { color: #2d6cb8; background: #e8f0fa; }
+    .pd-hist-box.disc-20 { color: #d36916; background: #fcefe2; }
+    .pd-hist-box.disc-30 { color: #2a8a45; background: #e8f4ec; }
+    .pd-hist-box.disc-50 { color: #d83838; background: #faeaea; }
+    .pd-hist-empty { font-size: 13px; color: #9aa1a8; }
     /* バリエ・手数料ボタン: product-group-header 内の下部スペース(padding-bottomの中)に
        absolute 配置。JSで left を v4列の中央に合わせる。
        v0.52.116: bottom を正値にして 枠内に収め、表ヘッダーに被らせない。 */
@@ -4014,7 +4033,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.250</span>
+      <span class="version">v0.52.251</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -6799,6 +6818,118 @@
         }
       } catch (e) {}
       return hist;
+    }
+
+    // ===== v0.52.251: 過去割引率インデックス (店舗単位・両セール横断) =====
+    // 月データ(data)から mgr→Set(割引率) を算出。全SKUの率を集計する(使った率を全部)。
+    function _mgrDiscountsFromData(data) {
+      const map = {};
+      try {
+        if (!data || !data.rmsCsvB64) return map;
+        const discounts = (data.discounts && typeof data.discounts === 'object') ? data.discounts : {};
+        const rmsRows = parseCsvText(decodeShiftJIS(b642u8(data.rmsCsvB64)));
+        if (rmsRows.length < 2) return map;
+        const rh = rmsRows[0];
+        const iMgr = rh.findIndex(x => x && x.indexOf('商品管理番号') >= 0);
+        const iSku = rh.findIndex(x => x && x.indexOf('システム連携用SKU番号') >= 0);
+        if (iMgr < 0 || iSku < 0) return map;
+        for (let i = 1; i < rmsRows.length; i++) {
+          const r = rmsRows[i]; if (!r) continue;
+          const mgr = (r[iMgr] || '').trim();
+          const sku = (r[iSku] || '').trim();
+          if (!mgr || !sku) continue;
+          const d = discounts[sku];
+          if (d === 10 || d === 20 || d === 30 || d === 50) {
+            if (!map[mgr]) map[mgr] = new Set();
+            map[mgr].add(d);
+          }
+        }
+      } catch (e) {}
+      return map;
+    }
+    const DISC_HIST_KEY = 'discount-history-index-v1';
+    let _discHistCache = null;
+    function _loadDiscHist() {
+      if (_discHistCache) return _discHistCache;
+      try { _discHistCache = JSON.parse(localStorage.getItem(DISC_HIST_KEY) || '{}'); }
+      catch (e) { _discHistCache = {}; }
+      return _discHistCache;
+    }
+    function _saveDiscHist(obj) {
+      _discHistCache = obj;
+      try { localStorage.setItem(DISC_HIST_KEY, JSON.stringify(obj)); } catch (e) {}
+    }
+    // 1店舗ぶんのインデックスを全月走査で構築: mgr -> [ {ym, sale, disc} ]
+    function _buildDiscHistForShop(shop) {
+      const out = {};
+      try {
+        const v2 = _loadArchiveV2();
+        if (!v2 || !v2[shop]) return out;
+        for (const sale of SALE_NAMES) {
+          const byYm = v2[shop][sale];
+          if (!byYm) continue;
+          for (const ym of Object.keys(byYm)) {
+            const map = _mgrDiscountsFromData(byYm[ym]);
+            for (const mgr of Object.keys(map)) {
+              if (!out[mgr]) out[mgr] = [];
+              for (const d of map[mgr]) out[mgr].push({ ym, sale, disc: d });
+            }
+          }
+        }
+      } catch (e) {}
+      return out;
+    }
+    function _ensureDiscHist(shop) {
+      const all = _loadDiscHist();
+      if (!all[shop]) { all[shop] = _buildDiscHistForShop(shop); _saveDiscHist(all); }
+      return all[shop];
+    }
+    // 割引率保存後に当月(現在の店舗/セール/ym)ぶんを差分更新
+    function updateDiscHistCurrentMonth() {
+      try {
+        const shop = getCurrentShop();
+        const sale = getCurrentSaleName();
+        const ym = currentYM || getCurrentYM();
+        if (SHOPS.indexOf(shop) < 0 || SALE_NAMES.indexOf(sale) < 0 || !ym) return;
+        const all = _loadDiscHist();
+        if (!all[shop]) { all[shop] = _buildDiscHistForShop(shop); _saveDiscHist(all); return; }
+        const data = (loadArchive() || {})[ym];
+        const map = _mgrDiscountsFromData(data);
+        // 当該 ym+sale の既存エントリを除去してから再追加
+        for (const mgr of Object.keys(all[shop])) {
+          all[shop][mgr] = all[shop][mgr].filter(e => !(e.ym === ym && e.sale === sale));
+        }
+        for (const mgr of Object.keys(map)) {
+          if (!all[shop][mgr]) all[shop][mgr] = [];
+          for (const d of map[mgr]) all[shop][mgr].push({ ym, sale, disc: d });
+        }
+        _saveDiscHist(all);
+      } catch (e) {}
+    }
+    // 表示用: mgr の過去割引率を新しい順に最大 limit 件 (現在の ym+sale は除外)
+    function getPastDiscountEntries(mgr, limit) {
+      try {
+        const shop = getCurrentShop();
+        const curSale = getCurrentSaleName();
+        const curYm = currentYM || getCurrentYM();
+        const shopIdx = _ensureDiscHist(shop);
+        let list = (shopIdx[mgr] || []).filter(e => !(e.ym === curYm && e.sale === curSale));
+        list.sort((a, b) => (a.ym < b.ym ? 1 : a.ym > b.ym ? -1 : 0));
+        const seen = new Set(); const uniq = [];
+        for (const e of list) {
+          const k = e.ym + '|' + e.sale + '|' + e.disc;
+          if (seen.has(k)) continue; seen.add(k); uniq.push(e);
+        }
+        return uniq.slice(0, limit || 3);
+      } catch (e) { return []; }
+    }
+    // 商品ヘッダー内に出す「過去割引率」ボックスHTML (直近3件・率ごとの色)
+    function pastDiscountBoxesHtml(mgr) {
+      const entries = getPastDiscountEntries(mgr, 3);
+      if (!entries.length) return '<span class="pd-hist-empty">― 初参加（履歴なし）</span>';
+      const abbr = s => s === 'super-sale' ? 'SS' : (s === 'marathon' ? 'マラ' : s);
+      const ymJp = ym => { const m = /^(\d{4})\/(\d{1,2})$/.exec(ym); return m ? (m[1] + '年' + Number(m[2]) + '月') : ym; };
+      return entries.map(e => `<span class="pd-hist-box disc-${e.disc}"><span class="pd-hist-ym">${ymJp(e.ym)}</span><span class="pd-hist-rate">${abbr(e.sale)}-${e.disc}%</span></span>`).join('');
     }
 
     // ⑧ 過去履歴表を描画
@@ -12495,8 +12626,9 @@
           <div class="product-group-header-inner">
             <button type="button" class="mgr-nav-btn mgr-nav-prev" data-nav="prev" title="前の商品へ" aria-label="前の商品へ">‹</button>
             <div class="group-img">${imageCellHtml(imgUrl)}</div>
-            <div class="group-header-namecol">
-              <span class="group-name">${escapeHtml(name)}</span>
+            <div class="group-header-namecol pd-hist-col" title="${escapeHtml(name)}">
+              <span class="pd-hist-title">過去割引率</span>
+              <div class="pd-hist-boxes">${pastDiscountBoxesHtml(mgr)}</div>
             </div>
             <div class="group-disc-wrap">
               <span class="group-disc-label">割引率</span>
@@ -12972,6 +13104,7 @@
         archive[ym].discounts[sku] = value;
       }
       saveArchive(archive);
+      try { updateDiscHistCurrentMonth(); } catch (e) {}
     }
 
     // セルの本文 (フィルハンドルなどの contenteditable=false 子要素を除いた textContent)
@@ -13468,6 +13601,7 @@
         archive[ym].discounts[sku] = value;
       }
       saveArchive(archive);
+      try { updateDiscHistCurrentMonth(); } catch (e) {}
     }
     function _readDiscountRaw(sku) {
       const ym = currentYM || getCurrentYM();
