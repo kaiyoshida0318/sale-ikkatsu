@@ -78,6 +78,30 @@
       height: 65px;
       flex-shrink: 0;
     }
+    /* v0.52.250: ロゴ右の「新しいタブ」ボタン (セール参加商品画面を別タブで開く) */
+    .open-tab-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border: 1px solid #c9c9d1;
+      background: #fff;
+      color: #444;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: background .12s, border-color .12s, box-shadow .12s;
+    }
+    .open-tab-btn:hover {
+      background: #f5f7fa;
+      border-color: #a8b3c6;
+      box-shadow: 0 2px 6px rgba(30, 58, 95, 0.12);
+    }
+    .open-tab-btn:active { transform: translateY(1px); }
+    .open-tab-btn .ot-icon { font-size: 14px; line-height: 1; color: var(--brand); }
     /* v0.52.209: ログを取るボタン */
     .log-capture-btn {
       display: inline-flex;
@@ -3912,6 +3936,11 @@
       </svg>
     </div>
 
+    <!-- v0.52.250: セール参加商品画面を新しいタブで開くボタン -->
+    <button type="button" id="btn-open-products-tab" class="open-tab-btn" title="セール参加商品画面を新しいタブで開く">
+      <span class="ot-icon" aria-hidden="true">↗</span><span>新しいタブ</span>
+    </button>
+
     <!-- v0.52.216: ショップ選択 (ヘッダー) -->
     <div id="shop-wrap" class="shop-wrap">
       <span class="shop-tag">ショップ</span>
@@ -3985,7 +4014,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.249</span>
+      <span class="version">v0.52.250</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -5522,6 +5551,17 @@
           showView('products');
         }
       });
+    }
+
+    // v0.52.250: ロゴ右の「新しいタブ」ボタン → セール参加商品画面を別タブで開く
+    {
+      const openTabBtn = document.getElementById('btn-open-products-tab');
+      if (openTabBtn) {
+        openTabBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          _openViewInNewTab('products');
+        });
+      }
     }
 
     // セール種別の色切替（ラップ要素にクラス適用）＋永続化
