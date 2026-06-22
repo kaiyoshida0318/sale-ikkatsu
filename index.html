@@ -3985,7 +3985,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.247</span>
+      <span class="version">v0.52.248</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -13743,13 +13743,13 @@
           const kClass = _KUBUN_CLASS[k] || 'k-none';
           const adv = ad[mgr] === 'yes';
           const imgHtml = (typeof imageCellHtml === 'function') ? imageCellHtml(imgMap[mgr] || '') : '';
-          return `<label class="ps-decide-row${on ? '' : ' is-off'}">
+          return `<div class="ps-decide-row${on ? '' : ' is-off'}">
             <input type="checkbox" class="pd-check" data-mgr="${escapeHtml(mgr)}" ${on ? 'checked' : ''} />
             <span class="pd-mgr">${escapeHtml(mgr)}</span>
             <span class="pd-img">${imgHtml}</span>
             <span class="pd-kubun ${kClass}">${kLabel}</span>
             <span class="pd-ad ${adv ? 'ad-yes' : 'ad-no'}">${adv ? '出稿中' : '未出稿'}</span>
-          </label>`;
+          </div>`;
         }).join('');
         decideListEl.innerHTML = html;
         if (resultCount) resultCount.textContent = `参加決定 ${decided.size} 件 / 参加可能 ${matched.length} 件`;
