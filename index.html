@@ -2669,7 +2669,7 @@
     .ps-decide-empty { padding: 18px; color: var(--muted); font-size: 13px; text-align: center; }
     .ps-decide-row {
       display: grid;
-      grid-template-columns: 28px minmax(110px, 1.2fr) 56px 92px 80px;
+      grid-template-columns: 28px 110px 56px 92px 80px 1fr;
       align-items: center; gap: 8px;
       padding: 5px 12px; border-radius: 0; font-size: 13px;
     }
@@ -2689,7 +2689,7 @@
     .pd-ad.ad-yes { background: #fff3e0; color: #d36916; }
     .pd-ad.ad-no { background: #f0f1f3; color: #9aa1a8; }
     .ps-decide-head {
-      display: grid; grid-template-columns: 28px minmax(110px, 1.2fr) 56px 92px 80px;
+      display: grid; grid-template-columns: 28px 110px 56px 92px 80px 1fr;
       gap: 8px; padding: 8px 12px; font-size: 11px; color: var(--muted); font-weight: 600;
       position: sticky; top: 0; z-index: 1; background: #eef0f3; border-bottom: 1px solid var(--border);
     }
@@ -3985,7 +3985,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.246</span>
+      <span class="version">v0.52.247</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4157,7 +4157,6 @@
         <p class="tool-panel-description">①で特定した参加可能商品の中から、実際にセールに参加させる商品を決定する。</p>
 
         <div class="card ps-result-card">
-          <h2>参加可能商品（参加決定）</h2>
           <p class="card-lead">ADcheck・RMSを見て、実際にセールに参加させる商品にチェックを入れてください（初期は全てON）。<br>
           「参加決定商品をダウンロード」したファイルを<b>ADcheckにアップすると実施中へ一括移動</b>します。同じ商品管理番号は<b>参加商品データ追加でのRMSデータ絞り込み</b>にもそのまま使えます。</p>
           <div class="ps-result-actions">
