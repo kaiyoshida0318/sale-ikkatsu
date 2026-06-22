@@ -3985,7 +3985,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.248</span>
+      <span class="version">v0.52.249</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -9372,6 +9372,13 @@
               archive[ym].setItemCsvB64 = ab2b64(mergedSet);
               archive[ym].setItemCsvName = _costPendingFiles.set.name;
             }
+            // v0.52.249: 単一(セット無し)商品が0件で取り込んだ場合、「該当なし」を記録し⑥以降で止まらないようにする
+            //   (SKU数チェックが「0＋セット＝期待値」で通って取り込めている＝単一は0件で確定)
+            if (_costPendingFiles.single) {
+              delete archive[ym].nonSetNone;
+            } else if (_costPendingFiles.set && !archive[ym].nonSetCsvB64) {
+              archive[ym].nonSetNone = true;
+            }
             // v0.52.203: アップロードファイルを保持表示 (③ 単一=nonSet / セット=setItem)
             const _pendSingle = _costPendingFiles.single, _pendSet = _costPendingFiles.set;
             saveArchive(archive);
@@ -9971,16 +9978,17 @@
       if (!data.rmsCsvB64) throw new Error('① のRMSデータCSVが未取り込みです');
       if (!data.setItemCsvB64) throw new Error('② のNE-セット商品コードCSVが未取り込みです');
       if (!data.setComponentCsvB64) throw new Error('③ のNE-セット構成物コードCSVが未取り込みです');
-      if (!data.nonSetCsvB64) throw new Error('④ のNE-セット無しコードCSVが未取り込みです');
+      // v0.52.249: セット無し(単一)商品が0件のときは nonSetNone フラグで「該当なし」を許容
+      if (!data.nonSetCsvB64 && !data.nonSetNone) throw new Error('④ のNE-セット無しコードCSVが未取り込みです');
 
       const rmsText = decodeShiftJIS(b642u8(data.rmsCsvB64));
       const setItemText = decodeShiftJIS(b642u8(data.setItemCsvB64));
       const compText = decodeShiftJIS(b642u8(data.setComponentCsvB64));
-      const nonSetText = decodeShiftJIS(b642u8(data.nonSetCsvB64));
+      const nonSetText = data.nonSetCsvB64 ? decodeShiftJIS(b642u8(data.nonSetCsvB64)) : '';
 
       const setItemMap = parseSetItemMap(setItemText);
       const componentCost = parseCostMap(compText);
-      const nonSetCost = parseCostMap(nonSetText);
+      const nonSetCost = nonSetText ? parseCostMap(nonSetText) : {};
 
       // RMSデータをパース
       const rmsRows = parseCsvText(rmsText);
