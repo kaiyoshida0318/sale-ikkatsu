@@ -2664,19 +2664,22 @@
     /* v0.52.244: 参加決定チェックリスト */
     .ps-decide-list {
       border: 1px solid var(--border); border-radius: 8px; background: #fafbfc;
-      max-height: 460px; overflow-y: auto; padding: 4px;
+      max-height: 480px; overflow-y: auto; padding: 0;
     }
     .ps-decide-empty { padding: 18px; color: var(--muted); font-size: 13px; text-align: center; }
     .ps-decide-row {
       display: grid;
-      grid-template-columns: 26px minmax(120px, 1.4fr) 92px 80px;
+      grid-template-columns: 28px minmax(110px, 1.2fr) 56px 92px 80px;
       align-items: center; gap: 8px;
-      padding: 6px 10px; border-radius: 6px; font-size: 13px;
+      padding: 5px 12px; border-radius: 0; font-size: 13px;
     }
-    .ps-decide-row:nth-child(odd) { background: #fff; }
+    .ps-decide-row:nth-child(even) { background: #fff; }
     .ps-decide-row.is-off { opacity: .5; }
     .ps-decide-row input[type=checkbox] { width: 17px; height: 17px; cursor: pointer; margin: 0; }
     .ps-decide-row .pd-mgr { font-family: monospace, "Consolas", "Menlo", sans-serif; font-weight: 600; }
+    .ps-decide-row .pd-img { text-align: center; }
+    .ps-decide-row .pd-img .product-image-thumb { max-width: 44px; max-height: 44px; border-radius: 4px; vertical-align: middle; }
+    .ps-decide-row .pd-img .img-placeholder { font-size: 9px; color: #b3b8bd; }
     .ps-decide-row .pd-kubun,
     .ps-decide-row .pd-ad { font-size: 11px; text-align: center; border-radius: 999px; padding: 2px 6px; white-space: nowrap; }
     .pd-kubun.k-new { background: #e3f2ff; color: #1769c0; }
@@ -2686,9 +2689,9 @@
     .pd-ad.ad-yes { background: #fff3e0; color: #d36916; }
     .pd-ad.ad-no { background: #f0f1f3; color: #9aa1a8; }
     .ps-decide-head {
-      display: grid; grid-template-columns: 26px minmax(120px, 1.4fr) 92px 80px;
-      gap: 8px; padding: 4px 10px 6px; font-size: 11px; color: var(--muted); font-weight: 600;
-      position: sticky; top: 0; background: #fafbfc; border-bottom: 1px solid var(--border);
+      display: grid; grid-template-columns: 28px minmax(110px, 1.2fr) 56px 92px 80px;
+      gap: 8px; padding: 8px 12px; font-size: 11px; color: var(--muted); font-weight: 600;
+      position: sticky; top: 0; z-index: 1; background: #eef0f3; border-bottom: 1px solid var(--border);
     }
     .ps-result-textarea {
       width: 100%; box-sizing: border-box;
@@ -3982,7 +3985,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.244</span>
+      <span class="version">v0.52.246</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4112,7 +4115,7 @@
 
         <div class="card">
           <h2>3. 突き合わせと商品特定</h2>
-          <p class="card-lead">上記の1と2でダウンロードした2つのCSVファイルを下のスロットにアップロードし、「取り込んで反映」を押すと、参加可能な商品が下部にチェックリストで表示されます（ジャンルIDで突き合わせ／区分・広告状況つき）。その後、参加させる商品を選んで「参加決定商品をダウンロード」してください。</p>
+          <p class="card-lead">上記の1と2でダウンロードした2つのCSVファイルを下のスロットにアップロードし、「取り込んで反映」を押すと、参加可能な商品が特定されます（ジャンルIDで突き合わせ／区分・広告状況つき）。特定した商品は次の「②参加商品決定」でチェックリスト表示されるので、そこで参加させる商品を選んでください。</p>
 
           <div class="mk-slots ps-slots">
             <div class="mk-slot" data-slot="genre">
@@ -4144,11 +4147,19 @@
           </div>
           <div id="ps-status" class="status"></div>
         </div>
+      </div>
+
+      <!-- サブビュー: ② 参加商品決定 (マラソン専用 / v0.52.246 ①から分離) -->
+      <div id="tool-join-decide" class="tool-panel">
+        <div class="tool-panel-header">
+          <h2><span class="vstep-num" data-vstep="join-decide"></span>参加商品決定</h2>
+        </div>
+        <p class="tool-panel-description">①で特定した参加可能商品の中から、実際にセールに参加させる商品を決定する。</p>
 
         <div class="card ps-result-card">
           <h2>参加可能商品（参加決定）</h2>
           <p class="card-lead">ADcheck・RMSを見て、実際にセールに参加させる商品にチェックを入れてください（初期は全てON）。<br>
-          「参加決定商品をダウンロード」したファイルを<b>ADcheckにアップすると実施中へ一括移動</b>します。同じ商品管理番号は<b>②のRMSデータ絞り込み</b>にもそのまま使えます。</p>
+          「参加決定商品をダウンロード」したファイルを<b>ADcheckにアップすると実施中へ一括移動</b>します。同じ商品管理番号は<b>参加商品データ追加でのRMSデータ絞り込み</b>にもそのまま使えます。</p>
           <div class="ps-result-actions">
             <button type="button" id="btn-ps-check-all" class="dl-ready">全チェック</button>
             <button type="button" id="btn-ps-uncheck-all" class="secondary">全解除</button>
@@ -4158,7 +4169,7 @@
             <span id="ps-result-count" class="ps-result-count"></span>
           </div>
           <div id="ps-decide-list" class="ps-decide-list">
-            <div class="ps-decide-empty">まだ突き合わせを行っていません。上の手順1〜3を実施してください。</div>
+            <div class="ps-decide-empty">まだ突き合わせを行っていません。①参加可能商品特定を実施してください。</div>
           </div>
           <textarea id="ps-result-textarea" class="ps-result-textarea" readonly hidden></textarea>
         </div>
@@ -4168,7 +4179,7 @@
       <div id="tool-add-products" class="tool-panel">
         <div class="tool-panel-header">
           <h2 class="ap-h2-supersale">① 参加商品追加</h2>
-          <h2 class="ap-h2-marathon">② 参加商品追加</h2>
+          <h2 class="ap-h2-marathon">③ 参加商品データ追加</h2>
         </div>
         <p class="tool-panel-description">セール参加商品のデータをRMSからダウンロードし、それをSALE一括内に取り込んでいく。</p>
 
@@ -4190,7 +4201,7 @@
             <li>RMS - 店舗設定 - <b>1 商品管理</b> - <b>2 CSV一括編集</b> - <b>CSVダウンロード</b></li>
             <!-- 手順2: ソースが異なる (スーパーSALE=ADcheck, マラソン=①参加可能商品特定) -->
             <li class="ap-li-supersale">上でダウンロードしたADcheckデータの商品管理番号をコピーし、「<b>商品管理番号で絞り込む</b>」に一括貼り付け</li>
-            <li class="ap-li-marathon"><b>①参加可能商品特定</b>で<b>参加決定</b>した商品管理番号（「決定分をコピー」ボタン、または「参加決定商品をダウンロード」したCSV）を、「<b>商品管理番号で絞り込む</b>」に一括貼り付け</li>
+            <li class="ap-li-marathon"><b>②参加商品決定</b>で<b>参加決定</b>した商品管理番号（「決定分をコピー」ボタン、または「参加決定商品をダウンロード」したCSV）を、「<b>商品管理番号で絞り込む</b>」に一括貼り付け</li>
             <li>以下の項目にチェックを入れてダウンロード
               <ul class="howto-checklist">
                 <li class="auto">商品管理番号<span class="howto-note">（必須-自動でDLされる）</span></li>
@@ -4361,11 +4372,11 @@
         <div class="tool-panel-header">
           <h2>⑧ RMSアップ用CSV作成</h2>
         </div>
-        <p class="tool-panel-description">セール開始準備⑦で用意した2つのファイルをアップロードして組み合わせることで、RMSにアップするセールバージョンのCSVファイルを作成する。</p>
+        <p class="tool-panel-description">セール開始準備<span class="n-ss">⑦</span><span class="n-ma">⑧</span>で用意した2つのファイルをアップロードして組み合わせることで、RMSにアップするセールバージョンのCSVファイルを作成する。</p>
 
         <div class="card">
           <h2>1. 2つのファイルをアップロード</h2>
-          <p class="card-lead">下の2つのスロットに、⑧で用意したファイルをそれぞれセットしてください。両方セットされるとCSV作成が可能になります。</p>
+          <p class="card-lead">下の2つのスロットに、<span class="n-ss">⑦</span><span class="n-ma">⑧</span>で用意したファイルをそれぞれセットしてください。両方セットされるとCSV作成が可能になります。</p>
 
           <div class="mk-slots">
             <div class="mk-slot" data-slot="sale">
@@ -4412,13 +4423,13 @@
         <div class="tool-panel-header">
           <h2>③ 原価特定-NE-単一orセット商品仕分け</h2>
         </div>
-        <p class="tool-panel-description">セール開始準備<span class="n-ss">①</span><span class="n-ma">②</span>でRMSからダウンロードしたデータからは、その商品が単一商品なのかセット商品なのかを判別することができない。<br>
+        <p class="tool-panel-description">セール開始準備<span class="n-ss">①</span><span class="n-ma">③</span>でRMSからダウンロードしたデータからは、その商品が単一商品なのかセット商品なのかを判別することができない。<br>
         ここでは、ネクストエンジンでの検索を通すことでそれぞれを特定し、ツール内に情報を取り込んでいく。</p>
 
         <div class="card">
           <h2>1. 単一orセット判別&CSVダウンロード</h2>
           <ol class="howto-list" style="margin-bottom: 6px;">
-            <li>セール開始準備<span class="n-ss">①</span><span class="n-ma">②</span>でアップした<b>RMSデータCSV</b>の「<b>システム連携用SKU番号</b>」を全てコピー。</li>
+            <li>セール開始準備<span class="n-ss">①</span><span class="n-ma">③</span>でアップした<b>RMSデータCSV</b>の「<b>システム連携用SKU番号</b>」を全てコピー。</li>
             <li>ネクストエンジン → <b>商品 → 商品管理 → 詳細検索</b> を開く。全コピーしたシステム連携用SKU番号を以下の2つの方法で検索していく。</li>
           </ol>
 
@@ -4487,7 +4498,7 @@
           </div>
           <p style="margin: 8px 0 0 0; font-size: 12px; color: var(--muted);">
             ※「単一商品CSVの<b>商品コード</b>」と「セット商品CSVの<b>セット商品コード</b>」の<b>合計</b>が、
-            <b>直近<span class="n-ss">①</span><span class="n-ma">②</span>で取り込んだ分</b>の<b>システム連携用SKU番号</b>の数と<b>一致</b>している場合のみ取り込めます。
+            <b>直近<span class="n-ss">①</span><span class="n-ma">③</span>で取り込んだ分</b>の<b>システム連携用SKU番号</b>の数と<b>一致</b>している場合のみ取り込めます。
             不一致の場合はCSVを見直してください。
           </p>
           <div id="cost-import-status" class="status" style="margin-top: 10px;"></div>
@@ -4581,7 +4592,7 @@
         <div class="tool-panel-header">
           <h2>⑩ RMS-完成CSVアップロード</h2>
         </div>
-        <p class="tool-panel-description">セール開始準備⑧で作成した「normal-item-sale」ファイルをRMSにアップロードしていく。<br>
+        <p class="tool-panel-description">セール開始準備<span class="n-ss">⑧</span><span class="n-ma">⑨</span>で作成した「normal-item-sale」ファイルをRMSにアップロードしていく。<br>
         アップロードにはWinSCPを使用する。</p>
 
         <div class="card">
@@ -4774,7 +4785,7 @@
 
         <div class="card">
           <h2>1. 保管ファイルをダウンロード</h2>
-          <p class="card-lead">⑧で保管したCSVファイルをここからダウンロードしてください。差し替えや削除は ⑧ RMSアップ用素材ダウンロード から行ってください。</p>
+          <p class="card-lead"><span class="n-ss">⑦</span><span class="n-ma">⑧</span>で保管したCSVファイルをここからダウンロードしてください。差し替えや削除は <span class="n-ss">⑦</span><span class="n-ma">⑧</span> RMSアップ用素材ダウンロード から行ってください。</p>
           <div class="archive-file-area" id="upload-original-archive-area">
             <div id="upload-original-display" class="archive-dropzone" style="cursor:default;">
               <div class="archive-dropzone-empty">
@@ -5184,7 +5195,7 @@
     // ※旧 cost-non-set は v0.52.88 で廃止(②のセクション1=単一商品 に統合)
     // ※サブビュー間は forward/back で履歴を残す。同一サブビュー間は履歴に積まない。
     // 履歴に積まれた viewId は、ブラウザ戻る/進むで復元される。
-    const VALID_VIEWS = ['products','workflow','sale-thumb','pre-select','add-products','ad-info','decide-price','decide-title','dl-rms-csv','make-rms-csv','make-thumb','cost-set-item','cost-set-component','upload-rms','rms-event','sku-record','ad-delete','ad-restore','upload-original','sku-restore','thumb-change','sp-banner','top-image-back'];
+    const VALID_VIEWS = ['products','workflow','sale-thumb','pre-select','join-decide','add-products','ad-info','decide-price','decide-title','dl-rms-csv','make-rms-csv','make-thumb','cost-set-item','cost-set-component','upload-rms','rms-event','sku-record','ad-delete','ad-restore','upload-original','sku-restore','thumb-change','sp-banner','top-image-back'];
     // ブラウザ/マウスの「戻る」でサブビューから戻れるよう、サブビュー遷移時は history.pushState する
     let _suppressPushState = false; // popstate由来の呼び出しでは積まない
     const MAIN_TABS = ['products', 'workflow', 'sale-thumb'];
@@ -5192,10 +5203,45 @@
     // 直近のメインタブ(サブビューから戻る時の戻り先)
     let _lastMainTab = 'products';
 
+    // v0.52.246: サブビューのタイトル番号を、現在のセールのワークフロー順から動的に決定する。
+    //   マラソン/スーパーSALEで番号が変わるため、h2先頭の番号を実行時に上書きする。
+    const _CIRCLED_NUMS_RE = /^[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳]\s*/;
+    function getStepNumberMap() {
+      const map = {};
+      if (typeof getWorkflowBlocks !== 'function') return map;
+      let n = 0;
+      getWorkflowBlocks().forEach(block => {
+        (block.buttons || []).forEach(btn => {
+          const mark = (typeof WF_NUMBER_MARKS !== 'undefined' && WF_NUMBER_MARKS[n]) ? WF_NUMBER_MARKS[n] : `(${n + 1})`;
+          if (btn.action && btn.action.indexOf('open-') === 0) map[btn.action.slice(5)] = mark;
+          n++;
+        });
+      });
+      return map;
+    }
+    function applyPanelNumber(viewId) {
+      try {
+        const panel = document.getElementById('tool-' + viewId);
+        if (!panel) return;
+        const header = panel.querySelector('.tool-panel-header');
+        if (!header) return;
+        const mark = getStepNumberMap()[viewId];
+        if (!mark) return;
+        header.querySelectorAll('h2').forEach(h2 => {
+          const span = h2.querySelector('.vstep-num');
+          if (span) { span.textContent = mark + ' '; return; }
+          const t = h2.textContent.replace(_CIRCLED_NUMS_RE, '').trim();
+          h2.textContent = mark + ' ' + t;
+        });
+      } catch (e) {}
+    }
+
     function showView(viewId) {
       document.querySelectorAll('.tool-panel').forEach(p => p.classList.remove('active'));
       const panel = document.getElementById('tool-' + viewId);
       if (panel) panel.classList.add('active');
+      // v0.52.246: タイトル番号を現在のセールのワークフロー順に合わせて上書き
+      applyPanelNumber(viewId);
       // body[data-view] を最新化 (CSSで workflow-shared の表示制御に使用)
       document.body.setAttribute('data-view', viewId);
       // ワークフローブロック内の「現在開いているサブビュー」ボタンを is-current でハイライト
@@ -5213,8 +5259,8 @@
       if (viewId === 'add-products') {
         if (typeof restoreStatusMessage === 'function') restoreStatusMessage('add-products-status');
       }
-      // v0.52.224: 参加可能商品特定 (マラソン専用) を開いたら結果を復元
-      if (viewId === 'pre-select') {
+      // v0.52.224/246: 参加可能商品特定 / 参加商品決定 (マラソン専用) を開いたら結果を復元
+      if (viewId === 'pre-select' || viewId === 'join-decide') {
         if (typeof window._restorePreSelect === 'function') window._restorePreSelect();
       }
       // v0.52.141: セール用サムネイルタブを開いたとき描画
@@ -8361,16 +8407,23 @@
       const saleType = (typeof getCurrentSaleName === 'function') ? getCurrentSaleName() : '';
       if (!saleType) return []; // v0.52.232: 未選択時は手順を出さない
       if (saleType !== 'marathon') return WORKFLOW_BLOCKS;
-      // マラソン専用: 「セール開始準備」ブロック先頭に prep-pre-select を挿入し、
+      // マラソン専用: 「セール開始準備」ブロック先頭に prep-pre-select / prep-join-decide を挿入し、
       //   広告出稿情報追加(prep-ad-info)は ① で広告状況を取得するため除外 (v0.52.233)
+      //   add-products(参加商品追加) はマラソンでは「参加商品データ追加」に名称変更 (v0.52.246)
       return WORKFLOW_BLOCKS.map(block => {
         if (block.id !== 'prep') return block;
-        return Object.assign({}, block, {
-          buttons: [
-            { id: 'prep-pre-select', label: '参加可能商品特定', action: 'open-pre-select' },
-            ...block.buttons.filter(b => b.id !== 'prep-ad-info'),
-          ],
+        const buttons = [
+          { id: 'prep-pre-select', label: '参加可能商品特定', action: 'open-pre-select' },
+          { id: 'prep-join-decide', label: '参加商品決定', action: 'open-join-decide' },
+        ];
+        block.buttons.filter(b => b.id !== 'prep-ad-info').forEach(b => {
+          if (b.id === 'prep-add-products') {
+            buttons.push(Object.assign({}, b, { label: '参加商品データ追加' }));
+          } else {
+            buttons.push(b);
+          }
         });
+        return Object.assign({}, block, { buttons });
       });
     }
 
@@ -12067,7 +12120,7 @@
           const endDtOut = formatDtForRms(period.endDt);
           // v0.52.200: SALE一括ファイルを「システム連携用SKU番号」キーでパース (SKU単位で価格対応)
           const { bySku: saleBySku, titleByMgr } = parseSaleIkkatsuCsvBySku(slots.sale.text);
-          if (saleBySku.size === 0) throw new Error('SALE一括CSVに有効なSKU行がありません（⑦で最新のCSVを再生成してください）');
+          if (saleBySku.size === 0) throw new Error('SALE一括CSVに有効なSKU行がありません（' + ((typeof getCurrentSaleName==='function'&&getCurrentSaleName()==='marathon')?'⑧':'⑦') + 'で最新のCSVを再生成してください）');
           // RMSファイルをパース: 各SKU行を取得
           const rmsRows = parseRmsNormalItemCsv(slots.rms.text);
           if (rmsRows.length === 0) throw new Error('RMSダウンロードCSVに有効な行がありません');
@@ -12197,7 +12250,7 @@
       const iSale = h.findIndex(x => x && x.trim() === '通常購入販売価格');
       const iTitle = h.findIndex(x => x && x.trim().indexOf('セール用タイトル') >= 0);
       if (iMgr < 0) throw new Error('SALE一括CSVに「商品管理番号」列がありません');
-      if (iItemSku < 0) throw new Error('SALE一括CSVに「システム連携用SKU番号」列がありません（⑦で最新のCSVを再生成してください）');
+      if (iItemSku < 0) throw new Error('SALE一括CSVに「システム連携用SKU番号」列がありません（' + ((typeof getCurrentSaleName==='function'&&getCurrentSaleName()==='marathon')?'⑧':'⑦') + 'で最新のCSVを再生成してください）');
       const bySku = new Map();
       const titleByMgr = new Map();
       let lastMgr = '';
@@ -13652,6 +13705,25 @@
         const { matched, decided } = _psData();
         return matched.filter(m => decided.has(m));
       }
+      // v0.52.245: 商品管理番号 → 画像URL の参照表 (同ショップ・同セールの全月の取り込み済みrows、
+      //   および候補CSVに画像URL列があった場合の保存分 preSelectImg から構築)
+      function _buildImageLookup() {
+        const map = {};
+        try {
+          const arc = loadArchive();
+          for (const ym in arc) {
+            const rows = (arc[ym] && Array.isArray(arc[ym].rows)) ? arc[ym].rows : [];
+            for (const r of rows) {
+              if (r && r.mgr && r.imageUrl && !map[r.mgr]) map[r.mgr] = r.imageUrl;
+            }
+          }
+          const ym = (typeof currentYM !== 'undefined') ? currentYM : null;
+          if (ym && arc[ym] && arc[ym].preSelectImg && typeof arc[ym].preSelectImg === 'object') {
+            for (const k in arc[ym].preSelectImg) if (arc[ym].preSelectImg[k]) map[k] = arc[ym].preSelectImg[k];
+          }
+        } catch (e) {}
+        return map;
+      }
       function renderDecideList() {
         if (!decideListEl) return;
         const { ym, matched, decided, arc } = _psData();
@@ -13663,16 +13735,19 @@
         const d = arc[ym] || {};
         const pst = (d.productStatus && typeof d.productStatus === 'object') ? d.productStatus : {};
         const ad = (d.adStatus && typeof d.adStatus === 'object') ? d.adStatus : {};
-        let html = '<div class="ps-decide-head"><span></span><span>商品管理番号</span><span style="text-align:center">区分</span><span style="text-align:center">広告状況</span></div>';
+        const imgMap = _buildImageLookup();
+        let html = '<div class="ps-decide-head"><span></span><span>商品管理番号</span><span style="text-align:center">画像</span><span style="text-align:center">区分</span><span style="text-align:center">広告状況</span></div>';
         html += matched.map(mgr => {
           const on = decided.has(mgr);
           const k = pst[mgr];
           const kLabel = _KUBUN_LABEL[k] || '—';
           const kClass = _KUBUN_CLASS[k] || 'k-none';
           const adv = ad[mgr] === 'yes';
+          const imgHtml = (typeof imageCellHtml === 'function') ? imageCellHtml(imgMap[mgr] || '') : '';
           return `<label class="ps-decide-row${on ? '' : ' is-off'}">
             <input type="checkbox" class="pd-check" data-mgr="${escapeHtml(mgr)}" ${on ? 'checked' : ''} />
             <span class="pd-mgr">${escapeHtml(mgr)}</span>
+            <span class="pd-img">${imgHtml}</span>
             <span class="pd-kubun ${kClass}">${kLabel}</span>
             <span class="pd-ad ${adv ? 'ad-yes' : 'ad-no'}">${adv ? '出稿中' : '未出稿'}</span>
           </label>`;
@@ -13897,11 +13972,14 @@
           const cAdIdx = findCol(cHead, ['広告状況', '広告状態', '広告出稿', 'ad_status']);
           // v0.52.243: 候補CSVの「区分」列 → セール参加商品の区分へ反映 (スーパーSALEと同ルール)
           const cKubunIdx = findCol(cHead, ['区分', '商品区分']);
-          // 突き合わせ + 広告状況/区分マップ作成
+          // v0.52.245: 候補CSVに画像URL列があれば拾って①リストに表示できるようにする
+          const cImgIdx = findCol(cHead, ['画像URL', '商品画像URL', '商品画像', 'imageUrl', 'image_url', '画像']);
+          // 突き合わせ + 広告状況/区分/画像マップ作成
           const matched = [];
           const seen = new Set();
           const adMap = {};
           const statusMap = {};
+          const imgMap = {};
           for (let i = 1; i < cRows.length; i++) {
             const mgr = (cRows[i][cMgrIdx] || '').trim();
             const gid = (cRows[i][cGidIdx] || '').trim();
@@ -13913,6 +13991,10 @@
             if (cKubunIdx >= 0) {
               const st = mapAdcheckKubun(cRows[i][cKubunIdx]);
               if (st) statusMap[mgr] = st;
+            }
+            if (cImgIdx >= 0) {
+              const u = (cRows[i][cImgIdx] || '').trim();
+              if (u) imgMap[mgr] = u;
             }
             if (!gid) continue;
             if (targetGenres.has(gid) && !seen.has(mgr)) { matched.push(mgr); seen.add(mgr); }
@@ -13944,6 +14026,12 @@
                 arc[ym].productStatus = curSt;
                 kubunReflected = Object.keys(statusMap).length;
               }
+              // 画像URL(候補CSVにあれば)を保存 → ①リストに表示
+              if (cImgIdx >= 0 && Object.keys(imgMap).length) {
+                const curImg = (arc[ym].preSelectImg && typeof arc[ym].preSelectImg === 'object') ? arc[ym].preSelectImg : {};
+                for (const k in imgMap) curImg[k] = imgMap[k];
+                arc[ym].preSelectImg = curImg;
+              }
               saveArchive(arc);
               // 参加商品表に即時反映
               if (typeof renderProductTable === 'function') { try { renderProductTable(); } catch(e){} }
@@ -13973,7 +14061,7 @@
               + `対象ジャンル ${targetGenres.size} 件（例: ${tgSample}）／候補 ${cRows.length - 1} 件（例: ${cgArr.join(', ')}）。`
               + hint + adMsg, 'error');
           } else {
-            setStatus(`✅ ${matched.length} 件の参加可能商品を特定しました${adMsg}`, 'success');
+            setStatus(`✅ ${matched.length} 件の参加可能商品を特定しました${adMsg}。「②参加商品決定」で参加させる商品を選んでください。`, 'success');
           }
         } catch (e) {
           console.error('参加可能商品特定 失敗', e);
@@ -14034,6 +14122,7 @@
             if (arc[ym]) {
               delete arc[ym].preSelectMgrs;
               delete arc[ym].preSelectDecided;
+              delete arc[ym].preSelectImg;
               delete arc[ym].preSelectAt;
               saveArchive(arc);
             }
