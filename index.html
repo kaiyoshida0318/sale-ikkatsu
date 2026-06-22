@@ -2656,10 +2656,39 @@
     }
     /* v0.52.224: 参加可能商品特定 結果表示 */
     .ps-result-card .ps-result-actions {
-      display: flex; align-items: center; gap: 10px; margin: 10px 0 6px;
+      display: flex; align-items: center; gap: 10px; margin: 10px 0 6px; flex-wrap: wrap;
     }
     .ps-result-card .ps-result-count {
       font-size: 13px; color: var(--muted); margin-left: 6px;
+    }
+    /* v0.52.244: 参加決定チェックリスト */
+    .ps-decide-list {
+      border: 1px solid var(--border); border-radius: 8px; background: #fafbfc;
+      max-height: 460px; overflow-y: auto; padding: 4px;
+    }
+    .ps-decide-empty { padding: 18px; color: var(--muted); font-size: 13px; text-align: center; }
+    .ps-decide-row {
+      display: grid;
+      grid-template-columns: 26px minmax(120px, 1.4fr) 92px 80px;
+      align-items: center; gap: 8px;
+      padding: 6px 10px; border-radius: 6px; font-size: 13px;
+    }
+    .ps-decide-row:nth-child(odd) { background: #fff; }
+    .ps-decide-row.is-off { opacity: .5; }
+    .ps-decide-row input[type=checkbox] { width: 17px; height: 17px; cursor: pointer; margin: 0; }
+    .ps-decide-row .pd-mgr { font-family: monospace, "Consolas", "Menlo", sans-serif; font-weight: 600; }
+    .ps-decide-row .pd-kubun,
+    .ps-decide-row .pd-ad { font-size: 11px; text-align: center; border-radius: 999px; padding: 2px 6px; white-space: nowrap; }
+    .pd-kubun.k-new { background: #e3f2ff; color: #1769c0; }
+    .pd-kubun.k-keep { background: #eef6e9; color: #3b8a3b; }
+    .pd-kubun.k-withdraw { background: #fdeaea; color: #c0392b; }
+    .pd-kubun.k-none { background: #f0f1f3; color: #9aa1a8; }
+    .pd-ad.ad-yes { background: #fff3e0; color: #d36916; }
+    .pd-ad.ad-no { background: #f0f1f3; color: #9aa1a8; }
+    .ps-decide-head {
+      display: grid; grid-template-columns: 26px minmax(120px, 1.4fr) 92px 80px;
+      gap: 8px; padding: 4px 10px 6px; font-size: 11px; color: var(--muted); font-weight: 600;
+      position: sticky; top: 0; background: #fafbfc; border-bottom: 1px solid var(--border);
     }
     .ps-result-textarea {
       width: 100%; box-sizing: border-box;
@@ -3953,7 +3982,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.243</span>
+      <span class="version">v0.52.244</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4083,7 +4112,7 @@
 
         <div class="card">
           <h2>3. 突き合わせと商品特定</h2>
-          <p class="card-lead">上記の1と2でダウンロードした2つのCSVファイルを下のスロットにアップロードし、「取り込んで反映」を押すと、参加可能な商品の商品管理番号が下部に表示されます（ジャンルIDで突き合わせ）。</p>
+          <p class="card-lead">上記の1と2でダウンロードした2つのCSVファイルを下のスロットにアップロードし、「取り込んで反映」を押すと、参加可能な商品が下部にチェックリストで表示されます（ジャンルIDで突き合わせ／区分・広告状況つき）。その後、参加させる商品を選んで「参加決定商品をダウンロード」してください。</p>
 
           <div class="mk-slots ps-slots">
             <div class="mk-slot" data-slot="genre">
@@ -4117,15 +4146,21 @@
         </div>
 
         <div class="card ps-result-card">
-          <h2>参加可能商品 商品管理番号</h2>
-          <p class="card-lead">下のテキストボックスをクリックすると全選択されます。Ctrl+Cでコピーしてください。</p>
+          <h2>参加可能商品（参加決定）</h2>
+          <p class="card-lead">ADcheck・RMSを見て、実際にセールに参加させる商品にチェックを入れてください（初期は全てON）。<br>
+          「参加決定商品をダウンロード」したファイルを<b>ADcheckにアップすると実施中へ一括移動</b>します。同じ商品管理番号は<b>②のRMSデータ絞り込み</b>にもそのまま使えます。</p>
           <div class="ps-result-actions">
-            <button type="button" id="btn-ps-select-all" class="dl-ready">全選択</button>
-            <button type="button" id="btn-ps-copy" class="dl-ready">クリップボードにコピー</button>
+            <button type="button" id="btn-ps-check-all" class="dl-ready">全チェック</button>
+            <button type="button" id="btn-ps-uncheck-all" class="secondary">全解除</button>
+            <button type="button" id="btn-ps-download" class="dl-ready">参加決定商品をダウンロード</button>
+            <button type="button" id="btn-ps-copy" class="dl-ready">決定分をコピー</button>
             <button type="button" id="btn-ps-clear" class="secondary">クリア</button>
             <span id="ps-result-count" class="ps-result-count"></span>
           </div>
-          <textarea id="ps-result-textarea" class="ps-result-textarea" readonly placeholder="まだ突き合わせを行っていません。上の手順1〜3を実施してください。" rows="20"></textarea>
+          <div id="ps-decide-list" class="ps-decide-list">
+            <div class="ps-decide-empty">まだ突き合わせを行っていません。上の手順1〜3を実施してください。</div>
+          </div>
+          <textarea id="ps-result-textarea" class="ps-result-textarea" readonly hidden></textarea>
         </div>
       </div>
 
@@ -4155,7 +4190,7 @@
             <li>RMS - 店舗設定 - <b>1 商品管理</b> - <b>2 CSV一括編集</b> - <b>CSVダウンロード</b></li>
             <!-- 手順2: ソースが異なる (スーパーSALE=ADcheck, マラソン=①参加可能商品特定) -->
             <li class="ap-li-supersale">上でダウンロードしたADcheckデータの商品管理番号をコピーし、「<b>商品管理番号で絞り込む</b>」に一括貼り付け</li>
-            <li class="ap-li-marathon"><b>①参加可能商品特定</b>で抽出した商品管理番号一覧をコピーし、「<b>商品管理番号で絞り込む</b>」に一括貼り付け</li>
+            <li class="ap-li-marathon"><b>①参加可能商品特定</b>で<b>参加決定</b>した商品管理番号（「決定分をコピー」ボタン、または「参加決定商品をダウンロード」したCSV）を、「<b>商品管理番号で絞り込む</b>」に一括貼り付け</li>
             <li>以下の項目にチェックを入れてダウンロード
               <ul class="howto-checklist">
                 <li class="auto">商品管理番号<span class="howto-note">（必須-自動でDLされる）</span></li>
@@ -13575,7 +13610,10 @@
       const statusEl = document.getElementById('ps-status');
       const resultArea = document.getElementById('ps-result-textarea');
       const resultCount = document.getElementById('ps-result-count');
-      const btnSelAll = document.getElementById('btn-ps-select-all');
+      const decideListEl = document.getElementById('ps-decide-list');
+      const btnCheckAll = document.getElementById('btn-ps-check-all');
+      const btnUncheckAll = document.getElementById('btn-ps-uncheck-all');
+      const btnDownload = document.getElementById('btn-ps-download');
       const btnCopy = document.getElementById('btn-ps-copy');
       const btnClear = document.getElementById('btn-ps-clear');
       if (!slotGenreZone || !slotCandZone || !btnIngest) return;
@@ -13587,6 +13625,77 @@
         statusEl.className = 'status' + (kind ? ' ' + kind : '');
       }
       function updateBtn() { btnIngest.disabled = !(slots.genre && slots.cand); }
+
+      // v0.52.244: 参加決定チェックリスト ---------------------------------
+      // データ: arc[ym].preSelectMgrs(参加可能) / arc[ym].preSelectDecided(参加決定=チェックON)
+      const _KUBUN_LABEL = { 'new': '新商品', 'keep': '既存-伸ばし', 'withdraw': '既存-撤退' };
+      const _KUBUN_CLASS = { 'new': 'k-new', 'keep': 'k-keep', 'withdraw': 'k-withdraw' };
+      function _psData() {
+        const ym = (typeof currentYM !== 'undefined') ? currentYM : null;
+        if (!ym) return { ym: null, matched: [], decided: new Set(), arc: null };
+        const arc = loadArchive();
+        const d = arc[ym] || {};
+        const matched = Array.isArray(d.preSelectMgrs) ? d.preSelectMgrs : [];
+        // preSelectDecided 未定義時は「全件決定」をデフォルトとする
+        const decided = new Set(Array.isArray(d.preSelectDecided) ? d.preSelectDecided : matched);
+        return { ym, matched, decided, arc };
+      }
+      function _saveDecided(decidedSet) {
+        const ym = (typeof currentYM !== 'undefined') ? currentYM : null;
+        if (!ym) return;
+        const arc = loadArchive();
+        if (!arc[ym]) return;
+        arc[ym].preSelectDecided = Array.from(decidedSet);
+        saveArchive(arc);
+      }
+      function getDecidedMgrs() {
+        const { matched, decided } = _psData();
+        return matched.filter(m => decided.has(m));
+      }
+      function renderDecideList() {
+        if (!decideListEl) return;
+        const { ym, matched, decided, arc } = _psData();
+        if (!ym || matched.length === 0) {
+          decideListEl.innerHTML = '<div class="ps-decide-empty">まだ突き合わせを行っていません。上の手順1〜3を実施してください。</div>';
+          if (resultCount) resultCount.textContent = '';
+          return;
+        }
+        const d = arc[ym] || {};
+        const pst = (d.productStatus && typeof d.productStatus === 'object') ? d.productStatus : {};
+        const ad = (d.adStatus && typeof d.adStatus === 'object') ? d.adStatus : {};
+        let html = '<div class="ps-decide-head"><span></span><span>商品管理番号</span><span style="text-align:center">区分</span><span style="text-align:center">広告状況</span></div>';
+        html += matched.map(mgr => {
+          const on = decided.has(mgr);
+          const k = pst[mgr];
+          const kLabel = _KUBUN_LABEL[k] || '—';
+          const kClass = _KUBUN_CLASS[k] || 'k-none';
+          const adv = ad[mgr] === 'yes';
+          return `<label class="ps-decide-row${on ? '' : ' is-off'}">
+            <input type="checkbox" class="pd-check" data-mgr="${escapeHtml(mgr)}" ${on ? 'checked' : ''} />
+            <span class="pd-mgr">${escapeHtml(mgr)}</span>
+            <span class="pd-kubun ${kClass}">${kLabel}</span>
+            <span class="pd-ad ${adv ? 'ad-yes' : 'ad-no'}">${adv ? '出稿中' : '未出稿'}</span>
+          </label>`;
+        }).join('');
+        decideListEl.innerHTML = html;
+        if (resultCount) resultCount.textContent = `参加決定 ${decided.size} 件 / 参加可能 ${matched.length} 件`;
+        // チェック変更
+        decideListEl.querySelectorAll('.pd-check').forEach(chk => {
+          chk.addEventListener('change', () => {
+            const { decided } = _psData();
+            const mgr = chk.getAttribute('data-mgr');
+            if (chk.checked) decided.add(mgr); else decided.delete(mgr);
+            _saveDecided(decided);
+            const row = chk.closest('.ps-decide-row');
+            if (row) row.classList.toggle('is-off', !chk.checked);
+            if (resultCount) {
+              const { matched } = _psData();
+              resultCount.textContent = `参加決定 ${decided.size} 件 / 参加可能 ${matched.length} 件`;
+            }
+          });
+        });
+      }
+      // ---------------------------------------------------------------
 
       // v0.52.228: ① 参加可能商品特定 専用のエンコーディング自動判定リーダー
       //   (従来は別IIFE内の readAsTextAutoDetect を参照しており ReferenceError で
@@ -13809,8 +13918,8 @@
             if (targetGenres.has(gid) && !seen.has(mgr)) { matched.push(mgr); seen.add(mgr); }
           }
           // textarea反映
-          resultArea.value = matched.join('\n');
-          resultCount.textContent = `${matched.length} 件 / 候補 ${cRows.length - 1} 件中`;
+          // 結果はチェックリストで表示 (textareaは廃止)
+          // 件数はrenderDecideListで「参加決定 X / 参加可能 Y」表示
           // セール月配下に保存 (参加可能商品 + 広告状況 + 区分)
           let adReflected = 0, kubunReflected = 0;
           try {
@@ -13819,6 +13928,7 @@
               const arc = loadArchive();
               if (!arc[ym]) arc[ym] = { rows: [], titles: {}, workflow: {} };
               arc[ym].preSelectMgrs = matched;
+              arc[ym].preSelectDecided = matched.slice(); // 初期は全件「参加決定」ON
               arc[ym].preSelectAt = Date.now();
               // 広告状況をマージ (既存を保持しつつ最新で上書き)
               if (cAdIdx >= 0) {
@@ -13837,6 +13947,8 @@
               saveArchive(arc);
               // 参加商品表に即時反映
               if (typeof renderProductTable === 'function') { try { renderProductTable(); } catch(e){} }
+              // 参加決定チェックリストを描画
+              renderDecideList();
             }
           } catch(e) { console.warn('preSelect保存失敗', e); }
           const adMsg = (cAdIdx >= 0)
@@ -13869,55 +13981,71 @@
         }
       });
 
-      // 全選択 / コピー
-      if (btnSelAll) btnSelAll.addEventListener('click', () => { resultArea.focus(); resultArea.select(); });
+      // 全チェック / 全解除
+      if (btnCheckAll) btnCheckAll.addEventListener('click', () => {
+        const { matched } = _psData();
+        if (matched.length === 0) return;
+        _saveDecided(new Set(matched));
+        renderDecideList();
+      });
+      if (btnUncheckAll) btnUncheckAll.addEventListener('click', () => {
+        _saveDecided(new Set());
+        renderDecideList();
+      });
+
+      // 参加決定商品をダウンロード (ADcheckアップ用 / ②のRMS絞り込み用)
+      //   形式: 1列CSV「商品管理番号」+ UTF-8(BOM)。ADcheck側の取込形式に合わせて後で変更可。
+      if (btnDownload) btnDownload.addEventListener('click', () => {
+        const mgrs = getDecidedMgrs();
+        if (mgrs.length === 0) { setStatus('参加決定商品が0件です。チェックを入れてください。', 'error'); return; }
+        const csv = '商品管理番号\r\n' + mgrs.join('\r\n') + '\r\n';
+        const bom = '\uFEFF';
+        const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
+        const ym = (typeof currentYM !== 'undefined') ? currentYM : '';
+        const ymTag = ym ? ym.replace('/', '') : '';
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `sale-join-decided-${ymTag || 'list'}.csv`;
+        document.body.appendChild(a); a.click();
+        setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+        setStatus(`参加決定 ${mgrs.length} 件をダウンロードしました。ADcheckにアップして実施中へ移動し、②のRMS絞り込みにも使えます。`, 'success');
+      });
+
+      // 決定分をコピー (RMS絞り込み貼り付け用に改行区切り)
       if (btnCopy) btnCopy.addEventListener('click', async () => {
-        const text = resultArea.value || '';
-        if (!text) { setStatus('コピーする商品がありません', 'error'); return; }
+        const mgrs = getDecidedMgrs();
+        if (mgrs.length === 0) { setStatus('コピーする参加決定商品がありません', 'error'); return; }
+        const text = mgrs.join('\n');
         try {
           if (navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(text);
-          else { resultArea.focus(); resultArea.select(); document.execCommand('copy'); }
+          else { resultArea.hidden = false; resultArea.value = text; resultArea.focus(); resultArea.select(); document.execCommand('copy'); resultArea.hidden = true; }
           const orig = btnCopy.textContent;
           btnCopy.textContent = '✓ コピー完了';
           setTimeout(() => { btnCopy.textContent = orig; }, 2000);
         } catch (e) { setStatus('コピーに失敗しました', 'error'); }
       });
 
-      // v0.52.241: 結果(参加可能商品の商品管理番号)をクリア
+      // v0.52.241/244: 結果(参加可能・参加決定)をクリア
       if (btnClear) btnClear.addEventListener('click', () => {
-        if (resultArea) resultArea.value = '';
-        if (resultCount) resultCount.textContent = '';
-        // 保存済みの参加可能商品リストも削除 (再表示で復活しないように)
         try {
           const ym = (typeof currentYM !== 'undefined') ? currentYM : null;
           if (ym) {
             const arc = loadArchive();
             if (arc[ym]) {
               delete arc[ym].preSelectMgrs;
+              delete arc[ym].preSelectDecided;
               delete arc[ym].preSelectAt;
               saveArchive(arc);
             }
           }
         } catch (e) { console.warn('preSelectクリア失敗', e); }
-        setStatus('参加可能商品の一覧をクリアしました', '');
+        renderDecideList();
+        setStatus('参加可能・参加決定の一覧をクリアしました', '');
       });
-
-      // textareaクリックで全選択 (使い勝手)
-      if (resultArea) {
-        resultArea.addEventListener('focus', () => { setTimeout(() => resultArea.select(), 0); });
-      }
 
       // 表示時にアーカイブから復元
       function _restorePreSelect() {
-        try {
-          const ym = (typeof currentYM !== 'undefined') ? currentYM : null;
-          if (!ym) { resultArea.value = ''; resultCount.textContent = ''; return; }
-          const arc = loadArchive();
-          const d = arc[ym] || {};
-          const list = Array.isArray(d.preSelectMgrs) ? d.preSelectMgrs : [];
-          resultArea.value = list.join('\n');
-          resultCount.textContent = list.length > 0 ? `${list.length} 件 (保存済)` : '';
-        } catch (e) {}
+        try { renderDecideList(); } catch (e) {}
       }
       window._restorePreSelect = _restorePreSelect;
     })();
