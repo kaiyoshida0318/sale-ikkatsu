@@ -1417,6 +1417,10 @@
     body[data-sale-name="marathon"] .ap-h2-marathon { display: block; }
     body[data-sale-name="marathon"] .ap-li-marathon { display: list-item; }
     body[data-sale-name="marathon"] .ap-card-adcheck { display: none; }
+    /* v0.52.243: 説明文中のステップ番号をセール名で出し分ける (参加商品追加=超SALE①/マラソン②等) */
+    .n-ma { display: none; }
+    body[data-sale-name="marathon"] .n-ss { display: none; }
+    body[data-sale-name="marathon"] .n-ma { display: inline; }
     /* チェックボックス風リスト (取り込み手順内の "✔項目") */
     .howto-checklist {
       list-style: none;
@@ -3949,7 +3953,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.242</span>
+      <span class="version">v0.52.243</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4074,7 +4078,7 @@
 
         <div class="card">
           <h2>2. ADcheck-候補商品データダウンロード</h2>
-          <p class="card-lead">ADcheckヘッダー【マラソン】の「候補」内にある「SALE一括用ファイル出力」を押下。ジャンルIDを含んだ候補商品の一覧がダウンロードされる。</p>
+          <p class="card-lead">ADcheckヘッダー【マラソン】の「候補」内にある「SALE一括用ファイル出力」を押下。ジャンルIDを含んだ候補商品の一覧がダウンロードされる（区分・広告状況も含まれ、取り込み時にセール参加商品へ反映されます）。</p>
         </div>
 
         <div class="card">
@@ -4373,13 +4377,13 @@
         <div class="tool-panel-header">
           <h2>③ 原価特定-NE-単一orセット商品仕分け</h2>
         </div>
-        <p class="tool-panel-description">セール開始準備①でRMSからダウンロードしたデータからは、その商品が単一商品なのかセット商品なのかを判別することができない。<br>
+        <p class="tool-panel-description">セール開始準備<span class="n-ss">①</span><span class="n-ma">②</span>でRMSからダウンロードしたデータからは、その商品が単一商品なのかセット商品なのかを判別することができない。<br>
         ここでは、ネクストエンジンでの検索を通すことでそれぞれを特定し、ツール内に情報を取り込んでいく。</p>
 
         <div class="card">
           <h2>1. 単一orセット判別&CSVダウンロード</h2>
           <ol class="howto-list" style="margin-bottom: 6px;">
-            <li>セール開始準備①でアップした<b>RMSデータCSV</b>の「<b>システム連携用SKU番号</b>」を全てコピー。</li>
+            <li>セール開始準備<span class="n-ss">①</span><span class="n-ma">②</span>でアップした<b>RMSデータCSV</b>の「<b>システム連携用SKU番号</b>」を全てコピー。</li>
             <li>ネクストエンジン → <b>商品 → 商品管理 → 詳細検索</b> を開く。全コピーしたシステム連携用SKU番号を以下の2つの方法で検索していく。</li>
           </ol>
 
@@ -4448,7 +4452,7 @@
           </div>
           <p style="margin: 8px 0 0 0; font-size: 12px; color: var(--muted);">
             ※「単一商品CSVの<b>商品コード</b>」と「セット商品CSVの<b>セット商品コード</b>」の<b>合計</b>が、
-            <b>直近①で取り込んだ分</b>の<b>システム連携用SKU番号</b>の数と<b>一致</b>している場合のみ取り込めます。
+            <b>直近<span class="n-ss">①</span><span class="n-ma">②</span>で取り込んだ分</b>の<b>システム連携用SKU番号</b>の数と<b>一致</b>している場合のみ取り込めます。
             不一致の場合はCSVを見直してください。
           </p>
           <div id="cost-import-status" class="status" style="margin-top: 10px;"></div>
@@ -7548,6 +7552,17 @@
     // 状態の並び順ランク (新商品→既存-伸ばし→既存-撤退)
     const PRODUCT_STATUS_RANK = { 'new': 0, 'keep': 1, 'withdraw': 2 };
 
+    // v0.52.243: ADcheckの「区分」→ セール参加商品の区分(productStatus) 共通マッピング
+    //   新商品→new / 健常・中立→keep(既存-伸ばし) / 撤退→withdraw(既存-撤退) / それ以外→null(変更しない)
+    function mapAdcheckKubun(v) {
+      const s = (v || '').trim();
+      if (!s) return null;
+      if (s.indexOf('新商品') >= 0) return 'new';
+      if (s.indexOf('健常') >= 0 || s.indexOf('中立') >= 0) return 'keep';
+      if (s.indexOf('撤退') >= 0) return 'withdraw';
+      return null;
+    }
+
     // v0.52.169: 広告出稿 (②広告出稿情報追加で取り込み)
     //   保存先: archive[ym].adStatus[mgr] = 'yes'(あり) | 'no'(なし)
     //   未取り込み・データ無しは 'no'(なし) 扱い
@@ -8541,16 +8556,8 @@
             setSt('❌ 「商品管理番号」「広告状況」列が見つかりません。ADcheckのCSVか確認してください。', 'error');
             return;
           }
-          // v0.52.242: ADcheckの「区分」→ セール参加商品の区分(productStatus) へマッピング
-          //   新商品→new / 健常・中立→keep(既存-伸ばし) / 撤退→withdraw(既存-撤退)
-          function mapKubun(v) {
-            const s = (v || '').trim();
-            if (!s) return null;
-            if (s.indexOf('新商品') >= 0) return 'new';
-            if (s.indexOf('健常') >= 0 || s.indexOf('中立') >= 0) return 'keep';
-            if (s.indexOf('撤退') >= 0) return 'withdraw';
-            return null; // それ以外は変更しない
-          }
+          // v0.52.242: ADcheckの「区分」→ セール参加商品の区分(productStatus) へマッピング (共通関数)
+          const mapKubun = mapAdcheckKubun;
           const map = {};
           const statusMap = {};
           let yes = 0, no = 0, kubunCount = 0;
@@ -13777,12 +13784,15 @@
           const cGidIdx = findCol(cHead, GENRE_ID_ALIASES);
           if (cMgrIdx < 0) { setStatus('ADcheck候補商品CSVに「商品管理番号」列が見つかりません', 'error'); return; }
           if (cGidIdx < 0) { setStatus('ADcheck候補商品CSVに「ジャンルID」列が見つかりません', 'error'); return; }
-          // v0.52.233: 候補CSVの「広告状況」列(3列目) → そのままセール参加商品の広告状況へ反映
+          // v0.52.233: 候補CSVの「広告状況」列 → セール参加商品の広告状況へ反映
           const cAdIdx = findCol(cHead, ['広告状況', '広告状態', '広告出稿', 'ad_status']);
-          // 突き合わせ + 広告状況マップ作成
+          // v0.52.243: 候補CSVの「区分」列 → セール参加商品の区分へ反映 (スーパーSALEと同ルール)
+          const cKubunIdx = findCol(cHead, ['区分', '商品区分']);
+          // 突き合わせ + 広告状況/区分マップ作成
           const matched = [];
           const seen = new Set();
           const adMap = {};
+          const statusMap = {};
           for (let i = 1; i < cRows.length; i++) {
             const mgr = (cRows[i][cMgrIdx] || '').trim();
             const gid = (cRows[i][cGidIdx] || '').trim();
@@ -13791,14 +13801,18 @@
               const av = (cRows[i][cAdIdx] || '').trim();
               adMap[mgr] = (av === '出稿中') ? 'yes' : 'no';
             }
+            if (cKubunIdx >= 0) {
+              const st = mapAdcheckKubun(cRows[i][cKubunIdx]);
+              if (st) statusMap[mgr] = st;
+            }
             if (!gid) continue;
             if (targetGenres.has(gid) && !seen.has(mgr)) { matched.push(mgr); seen.add(mgr); }
           }
           // textarea反映
           resultArea.value = matched.join('\n');
           resultCount.textContent = `${matched.length} 件 / 候補 ${cRows.length - 1} 件中`;
-          // セール月配下に保存 (参加可能商品 + 広告状況)
-          let adReflected = 0;
+          // セール月配下に保存 (参加可能商品 + 広告状況 + 区分)
+          let adReflected = 0, kubunReflected = 0;
           try {
             const ym = (typeof currentYM !== 'undefined') ? currentYM : null;
             if (ym) {
@@ -13813,13 +13827,20 @@
                 arc[ym].adStatus = cur;
                 adReflected = Object.keys(adMap).length;
               }
+              // 区分をマージ
+              if (cKubunIdx >= 0 && Object.keys(statusMap).length) {
+                const curSt = (arc[ym].productStatus && typeof arc[ym].productStatus === 'object') ? arc[ym].productStatus : {};
+                for (const k in statusMap) curSt[k] = statusMap[k];
+                arc[ym].productStatus = curSt;
+                kubunReflected = Object.keys(statusMap).length;
+              }
               saveArchive(arc);
               // 参加商品表に即時反映
               if (typeof renderProductTable === 'function') { try { renderProductTable(); } catch(e){} }
             }
           } catch(e) { console.warn('preSelect保存失敗', e); }
           const adMsg = (cAdIdx >= 0)
-            ? `　/　広告状況 ${adReflected} 件を反映`
+            ? `　/　広告状況 ${adReflected} 件` + (cKubunIdx >= 0 ? ` / 区分 ${kubunReflected} 件を反映` : 'を反映')
             : '　/　広告状況列なし(反映なし)';
           if (matched.length === 0) {
             const tgArr = Array.from(targetGenres);
