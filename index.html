@@ -2357,8 +2357,8 @@
       border: 1px solid #e6e6ec;
     }
     .group-img .product-image-thumb {
-      width: 56px;
-      height: 56px;
+      width: 72px;
+      height: 72px;
       border-radius: 4px;
       border: 1px solid #e6e6ec;
     }
@@ -3228,6 +3228,13 @@
     .group-header-namecol .group-name {
       width: 100%;
     }
+    /* v0.52.256: 区分・広告状況・過去割引率の左クラスタ (画像の右に左寄せ固定) */
+    .dp-meta-cluster { display: flex; align-items: flex-start; gap: 18px; flex-shrink: 0; }
+    .dp-fld { display: flex; flex-direction: column; gap: 5px; align-items: flex-start; }
+    .dp-cap { font-size: 11px; color: #888; letter-spacing: .03em; white-space: nowrap; }
+    .dp-meta-cluster .pd-kubun,
+    .dp-meta-cluster .pd-ad { font-size: 12px; text-align: center; border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+    .dp-spacer { flex: 1 1 auto; min-width: 16px; }
     /* v0.52.251: 商品名の位置に出す「過去割引率」 (直近3件・率ごとの色) */
     .pd-hist-col { flex-direction: column; align-items: flex-start; gap: 6px; }
     .pd-hist-title {
@@ -3399,12 +3406,12 @@
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-      width: 56px;
-      height: 56px;
+      width: 72px;
+      height: 72px;
     }
     .group-img .img-placeholder {
-      width: 56px;
-      height: 56px;
+      width: 72px;
+      height: 72px;
       font-size: 10px;
     }
     .group-name {
@@ -4028,7 +4035,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.255</span>
+      <span class="version">v0.52.256</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -6925,6 +6932,21 @@
       const abbr = s => s === 'super-sale' ? 'SS' : (s === 'marathon' ? 'マラ' : s);
       const ymJp = ym => { const m = /^(\d{4})\/(\d{1,2})$/.exec(ym); return m ? (m[1] + '年' + Number(m[2]) + '月') : ym; };
       return entries.map(e => `<span class="pd-hist-box disc-${e.disc}"><span class="pd-hist-ym">${ymJp(e.ym)}</span><span class="pd-hist-rate">${abbr(e.sale)}-${e.disc}%</span></span>`).join('');
+    }
+    // v0.52.256: mgr の区分・広告状況を取得 (②区分＆広告状況追加で入力した値)
+    function getMgrKubunAd(mgr) {
+      let kCls = 'k-none', kLabel = '—', adv = false;
+      try {
+        const ym = currentYM || getCurrentYM();
+        if (ym) {
+          const d = (loadArchive() || {})[ym] || {};
+          const k = (d.productStatus && typeof d.productStatus === 'object') ? d.productStatus[mgr] : undefined;
+          const map = { 'new': ['新商品', 'k-new'], 'keep': ['既存-伸ばし', 'k-keep'], 'withdraw': ['既存-撤退', 'k-withdraw'] };
+          if (map[k]) { kLabel = map[k][0]; kCls = map[k][1]; }
+          adv = (d.adStatus && typeof d.adStatus === 'object') ? (d.adStatus[mgr] === 'yes') : false;
+        }
+      } catch (e) {}
+      return { kCls, kLabel, adv };
     }
 
     // ⑧ 過去履歴表を描画
@@ -12617,14 +12639,17 @@
           : cur === 30 ? '#e8f4ec'
           : cur === 50 ? '#faeaea'
           : '#f7f8fc';
+        const { kCls, kLabel, adv } = getMgrKubunAd(mgr);
         return `<div class="product-group-header" style="background:${bgColor};">
           <div class="product-group-header-inner">
             <button type="button" class="mgr-nav-btn mgr-nav-prev" data-nav="prev" title="前の商品へ" aria-label="前の商品へ">‹</button>
-            <div class="group-img">${imageCellHtml(imgUrl)}</div>
-            <div class="group-header-namecol pd-hist-col" title="${escapeHtml(name)}">
-              <span class="pd-hist-title">過去割引率</span>
-              <div class="pd-hist-boxes">${pastDiscountBoxesHtml(mgr)}</div>
+            <div class="group-img" title="${escapeHtml(name)}">${imageCellHtml(imgUrl)}</div>
+            <div class="dp-meta-cluster">
+              <div class="dp-fld"><span class="dp-cap">区分</span><span class="pd-kubun ${kCls}">${kLabel}</span></div>
+              <div class="dp-fld"><span class="dp-cap">広告状況</span><span class="pd-ad ${adv ? 'ad-yes' : 'ad-no'}">${adv ? '出稿中' : '未出稿'}</span></div>
+              <div class="dp-fld"><span class="dp-cap">過去割引率</span><div class="pd-hist-boxes">${pastDiscountBoxesHtml(mgr)}</div></div>
             </div>
+            <div class="dp-spacer"></div>
             <div class="group-disc-wrap">
               <span class="group-disc-label">割引率</span>
               <div class="discount-grid" data-sku="${escapeHtml(sku)}">${btns}</div>
