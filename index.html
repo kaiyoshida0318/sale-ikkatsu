@@ -4042,7 +4042,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.260</span>
+      <span class="version">v0.52.261</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -8684,6 +8684,14 @@
           const id = pill.getAttribute('data-wf-skip');
           const next = !pill.classList.contains('on');
           setWorkflowSkip(id, next);
+          // v0.52.261: セール用サムネイル作成をスキップ/解除したら、
+          //   それに依存する「サムネイル差し替え」「サムネイル戻し」も同時にスキップ/解除する。
+          if (id === 'prep-make-thumb') {
+            setWorkflowSkip('prep-thumb-change', next);
+            setWorkflowSkip('after-top-image-back', next);
+            renderWorkflow(); // 連動した3ボタンの表示を一括更新
+            return;
+          }
           pill.classList.toggle('on', next);
           pill.setAttribute('aria-pressed', next ? 'true' : 'false');
           const btn = pill.closest('.wf-btn');
