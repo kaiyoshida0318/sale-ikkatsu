@@ -3234,7 +3234,7 @@
       font-size: 12px; font-weight: 600; color: var(--brand);
       letter-spacing: .04em; white-space: nowrap;
     }
-    .pd-hist-boxes { display: flex; flex-wrap: wrap; gap: 8px; }
+    .pd-hist-boxes { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 46px; }
     .pd-hist-box {
       display: inline-flex; flex-direction: column; align-items: center;
       min-width: 84px; padding: 5px 10px; border-radius: 8px;
@@ -4033,7 +4033,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.253</span>
+      <span class="version">v0.52.254</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -10369,7 +10369,7 @@
       { key: 'off50rate',    label: '50%利益率',      cls: 'col-off50',group: 'main' },
     ];
 
-    let _decideShowFee = true; // バリエ・手数料グループの表示/非表示
+    let _decideShowFee = false; // v0.52.254: 初期はバリエ・手数料を隠す
     let _decideActiveTab = null; // ⑤画面 現在アクティブな商品管理番号タブ (null=未設定 → 一番左)
 
     // ⑥ セール用タイトル決定: 商品管理番号ごとに 商品名 + セール用タイトル を編集する
@@ -12987,7 +12987,7 @@
         const mo = new MutationObserver(() => {
           measureDeferred();
         });
-        mo.observe(document.body, { attributes: true, attributeFilter: ['data-header-collapsed', 'data-view'] });
+        mo.observe(document.body, { attributes: true, attributeFilter: ['data-header-collapsed', 'data-view', 'data-sale-name'] });
       } catch (e) { /* 監視失敗時は無視 */ }
 
       // ResizeObserver で各sticky要素のサイズ変化を継続監視 (動的生成された要素も追跡)
