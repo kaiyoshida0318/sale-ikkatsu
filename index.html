@@ -3228,12 +3228,14 @@
     .group-header-namecol .group-name {
       width: 100%;
     }
-    /* v0.52.256: 区分・広告状況・過去割引率の左クラスタ (画像の右に左寄せ固定) */
-    .dp-meta-cluster { display: flex; align-items: flex-start; gap: 18px; flex-shrink: 0; }
-    .dp-fld { display: flex; flex-direction: column; gap: 5px; align-items: flex-start; }
-    .dp-cap { font-size: 11px; font-weight: 700; color: #555; letter-spacing: .03em; white-space: nowrap; }
+    /* v0.52.258: 区分・広告状況・過去割引率クラスタ = パターン3 (白カード+ラベル帯付き3セル) */
+    .dp-meta-cluster { display: flex; align-items: stretch; flex-shrink: 0; background: #fff; border: 1px solid #c7ccd4; border-radius: 10px; overflow: hidden; }
+    .dp-cell { display: flex; flex-direction: column; }
+    .dp-cell + .dp-cell { border-left: 1px solid #e3e3ea; }
+    .dp-cap { font-size: 11px; font-weight: 700; color: #444; background: #f2f3f6; padding: 4px 12px; border-bottom: 1px solid #e8e8ee; text-align: center; white-space: nowrap; }
+    .dp-val { padding: 7px 12px; display: flex; align-items: center; justify-content: center; flex: 1; }
     .dp-meta-cluster .pd-kubun,
-    .dp-meta-cluster .pd-ad { font-size: 12px; text-align: center; border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+    .dp-meta-cluster .pd-ad { font-size: 12px; font-weight: 600; text-align: center; border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
     .dp-spacer { flex: 1 1 auto; min-width: 16px; }
     /* v0.52.251: 商品名の位置に出す「過去割引率」 (直近3件・率ごとの色) */
     .pd-hist-col { flex-direction: column; align-items: flex-start; gap: 6px; }
@@ -4035,7 +4037,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.257</span>
+      <span class="version">v0.52.258</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -12647,9 +12649,9 @@
             <button type="button" class="mgr-nav-btn mgr-nav-prev" data-nav="prev" title="前の商品へ" aria-label="前の商品へ">‹</button>
             <div class="group-img" title="${escapeHtml(name)}">${imageCellHtml(imgUrl)}</div>
             <div class="dp-meta-cluster">
-              <div class="dp-fld"><span class="dp-cap">区分</span><span class="pd-kubun ${kCls}">${kLabel}</span></div>
-              <div class="dp-fld"><span class="dp-cap">広告状況</span><span class="pd-ad ${adv ? 'ad-yes' : 'ad-no'}">${adv ? '出稿中' : '未出稿'}</span></div>
-              <div class="dp-fld"><span class="dp-cap">過去割引率</span><div class="pd-hist-boxes">${pastDiscountBoxesHtml(mgr)}</div></div>
+              <div class="dp-cell"><span class="dp-cap">区分</span><div class="dp-val"><span class="pd-kubun ${kCls}">${kLabel}</span></div></div>
+              <div class="dp-cell"><span class="dp-cap">広告状況</span><div class="dp-val"><span class="pd-ad ${adv ? 'ad-yes' : 'ad-no'}">${adv ? '出稿中' : '未出稿'}</span></div></div>
+              <div class="dp-cell"><span class="dp-cap">過去割引率</span><div class="dp-val"><div class="pd-hist-boxes">${pastDiscountBoxesHtml(mgr)}</div></div></div>
             </div>
             <div class="dp-spacer"></div>
             <div class="group-disc-wrap">
