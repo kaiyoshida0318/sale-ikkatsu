@@ -3257,12 +3257,12 @@
     .pd-hist-box.disc-50 { color: #d83838; background: #faeaea; }
     .pd-hist-empty { font-size: 13px; color: #9aa1a8; }
     /* v0.52.255: バリエ・手数料トグルを通常配置(インライン)に。下部予約余白を撤去しバンドをコンパクト化 */
-    /* v0.52.259: バリエ・手数料ボタンを帯の可視幅の中央に固定 (過去割引率は最大3つで中央の空きと衝突しない) */
+    /* v0.52.260: バリエ・手数料ボタンを帯の下部中央(表ヘッダーのすぐ上)へ。帯の枠内に収め表には被らせない */
     .fee-toggle-floating {
       position: absolute;
       left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
+      bottom: 4px;
+      transform: translateX(-50%);
       z-index: 6;
       display: inline-flex;
       align-items: center;
@@ -4042,7 +4042,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.259</span>
+      <span class="version">v0.52.260</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
