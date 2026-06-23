@@ -2546,7 +2546,7 @@
                   width は JS で scrollWidth に合わせて動的設定 (表より広く=表本体が下から透けない) */
     body[data-view="decide-price"] .product-group .product-group-header {
       position: sticky;
-      top: var(--decide-h-mgr, 72px); /* v0.52.195: mgr-tabsエリアの下に固定 (重なり解消) */
+      top: calc(var(--decide-h-mgr, 72px) - 1px); /* v0.52.255: -1pxでmgr-tabsと重ね、継ぎ目の透過を防止 */
       z-index: 25;
       /* width は JS で動的設定 (scrollWidth)。fallback として 100% */
       width: 100%;
@@ -3209,7 +3209,7 @@
     .product-group-header-inner {
       position: sticky;
       left: 0;
-      padding: 10px 14px 38px;
+      padding: 8px 14px;
       display: flex;
       align-items: center;
       gap: 10px;
@@ -3234,7 +3234,7 @@
       font-size: 12px; font-weight: 600; color: var(--brand);
       letter-spacing: .04em; white-space: nowrap;
     }
-    .pd-hist-boxes { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 46px; }
+    .pd-hist-boxes { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
     .pd-hist-box {
       display: inline-flex; flex-direction: column; align-items: center;
       min-width: 84px; padding: 5px 10px; border-radius: 8px;
@@ -3247,14 +3247,9 @@
     .pd-hist-box.disc-30 { color: #2a8a45; background: #e8f4ec; }
     .pd-hist-box.disc-50 { color: #d83838; background: #faeaea; }
     .pd-hist-empty { font-size: 13px; color: #9aa1a8; }
-    /* バリエ・手数料ボタン: product-group-header 内の下部スペース(padding-bottomの中)に
-       absolute 配置。JSで left を v4列の中央に合わせる。
-       v0.52.116: bottom を正値にして 枠内に収め、表ヘッダーに被らせない。 */
+    /* v0.52.255: バリエ・手数料トグルを通常配置(インライン)に。下部予約余白を撤去しバンドをコンパクト化 */
     .fee-toggle-floating {
-      position: absolute;
-      bottom: 6px;
-      left: 0;
-      z-index: 26;
+      flex-shrink: 0;
       display: inline-flex;
       align-items: center;
       gap: 4px;
@@ -3452,7 +3447,7 @@
     /* decide-price 画面: 内部スクロールコンテナ (.groups-scroll) 基準で sticky
        v0.52.113: ドキュメントスクロール → 内部スクロールに変更したため、top は商品名ヘッダーの高さのみで OK */
     body[data-view="decide-price"] .product-table.decide-table tr.sub-header-row th {
-      top: calc(var(--decide-h-mgr, 72px) + var(--mgr-header-h, 72px)); /* v0.52.195: mgr-tabs+商品名ヘッダーの下 */
+      top: calc(var(--decide-h-mgr, 72px) + var(--mgr-header-h, 72px) - 1px); /* v0.52.255: -1pxで緑ヘッダーと重ね継ぎ目防止 */
     }
     /* 編集可能セル */
     .product-table.decide-table td.editable {
@@ -4033,7 +4028,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.254</span>
+      <span class="version">v0.52.255</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -12634,8 +12629,8 @@
               <span class="group-disc-label">割引率</span>
               <div class="discount-grid" data-sku="${escapeHtml(sku)}">${btns}</div>
             </div>
-            <button type="button" class="mgr-nav-btn mgr-nav-next" data-nav="next" title="次の商品へ" aria-label="次の商品へ">›</button>
             <button type="button" class="fee-toggle fee-toggle-floating" title="${_decideShowFee ? 'バリエ・手数料列を隠す' : 'バリエ・手数料列を表示'}">${_decideShowFee ? '◀ バリエ・手数料 ▶' : '＋ バリエ・手数料'}</button>
+            <button type="button" class="mgr-nav-btn mgr-nav-next" data-nav="next" title="次の商品へ" aria-label="次の商品へ">›</button>
           </div>
         </div>`;
       }
@@ -12937,33 +12932,8 @@
             const h = header.getBoundingClientRect().height;
             if (h > 0) document.documentElement.style.setProperty('--mgr-header-h', Math.ceil(h) + 'px');
           }
-          // v0.52.113: 浮遊バリエ・手数料ボタンを v4列の中央真上に配置
-          // v0.52.120: 親は .product-group-header-inner (左端sticky、可視幅) なので、その rect 基準
-          if (activeGroup && header) {
-            const inner = header.querySelector('.product-group-header-inner') || header;
-            const btn = inner.querySelector('.fee-toggle-floating');
-            if (btn) {
-              const v4th = activeGroup.querySelector('tr.sub-header-row th[data-key="v4"]')
-                       || activeGroup.querySelector('tr.sub-header-row th[data-key="v1"]')
-                       || activeGroup.querySelector('tr.sub-header-row th[data-key="feeL"]');
-              if (v4th) {
-                const hRect = inner.getBoundingClientRect();
-                const tRect = v4th.getBoundingClientRect();
-                const btnWidth = btn.offsetWidth || 120;
-                const targetCenter = tRect.left + tRect.width / 2;
-                let leftPx = targetCenter - hRect.left - btnWidth / 2;
-                // inner の幅範囲内に収める (画面端ではみ出さないようクランプ)
-                const innerWidth = hRect.width;
-                if (leftPx < 4) leftPx = 4;
-                if (leftPx + btnWidth > innerWidth - 4) leftPx = Math.max(4, innerWidth - btnWidth - 4);
-                btn.style.left = leftPx + 'px';
-                btn.style.display = 'inline-flex';
-              } else {
-                btn.style.left = '50%';
-                btn.style.transform = 'translateX(-50%)';
-              }
-            }
-          }
+          // v0.52.255: バリエ・手数料ボタンは通常配置(インライン)に変更したため、
+          //   旧「v4列中央へ絶対配置」する処理は不要 (transform でズレるため撤去)。
         }
       }
       // 二重rAFでレイアウト完了を確実に待ってから計測する版
