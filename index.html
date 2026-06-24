@@ -4042,7 +4042,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.261</span>
+      <span class="version">v0.52.262</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -5431,7 +5431,7 @@
         if (viewId === 'ad-info') renderUploadedFileSlot('adInfo', 'uf-slot-adInfo', () => { if (typeof renderProductTable === 'function') renderProductTable(); });
         if (viewId === 'cost-set-item') { renderUploadedFileSlot('setItem', 'uf-slot-setItem'); renderUploadedFileSlot('nonSet', 'uf-slot-nonSet'); }
         if (viewId === 'cost-set-component') renderUploadedFileSlot('setComponent', 'uf-slot-setComponent');
-        if (viewId === 'make-rms-csv') { renderUploadedFileSlot('mkSale', 'uf-slot-mkSale', () => { if (window._mkClearSlot) window._mkClearSlot('sale'); }); renderUploadedFileSlot('mkRms', 'uf-slot-mkRms', () => { if (window._mkClearSlot) window._mkClearSlot('rms'); }); }
+        if (viewId === 'make-rms-csv') { if (window._mkRestoreSlots) window._mkRestoreSlots(); renderUploadedFileSlot('mkSale', 'uf-slot-mkSale', () => { if (window._mkClearSlot) window._mkClearSlot('sale'); }); renderUploadedFileSlot('mkRms', 'uf-slot-mkRms', () => { if (window._mkClearSlot) window._mkClearSlot('rms'); }); }
       }
       // upload-original サブビュー (セール後①) を開くときは保管ファイル表示を更新
       if (viewId === 'upload-original') {
@@ -12318,6 +12318,33 @@
       bindZone(slotSaleZone, slotSaleInput, 'sale');
       bindZone(slotRmsZone, slotRmsInput, 'rms');
 
+      // v0.52.262: バイト列から文字コードを自動判定してデコード (readAsTextAutoDetect のバイト版)
+      function decodeBytesAuto(u8) {
+        let sjisHits = 0;
+        const sampleLen = Math.min(2048, u8.length);
+        for (let i = 0; i < sampleLen; i++) { if (u8[i] >= 0x81 && u8[i] <= 0x9F) sjisHits++; }
+        if (sjisHits > 20) return decodeShiftJIS(u8);
+        return new TextDecoder('utf-8').decode(u8);
+      }
+      // v0.52.262: 保存済み(uploadedFiles)の本文からメモリ slots を復元する。
+      //   これにより、リロードや画面移動でメモリが消えても、別ファイルをアップし直さない限り
+      //   2ファイルが揃った状態が保たれ、CSVを何度でもダウンロードできる。
+      function restoreSlotsFromPersisted() {
+        [['sale', 'mkSale'], ['rms', 'mkRms']].forEach(([slotKey, ufKey]) => {
+          if (slots[slotKey]) return; // 既にメモリにあれば触らない
+          const info = (typeof getUploadedFile === 'function') ? getUploadedFile(ufKey) : null;
+          if (info && info.dataB64) {
+            try {
+              const u8 = b642u8(info.dataB64);
+              slots[slotKey] = { name: info.name || (ufKey + '.csv'), size: info.size || u8.length, text: decodeBytesAuto(u8) };
+              renderZone(slotKey === 'sale' ? slotSaleZone : slotRmsZone, slotKey);
+            } catch (e) {}
+          }
+        });
+        updateButton();
+      }
+      window._mkRestoreSlots = restoreSlotsFromPersisted;
+
       // CSV作成
       btnMake.addEventListener('click', () => {
         setStatus('', '');
@@ -12442,6 +12469,7 @@
       // 初期描画
       renderZone(slotSaleZone, 'sale');
       renderZone(slotRmsZone, 'rms');
+      restoreSlotsFromPersisted(); // v0.52.262: 保存済み本文があればメモリへ復元 (再DL可能に)
       updateButton();
     })();
 
