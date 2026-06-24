@@ -4042,7 +4042,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.262</span>
+      <span class="version">v0.52.263</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4698,15 +4698,17 @@
             楽天RMS - 店舗設定 - <b>1 商品管理</b> - <b>3 イベント申請</b> - <b>イベント商品申請</b>
           </div>
 
-          <!-- v0.52.155: 全商品管理番号CSVダウンロード + 申請手順 -->
+          <!-- v0.52.263: 手順順序を変更し、CSVダウンロードボタンをステップ2と3の間へ移動 -->
+          <ol class="rms-event-steps">
+            <li><b>一括申請</b>をクリックし、その先で申請用CSVをダウンロード。</li>
+            <li>下のボタンで、セール参加商品の<b>全商品管理番号</b>をCSVでダウンロードし、商品管理番号を一括コピーする。</li>
+          </ol>
           <div class="rms-event-dl-wrap">
             <button type="button" id="rms-event-dl-mgr" class="btn-primary rms-event-dl-btn">⬇ 全商品管理番号をCSVでダウンロード</button>
             <span id="rms-event-dl-status" class="rms-event-dl-status" aria-live="polite"></span>
           </div>
-          <ol class="rms-event-steps">
-            <li>上のボタンで、セール参加商品の<b>全商品管理番号</b>をCSVでダウンロードする。</li>
-            <li><b>一括申請</b>をクリックし、その先で申請用CSVをダウンロード。</li>
-            <li>ダウンロードしたCSVファイルの1列目「<b>申請するページの商品管理番号</b>」に全商品管理番号を貼り付けて保存。</li>
+          <ol class="rms-event-steps" start="3">
+            <li>RMSからダウンロードしたCSVファイルの1列目「<b>申請するページの商品管理番号</b>」に、コピーした全商品管理番号を貼り付けて保存。</li>
             <li>完成ファイルをアップして一括申請する。</li>
           </ol>
           <div class="rms-event-note">※ 全てのセール参加商品の商品管理番号を<b>一括で貼り付けて申請</b>する。<br>
