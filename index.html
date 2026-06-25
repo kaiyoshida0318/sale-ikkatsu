@@ -4075,7 +4075,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.267</span>
+      <span class="version">v0.52.268</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -5988,10 +5988,13 @@
         if (!currentYM) alert('セール期間が選択されていません。先に「+ 新規作成」で作成してください。');
         return;
       }
-      // v0.52.264: 開くたびに警告を隠してリセット (次の初クリックで再表示できるように)
+      // v0.52.268: マラソンのときは期間編集モーダルを開いた時点で警告を確実に表示する
+      //   (クリック待ちのデリゲーションが環境により効かないことがあったため)
       _pemWarnShown = false;
       const warnEl = m.querySelector('#pem-marathon-warn');
-      if (warnEl) warnEl.style.display = 'none';
+      const isMarathonPem = (typeof getCurrentSaleName === 'function') && getCurrentSaleName() === 'marathon';
+      if (warnEl) warnEl.style.display = isMarathonPem ? '' : 'none';
+      if (isMarathonPem) _pemWarnShown = true;
       const arc = loadArchive();
       const d = arc[currentYM] || {};
       const parseDt = (s) => {
