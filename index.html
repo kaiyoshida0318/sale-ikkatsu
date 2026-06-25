@@ -316,6 +316,10 @@
       font-weight: 700; color: #c0392b; font-size: 14px; margin-bottom: 6px;
     }
     .pem-warn b { color: #b02a2a; }
+    /* v0.52.270: 警告内の選択ボタン (そのまま進む / 取りやめて削除) */
+    .pem-warn-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
+    .pem-warn-delete-btn { background: #fff; color: #c0392b; border: 1.5px solid #e0857f; }
+    .pem-warn-delete-btn:hover { background: #fdeaea; }
     .pem-help { margin: 0 0 12px; font-size: 13px; color: #666; }
     /* v0.52.266: 新規作成の前半/後半ラジオ */
     .ymc-half-wrap { display: flex; gap: 18px; align-items: center; }
@@ -4076,7 +4080,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.269</span>
+      <span class="version">v0.52.270</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -5982,20 +5986,52 @@
     }
 
     // 期間編集モーダル
-    let _pemWarnShown = false; // v0.52.264: マラソン警告を1回の編集につき一度だけ出すフラグ
+    let _pemGatePassed = false; // v0.52.270: マラソン警告ゲートを通過したか
+    function _pemShowGate() {
+      const m = document.getElementById('period-edit-modal'); if (!m) return;
+      const area = m.querySelector('#pem-input-area');
+      const actions = m.querySelector('.pem-actions');
+      const warn = m.querySelector('#pem-marathon-warn');
+      if (area) area.style.display = 'none';
+      if (actions) actions.style.display = 'none';
+      if (warn) warn.style.display = '';
+    }
+    function _pemProceedGate() {
+      const m = document.getElementById('period-edit-modal'); if (!m) return;
+      const area = m.querySelector('#pem-input-area');
+      const actions = m.querySelector('.pem-actions');
+      const warn = m.querySelector('#pem-marathon-warn');
+      if (warn) warn.style.display = 'none';
+      if (area) area.style.display = '';
+      if (actions) actions.style.display = '';
+      _pemGatePassed = true;
+      const f = m.querySelector('.pem-dt[data-part="start-year"]');
+      if (f) setTimeout(() => f.focus(), 0);
+    }
     function openPeriodEditModal() {
       const m = document.getElementById('period-edit-modal');
       if (!m || !currentYM) {
         if (!currentYM) alert('セール期間が選択されていません。先に「+ 新規作成」で作成してください。');
         return;
       }
-      // v0.52.268: マラソンのときは期間編集モーダルを開いた時点で警告を確実に表示する
-      //   (クリック待ちのデリゲーションが環境により効かないことがあったため)
-      _pemWarnShown = false;
+      // v0.52.270: マラソンは「日時欄を押すと警告が出て、そのまま進む/削除を選ぶ」ゲート方式。
+      //   初期は入力欄を表示し、押した瞬間に警告だけを出す。スーパーSALEはゲート無し。
       const warnEl = m.querySelector('#pem-marathon-warn');
+      const inputArea = m.querySelector('#pem-input-area');
+      const actions = m.querySelector('.pem-actions');
       const isMarathonPem = (typeof getCurrentSaleName === 'function') && getCurrentSaleName() === 'marathon';
-      if (warnEl) warnEl.style.display = isMarathonPem ? '' : 'none';
-      if (isMarathonPem) _pemWarnShown = true;
+      if (warnEl) warnEl.style.display = 'none';
+      if (inputArea) inputArea.style.display = '';
+      if (actions) actions.style.display = '';
+      _pemGatePassed = !isMarathonPem;
+      m.querySelectorAll('.pem-dt').forEach(inp => {
+        inp.onmousedown = (ev) => {
+          if (getCurrentSaleName() === 'marathon' && !_pemGatePassed) { ev.preventDefault(); _pemShowGate(); }
+        };
+        inp.onfocus = () => {
+          if (getCurrentSaleName() === 'marathon' && !_pemGatePassed) { _pemShowGate(); }
+        };
+      });
       const arc = loadArchive();
       const d = arc[currentYM] || {};
       const parseDt = (s) => {
@@ -6048,24 +6084,14 @@
       const delBtn = document.getElementById('sale-ym-delete');
       if (delBtn) delBtn.addEventListener('click', deleteCurrentYm);
     }
-    // v0.52.264: 日時欄(.pem-dt)を初めてフォーカス(クリック)したとき、マラソンなら警告を表示
-    document.addEventListener('focusin', (e) => {
-      const t = e.target;
-      if (!t || !t.classList || !t.classList.contains('pem-dt')) return;
-      if (_pemWarnShown) return;
-      const m = document.getElementById('period-edit-modal');
-      if (!m || m.style.display === 'none') return;
-      const isMarathon = (typeof getCurrentSaleName === 'function') && getCurrentSaleName() === 'marathon';
-      if (!isMarathon) return;
-      const w = document.getElementById('pem-marathon-warn');
-      if (w) { w.style.display = ''; _pemWarnShown = true; }
-    });
     // v0.52.218: モーダルのbindはdelegationで(modal HTMLがscript閉じタグの後にあってもクリックを拾える)
     document.addEventListener('click', (e) => {
       const t = e.target;
       if (!t || !t.id) return;
       if (t.id === 'pem-cancel') { closePeriodEditModal(); }
       else if (t.id === 'pem-save') { savePeriodEditModal(); }
+      else if (t.id === 'pem-warn-proceed') { _pemProceedGate(); } // v0.52.270: そのまま進む → 入力欄表示
+      else if (t.id === 'pem-warn-delete') { closePeriodEditModal(); if (typeof deleteCurrentYm === 'function') deleteCurrentYm(); } // 取りやめてセール削除
       else if (t.id === 'ymc-cancel') { closeYmCreateModal(); }
       else if (t.id === 'ymc-create') { createNewYm(); }
       else if (t.classList && t.classList.contains('pem-backdrop')) {
@@ -14536,7 +14562,12 @@
         <div class="pem-warn-head"><span aria-hidden="true">⚠</span> お買い物マラソン参加前の注意</div>
         <b>2・5・8・11月（スーパーSALEの前月）の後半に開催されるマラソンには、参加申請しないでください。</b><br>
         この時期のマラソンに参加すると、翌月のスーパーSALEの出店審査条件を満たせず、<b>スーパーSALEに出店できなくなる可能性があります</b>。スーパーSALEを優先してください。
+        <div class="pem-warn-actions">
+          <button type="button" id="pem-warn-delete" class="pem-btn pem-warn-delete-btn">取りやめてセールを削除</button>
+          <button type="button" id="pem-warn-proceed" class="pem-btn pem-btn-save">そのまま進む</button>
+        </div>
       </div>
+      <div id="pem-input-area">
       <div class="pem-row">
         <label class="pem-label">開始日時</label>
         <div class="pem-dt-wrap">
@@ -14564,6 +14595,7 @@
           <span>:</span>
           <input type="text" inputmode="numeric" maxlength="2" class="pem-dt pem-2d" data-part="end-minute" placeholder="00" />
         </div>
+      </div>
       </div>
       <div class="pem-actions">
         <button type="button" id="pem-cancel" class="pem-btn pem-btn-cancel">キャンセル</button>
