@@ -317,6 +317,9 @@
     }
     .pem-warn b { color: #b02a2a; }
     .pem-help { margin: 0 0 12px; font-size: 13px; color: #666; }
+    /* v0.52.266: 新規作成の前半/後半ラジオ */
+    .ymc-half-wrap { display: flex; gap: 18px; align-items: center; }
+    .ymc-half-opt { display: inline-flex; align-items: center; gap: 5px; font-size: 14px; cursor: pointer; color: #333; }
     .pem-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
     .pem-label { font-size: 13px; color: #444; min-width: 72px; font-weight: 600; }
     .pem-dt-wrap { display: inline-flex; align-items: center; gap: 2px; }
@@ -4072,7 +4075,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.265</span>
+      <span class="version">v0.52.266</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -5742,6 +5745,35 @@
     }
     // 起動時に移行を1回試みる (画面より前にデータ準備)
     try { ensureMigrationV2(); } catch (e) { console.warn('初期移行失敗:', e); }
+    // v0.52.266: 既存のマラソン月(接尾辞なし)を「前半(-1)」へ1回だけ移行
+    function ensureMarathonHalfMigration() {
+      try {
+        const FLAG = 'marathon-half-migrated-v1';
+        if (localStorage.getItem(FLAG) === '1') return;
+        const v2 = _loadArchiveV2() || {};
+        let changed = false;
+        for (const shop of Object.keys(v2)) {
+          const byName = v2[shop];
+          if (!byName || !byName['marathon']) continue;
+          const mar = byName['marathon'];
+          for (const key of Object.keys(mar)) {
+            if (/^\d{4}\/\d{2}$/.test(key)) {
+              const nk = key + '-1';
+              if (!mar[nk]) { mar[nk] = mar[key]; delete mar[key]; changed = true; }
+            }
+          }
+        }
+        if (changed) _saveArchiveV2(v2);
+        try {
+          const cur = localStorage.getItem(SALE_ARCHIVE_CURRENT);
+          if (cur && /^\d{4}\/\d{2}$/.test(cur) && getCurrentSaleName() === 'marathon') {
+            localStorage.setItem(SALE_ARCHIVE_CURRENT, cur + '-1');
+          }
+        } catch (e) {}
+        localStorage.setItem(FLAG, '1');
+      } catch (e) { console.warn('マラソン前半/後半 移行失敗:', e); }
+    }
+    try { ensureMarathonHalfMigration(); } catch (e) {}
     const saleTypeEl = document.getElementById('sale-type');
     const saleTypeWrap = document.getElementById('sale-type-wrap');
     function updateSaleTypeColor() {
@@ -5791,6 +5823,15 @@
     // 初期: 保存されたショップを反映
     if (shopSelectEl) shopSelectEl.value = getCurrentShop();
 
+    // v0.52.266: ym キー → 表示ラベル。マラソンは "YYYY/MM-1"(前半)/"YYYY/MM-2"(後半) を許容。
+    function ymLabel(ym) {
+      const mt = String(ym || '').match(/^(\d{4})\/(\d{2})(?:-([12]))?$/);
+      if (!mt) return String(ym || '');
+      const base = `${mt[1]}年${parseInt(mt[2], 10)}月`;
+      if (mt[3] === '1') return base + '前半';
+      if (mt[3] === '2') return base + '後半';
+      return base;
+    }
     // 年月セレクトを再描画 (現在のショップ×セール名のスライスから取得)
     function refreshYmSelector() {
       if (!saleYmSelectEl) return;
@@ -5811,8 +5852,7 @@
       for (const ym of yms) {
         const opt = document.createElement('option');
         opt.value = ym;
-        const m = ym.match(/^(\d{4})\/(\d{2})$/);
-        opt.textContent = m ? `${m[1]}年${parseInt(m[2],10)}月` : ym;
+        opt.textContent = ymLabel(ym);
         saleYmSelectEl.appendChild(opt);
       }
       // 末尾に「+ 新規作成」
@@ -6030,6 +6070,14 @@
       m.querySelector('#ymc-year').value = '';
       m.querySelector('#ymc-month').value = '';
       m.querySelector('#ymc-error').style.display = 'none';
+      // v0.52.266: マラソンのときだけ 前半/後半 を選ばせる
+      const halfRow = m.querySelector('#ymc-half-row');
+      const isMarathon = getCurrentSaleName() === 'marathon';
+      if (halfRow) {
+        halfRow.style.display = isMarathon ? '' : 'none';
+        const r1 = m.querySelector('input[name="ymc-half"][value="1"]');
+        if (r1) r1.checked = true; // 既定は前半
+      }
       m.style.display = '';
       m.setAttribute('aria-hidden', 'false');
       setTimeout(() => m.querySelector('#ymc-year').focus(), 0);
@@ -6048,7 +6096,14 @@
       if (!/^\d{4}$/.test(y) || !/^\d{2}$/.test(mo)) { showErr('年(4桁)と月(2桁)を入力してください'); return; }
       const monNum = parseInt(mo, 10);
       if (monNum < 1 || monNum > 12) { showErr('月は 01〜12 で入力してください'); return; }
-      const ym = `${y}/${mo}`;
+      const ym0 = `${y}/${mo}`;
+      // v0.52.266: マラソンは 前半(-1)/後半(-2) を付けて区別する
+      let ym = ym0;
+      if (getCurrentSaleName() === 'marathon') {
+        const halfEl = m.querySelector('input[name="ymc-half"]:checked');
+        const half = (halfEl && halfEl.value === '2') ? '2' : '1';
+        ym = `${ym0}-${half}`;
+      }
       const arc = loadArchive();
       if (arc[ym]) { showErr('そのセール期間は既に存在します'); return; }
       arc[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
@@ -6063,10 +6118,10 @@
     // v0.52.265: 選択中のセール期間(年月)を削除
     function deleteCurrentYm() {
       if (!currentYM) { alert('削除するセール期間が選択されていません。'); return; }
-      const ymLabel = (() => { const mt = currentYM.match(/^(\d{4})\/(\d{2})$/); return mt ? `${mt[1]}年${parseInt(mt[2],10)}月` : currentYM; })();
+      const ymLabelStr = ymLabel(currentYM);
       const sn = getCurrentSaleName();
       const snLabel = sn === 'marathon' ? 'お買い物マラソン' : (sn === 'super-sale' ? 'スーパーSALE' : sn);
-      const ok = confirm(`「${getCurrentShop()} / ${snLabel} / ${ymLabel}」のセール期間を削除します。\nこの月に登録した参加商品・割引率・タイトル・原価などのデータはすべて消え、元に戻せません。\n\n削除してよろしいですか？`);
+      const ok = confirm(`「${getCurrentShop()} / ${snLabel} / ${ymLabelStr}」のセール期間を削除します。\nこの月に登録した参加商品・割引率・タイトル・原価などのデータはすべて消え、元に戻せません。\n\n削除してよろしいですか？`);
       if (!ok) return;
       const arc = loadArchive();
       if (arc[currentYM]) { delete arc[currentYM]; saveArchive(arc); }
@@ -6420,7 +6475,7 @@
       for (const ym of yms) {
         const opt = document.createElement('option');
         opt.value = ym;
-        opt.textContent = ym.replace('/', '年') + '月';
+        opt.textContent = (typeof ymLabel === 'function') ? ymLabel(ym) : (ym.replace('/', '年') + '月');
         sel.appendChild(opt);
       }
       // 復元: 直前の選択 or localStorage の current or 最新
@@ -7011,7 +7066,7 @@
       const entries = getPastDiscountEntries(mgr, 3);
       if (!entries.length) return '<span class="pd-hist-empty">― 初参加（履歴なし）</span>';
       const abbr = s => s === 'super-sale' ? 'SS' : (s === 'marathon' ? 'マラ' : s);
-      const ymJp = ym => { const m = /^(\d{4})\/(\d{1,2})$/.exec(ym); return m ? (m[1] + '年' + Number(m[2]) + '月') : ym; };
+      const ymJp = ym => { const m = /^(\d{4})\/(\d{2})/.exec(ym); return m ? (m[1] + '年' + Number(m[2]) + '月') : ym; };
       return entries.map(e => `<span class="pd-hist-box disc-${e.disc}"><span class="pd-hist-ym">${ymJp(e.ym)}</span><span class="pd-hist-rate">${abbr(e.sale)}-${e.disc}%</span></span>`).join('');
     }
     // v0.52.256: mgr の区分・広告状況を取得 (②区分＆広告状況追加で入力した値)
@@ -14492,6 +14547,13 @@
           <input type="text" inputmode="numeric" maxlength="4" class="pem-dt pem-year" id="ymc-year" placeholder="0000" />
           <span>/</span>
           <input type="text" inputmode="numeric" maxlength="2" class="pem-dt pem-2d" id="ymc-month" placeholder="00" />
+        </div>
+      </div>
+      <div class="pem-row" id="ymc-half-row" style="display:none;">
+        <label class="pem-label">回</label>
+        <div class="ymc-half-wrap">
+          <label class="ymc-half-opt"><input type="radio" name="ymc-half" value="1" checked /> 前半</label>
+          <label class="ymc-half-opt"><input type="radio" name="ymc-half" value="2" /> 後半</label>
         </div>
       </div>
       <div id="ymc-error" class="pem-error" style="display:none;"></div>
