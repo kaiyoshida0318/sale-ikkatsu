@@ -4081,7 +4081,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.272</span>
+      <span class="version">v0.52.273</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -6095,6 +6095,8 @@
       else if (t.id === 'pem-warn-delete') { closePeriodEditModal(); if (typeof deleteCurrentYm === 'function') deleteCurrentYm(); } // 取りやめてセール削除
       else if (t.id === 'ymc-cancel') { closeYmCreateModal(); }
       else if (t.id === 'ymc-create') { createNewYm(); }
+      else if (t.id === 'ymc-warn-proceed') { _ymcProceedGate(); } // v0.52.273: それでも作成する
+      else if (t.id === 'ymc-warn-back') { _ymcShowGate(false); }   // v0.52.273: 入力に戻る
       else if (t.classList && t.classList.contains('pem-backdrop')) {
         // どちらのモーダルのバックドロップか判定
         const parentModal = t.closest('.period-edit-modal');
@@ -6106,11 +6108,31 @@
     });
 
     // 新規作成モーダル
+    // v0.52.273: 申請不可な後半マラソン(2/5/8/11月後半)の警告ゲート
+    let _ymcWarnPassed = false;
+    function _ymcShowGate(show) {
+      const m = document.getElementById('ym-create-modal');
+      if (!m) return;
+      m.querySelectorAll('.pem-row').forEach(r => { r.style.display = show ? 'none' : ''; });
+      if (!show) {
+        const halfRow = m.querySelector('#ymc-half-row');
+        if (halfRow) halfRow.style.display = (getCurrentSaleName() === 'marathon') ? '' : 'none';
+        const err = m.querySelector('#ymc-error');
+        if (err) err.style.display = (err.textContent || '').trim() ? '' : 'none';
+      } else {
+        const err = m.querySelector('#ymc-error'); if (err) err.style.display = 'none';
+      }
+      const acts = m.querySelector('.pem-actions'); if (acts) acts.style.display = show ? 'none' : '';
+      const warn = m.querySelector('#ymc-warn'); if (warn) warn.style.display = show ? '' : 'none';
+    }
+    function _ymcProceedGate() { _ymcWarnPassed = true; _ymcShowGate(false); createNewYm(); }
     function openYmCreateModal() {
       const m = document.getElementById('ym-create-modal');
       if (!m) return;
+      _ymcWarnPassed = false;            // v0.52.273: 開くたびにゲートをリセット
       m.querySelector('#ymc-year').value = '';
       m.querySelector('#ymc-month').value = '';
+      m.querySelector('#ymc-error').textContent = '';
       m.querySelector('#ymc-error').style.display = 'none';
       // v0.52.266: マラソンのときだけ 前半/後半 を選ばせる
       const halfRow = m.querySelector('#ymc-half-row');
@@ -6120,6 +6142,7 @@
         const r1 = m.querySelector('input[name="ymc-half"][value="1"]');
         if (r1) r1.checked = true; // 既定は前半
       }
+      _ymcShowGate(false);               // v0.52.273: 警告を隠し入力欄を表示
       m.style.display = '';
       m.setAttribute('aria-hidden', 'false');
       setTimeout(() => m.querySelector('#ymc-year').focus(), 0);
@@ -6148,6 +6171,13 @@
       }
       const arc = loadArchive();
       if (arc[ym]) { showErr('そのセール期間は既に存在します'); return; }
+      // v0.52.273: 申請不可な後半マラソン(2/5/8/11月後半)は作成前に警告
+      if (getCurrentSaleName() === 'marathon') {
+        const halfChk = m.querySelector('input[name="ymc-half"]:checked');
+        const isLateHalf = !!(halfChk && halfChk.value === '2');
+        const blockedMonth = (monNum === 2 || monNum === 5 || monNum === 8 || monNum === 11);
+        if (isLateHalf && blockedMonth && !_ymcWarnPassed) { _ymcShowGate(true); return; }
+      }
       arc[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
       saveArchive(arc);
       currentYM = ym;
@@ -14641,6 +14671,18 @@
         </div>
       </div>
       <div id="ymc-error" class="pem-error" style="display:none;"></div>
+      <!-- v0.52.273: 申請不可な後半マラソン(2/5/8/11月後半)の警告ゲート -->
+      <div id="ymc-warn" class="pem-warn" style="display:none;" role="alert">
+        <div class="pem-warn-head"><span aria-hidden="true">⚠</span> この後半マラソンには参加できません</div>
+        <div>
+          <b>2月・5月・8月・11月の「後半」のお買い物マラソン</b>には参加できません。<br>
+          翌月（3月・6月・9月・12月）に<b>スーパーSALE</b>が控えており、この後半マラソンに参加すると<b>スーパーSALEの参加条件を満たせなくなるおそれ</b>があるためです。
+        </div>
+        <div class="pem-warn-actions">
+          <button type="button" id="ymc-warn-back" class="pem-btn pem-btn-cancel">入力に戻る</button>
+          <button type="button" id="ymc-warn-proceed" class="pem-btn pem-warn-delete-btn">それでも作成する</button>
+        </div>
+      </div>
       <div class="pem-actions">
         <button type="button" id="ymc-cancel" class="pem-btn pem-btn-cancel">キャンセル</button>
         <button type="button" id="ymc-create" class="pem-btn pem-btn-save">作成</button>
