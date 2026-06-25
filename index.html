@@ -4075,7 +4075,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.266</span>
+      <span class="version">v0.52.267</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -5909,6 +5909,7 @@
     // ショップ/セール名/年月 変更時の共通フック: アーカイブのスライスが変わるので
     // 年月セレクト・チップを更新し、下のサブビューを文脈に合わせて再描画(無効なら退避)
     function onShopOrSaleNameOrYmChanged(opt) {
+      const intendedYm = currentYM; // v0.52.267: 呼び出し元が選んだ期間を保持
       refreshYmSelector();
       refreshSalePeriodChip();
       // 旧 .sale-period-legacy にも値を反映 (互換のため)
@@ -5916,6 +5917,16 @@
       // 旧アーカイブセレクト(archive-select)も再構築し、currentYMを反映してchange発火
       if (typeof refreshArchiveSelect === 'function') {
         try { refreshArchiveSelect(); } catch (e) { console.warn('refreshArchiveSelect失敗:', e); }
+      }
+      // v0.52.267: refreshArchiveSelect が currentYM を旧値(prevSelected)へ戻すことがあるため、
+      //   選んだ期間が現在のスライスに存在するなら、その期間へ確実に復元する。
+      {
+        const arcNow = loadArchive();
+        if (intendedYm && arcNow[intendedYm]) {
+          currentYM = intendedYm;
+          try { localStorage.setItem(SALE_ARCHIVE_CURRENT, intendedYm); } catch (e) {}
+          if (saleYmSelectEl) saleYmSelectEl.value = intendedYm;
+        }
       }
       const oldSel = document.getElementById('archive-select');
       if (oldSel) {
