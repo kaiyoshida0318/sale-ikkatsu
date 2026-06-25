@@ -243,6 +243,17 @@
       font-family: inherit;
     }
     .sale-ym-select:focus { outline: none; box-shadow: inset 0 0 0 3px rgba(30, 58, 95, 0.15); }
+    /* v0.52.265: セール期間 削除ボタン */
+    .sale-ym-delete {
+      margin-left: 6px;
+      width: 30px; height: 30px;
+      display: inline-flex; align-items: center; justify-content: center;
+      border: 1px solid #d8d8de; border-radius: 7px;
+      background: #fff; cursor: pointer; font-size: 14px; line-height: 1;
+      color: #777; transition: background .12s, border-color .12s, color .12s;
+    }
+    .sale-ym-delete:hover { background: #fdeaea; border-color: #e0857f; color: #c0392b; }
+    .sale-ym-delete:disabled { opacity: .4; cursor: not-allowed; }
     /* v0.52.216: 開始-終了日時 表示チップ (クリックで編集モーダル) */
     .sale-period-chip {
       display: inline-flex;
@@ -4011,6 +4022,7 @@
       <select id="sale-ym-select" class="sale-ym-select" aria-label="セール期間">
         <!-- 動的生成: 既存の年月 + 末尾に「+ 新規作成」 -->
       </select>
+      <button type="button" id="sale-ym-delete" class="sale-ym-delete" title="選択中のセール期間を削除" aria-label="選択中のセール期間を削除">🗑</button>
     </div>
 
     <!-- v0.52.216: 開始-終了日時の表示チップ (クリックで編集モーダル) -->
@@ -4060,7 +4072,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.264</span>
+      <span class="version">v0.52.265</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -5817,6 +5829,9 @@
         currentYM = cur || null;
         if (cur) localStorage.setItem(SALE_ARCHIVE_CURRENT, cur);
       }
+      // v0.52.265: 月が選択されていなければ削除ボタンを無効化
+      const delBtn = document.getElementById('sale-ym-delete');
+      if (delBtn) delBtn.disabled = !currentYM;
     }
 
     // 開始-終了チップ表示の更新 (現在の年月のstartDt/endDtを取得)
@@ -5973,6 +5988,11 @@
       if (typeof reflectPeriodToLegacyInputs === 'function') reflectPeriodToLegacyInputs();
     }
     if (salePeriodChipEl) salePeriodChipEl.addEventListener('click', openPeriodEditModal);
+    // v0.52.265: セール期間 削除ボタン
+    {
+      const delBtn = document.getElementById('sale-ym-delete');
+      if (delBtn) delBtn.addEventListener('click', deleteCurrentYm);
+    }
     // v0.52.264: 日時欄(.pem-dt)を初めてフォーカス(クリック)したとき、マラソンなら警告を表示
     document.addEventListener('focusin', (e) => {
       const t = e.target;
@@ -6040,6 +6060,23 @@
     }
     // v0.52.218: ymc bind は上の delegation で吸収済みなので個別bindは削除
 
+    // v0.52.265: 選択中のセール期間(年月)を削除
+    function deleteCurrentYm() {
+      if (!currentYM) { alert('削除するセール期間が選択されていません。'); return; }
+      const ymLabel = (() => { const mt = currentYM.match(/^(\d{4})\/(\d{2})$/); return mt ? `${mt[1]}年${parseInt(mt[2],10)}月` : currentYM; })();
+      const sn = getCurrentSaleName();
+      const snLabel = sn === 'marathon' ? 'お買い物マラソン' : (sn === 'super-sale' ? 'スーパーSALE' : sn);
+      const ok = confirm(`「${getCurrentShop()} / ${snLabel} / ${ymLabel}」のセール期間を削除します。\nこの月に登録した参加商品・割引率・タイトル・原価などのデータはすべて消え、元に戻せません。\n\n削除してよろしいですか？`);
+      if (!ok) return;
+      const arc = loadArchive();
+      if (arc[currentYM]) { delete arc[currentYM]; saveArchive(arc); }
+      // 残りの最新を選択。残りが無ければ未選択(「-」)
+      const remaining = Object.keys(loadArchive()).sort();
+      const next = remaining.length ? remaining[remaining.length - 1] : '';
+      currentYM = next || null;
+      try { localStorage.setItem(SALE_ARCHIVE_CURRENT, next); } catch (e) {}
+      onShopOrSaleNameOrYmChanged({ ymChanged: true });
+    }
     // 旧 .sale-period-legacy への反映 (他コードがDOMから読む可能性に備える)
     function reflectPeriodToLegacyInputs() {
       const arc = loadArchive();
