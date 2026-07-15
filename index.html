@@ -4087,7 +4087,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.286</span>
+      <span class="version">v0.52.287</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -5733,8 +5733,9 @@
       } catch (e) { return null; }
     }
     function _saveArchiveV2(v2) {
-      try { localStorage.setItem(SALE_ARCHIVE_KEY_V2, JSON.stringify(v2)); }
-      catch (e) { console.warn('archive-v2保存失敗:', e); }
+      // v0.52.287: 保存の成否を返す (容量超過などの失敗を呼び出し側で検知できるように)
+      try { localStorage.setItem(SALE_ARCHIVE_KEY_V2, JSON.stringify(v2)); return true; }
+      catch (e) { console.warn('archive-v2保存失敗:', e); return false; }
     }
     function loadArchive() {
       try {
@@ -5752,14 +5753,14 @@
     function saveArchive(archive) {
       try {
         const sn = getCurrentSaleName();
-        if (SALE_NAMES.indexOf(sn) < 0) return; // v0.52.232: 未選択時は保存しない
+        if (SALE_NAMES.indexOf(sn) < 0) return false; // v0.52.232: 未選択時は保存しない
         ensureMigrationV2();
         const v2 = _loadArchiveV2() || {};
         const shop = getCurrentShop();
         if (!v2[shop]) v2[shop] = {};
         v2[shop][sn] = archive;
-        _saveArchiveV2(v2);
-      } catch (e) { console.warn('アーカイブ保存失敗:', e); }
+        return _saveArchiveV2(v2); // v0.52.287: 保存成否を返す
+      } catch (e) { console.warn('アーカイブ保存失敗:', e); return false; }
     }
     // 起動時に移行を1回試みる (画面より前にデータ準備)
     try { ensureMigrationV2(); } catch (e) { console.warn('初期移行失敗:', e); }
@@ -12360,7 +12361,22 @@
         } else {
           archive[ym].normalItemCsv = entry;
         }
-        saveArchive(archive);
+        const ok = saveArchive(archive);
+        // v0.52.287: 保存失敗(容量超過など)を検知。さらに読み戻して実際に永続化されたか検証。
+        if (!ok) {
+          setStatus('❌ 保存できませんでした。ブラウザの保存容量が上限に達している可能性があります。不要なセール期間や大きいCSVを削除してから、もう一度お試しください。', 'error');
+          return false;
+        }
+        if (entry !== null) {
+          try {
+            const verify = loadArchive();
+            const saved = verify[ym] && verify[ym].normalItemCsv;
+            if (!saved || !saved.dataB64) {
+              setStatus('❌ 保存を確認できませんでした（容量不足の可能性）。不要なデータを削除してから再度お試しください。', 'error');
+              return false;
+            }
+          } catch (e) { /* 検証失敗時はそのまま成功扱いにはしない */ }
+        }
         return true;
       }
 
