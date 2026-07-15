@@ -4087,7 +4087,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.287</span>
+      <span class="version">v0.52.288</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -9612,6 +9612,57 @@
       return u8;
     }
 
+    // v0.52.288: 大きいファイル(セール後アップ用CSV等)は localStorage 容量(約5MB)に収まらないため
+    //   実データを IndexedDB に保存する。localStorage にはメタ情報のみ残す。
+    const IDB_DB_NAME = 'sale-ikkatsu-blobs';
+    const IDB_STORE = 'blobs';
+    function _idbOpen() {
+      return new Promise((resolve, reject) => {
+        if (typeof indexedDB === 'undefined') { reject(new Error('IndexedDB非対応')); return; }
+        const req = indexedDB.open(IDB_DB_NAME, 1);
+        req.onupgradeneeded = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE);
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error || new Error('IndexedDB open失敗'));
+      });
+    }
+    async function idbPutBlob(key, u8) {
+      const db = await _idbOpen();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(IDB_STORE, 'readwrite');
+        tx.objectStore(IDB_STORE).put(u8, key);
+        tx.oncomplete = () => { db.close(); resolve(true); };
+        tx.onerror = () => { db.close(); reject(tx.error || new Error('IndexedDB書込失敗')); };
+        tx.onabort = () => { db.close(); reject(tx.error || new Error('IndexedDB書込中断(容量不足の可能性)')); };
+      });
+    }
+    async function idbGetBlob(key) {
+      const db = await _idbOpen();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(IDB_STORE, 'readonly');
+        const rq = tx.objectStore(IDB_STORE).get(key);
+        rq.onsuccess = () => { db.close(); resolve(rq.result || null); };
+        rq.onerror = () => { db.close(); reject(rq.error || new Error('IndexedDB読取失敗')); };
+      });
+    }
+    async function idbDeleteBlob(key) {
+      const db = await _idbOpen();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(IDB_STORE, 'readwrite');
+        tx.objectStore(IDB_STORE).delete(key);
+        tx.oncomplete = () => { db.close(); resolve(true); };
+        tx.onerror = () => { db.close(); reject(tx.error || new Error('IndexedDB削除失敗')); };
+      });
+    }
+    // セール後アップ用CSV(normalItemCsv)の IndexedDB キー: ショップ×セール名×年月で一意
+    function normalItemIdbKey(ym) {
+      const shop = (typeof getCurrentShop === 'function') ? getCurrentShop() : '';
+      const sn = (typeof getCurrentSaleName === 'function') ? getCurrentSaleName() : '';
+      return 'normalItem|' + shop + '|' + sn + '|' + (ym || '');
+    }
+
     document.getElementById('add-products-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const btn = document.getElementById('btn-add-products-upload');
@@ -11470,7 +11521,8 @@
       const archive = loadArchive();
       const data = archive[ym];
       const entry = (data && data.normalItemCsv) ? data.normalItemCsv : null;
-      if (!entry || !entry.dataB64) {
+      const hasData = entry && (entry.dataB64 || (entry.storage === 'idb' && entry.idbKey));
+      if (!hasData) {
         display.innerHTML = `
           <div class="archive-dropzone-empty">
             <div class="archive-dropzone-icon">📂</div>
@@ -11512,8 +11564,15 @@
       `;
       const btn = display.querySelector('button[data-action="download-original"]');
       if (btn) {
-        btn.addEventListener('click', () => {
-          const u8 = b642u8(entry.dataB64);
+        btn.addEventListener('click', async () => {
+          let u8 = null;
+          if (entry.storage === 'idb' && entry.idbKey) {
+            try { u8 = await idbGetBlob(entry.idbKey); } catch (e) { u8 = null; }
+            if (u8 && !(u8 instanceof Uint8Array)) u8 = new Uint8Array(u8);
+          } else if (entry.dataB64) {
+            u8 = b642u8(entry.dataB64);
+          }
+          if (!u8) { alert('保管データが見つかりませんでした。'); return; }
           const blob = new Blob([u8], { type: 'application/octet-stream' });
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
@@ -12371,7 +12430,8 @@
           try {
             const verify = loadArchive();
             const saved = verify[ym] && verify[ym].normalItemCsv;
-            if (!saved || !saved.dataB64) {
+            const persisted = saved && (saved.dataB64 || (saved.storage === 'idb' && saved.idbKey));
+            if (!persisted) {
               setStatus('❌ 保存を確認できませんでした（容量不足の可能性）。不要なデータを削除してから再度お試しください。', 'error');
               return false;
             }
@@ -12396,7 +12456,7 @@
         }
         dropzone.style.opacity = '';
         dropzone.style.pointerEvents = '';
-        if (entry && entry.dataB64) {
+        if (entry && (entry.dataB64 || (entry.storage === 'idb' && entry.idbKey))) {
           dropzone.innerHTML = `
             <div class="archive-file-saved">
               <div class="archive-file-saved-icon">📄</div>
@@ -12429,28 +12489,55 @@
           setStatus('❌ ファイル名が「normal」で始まるファイルのみ保管できます（例: normal-item-sale.csv）', 'error');
           return;
         }
+        const ym = currentYM || getCurrentYM();
+        if (!ym) {
+          setStatus('❌ セール期間（開始日時）を先に入力してください', 'error');
+          return;
+        }
         try {
           const buf = await file.arrayBuffer();
-          const dataB64 = ab2b64(buf);
+          const bytes = new Uint8Array(buf);
+          // v0.52.288: 実データは IndexedDB へ (localStorage 容量超過回避)。localStorage はメタのみ。
+          const idbKey = normalItemIdbKey(ym);
+          try {
+            await idbPutBlob(idbKey, bytes);
+          } catch (e) {
+            setStatus('❌ 保存に失敗しました: ' + (e && e.message ? e.message : String(e)), 'error');
+            return;
+          }
           const entry = {
             name: file.name || 'unnamed.csv',
-            size: file.size || (buf && buf.byteLength) || 0,
+            size: file.size || bytes.byteLength || 0,
             uploadedAt: new Date().toISOString(),
-            dataB64,
+            storage: 'idb',
+            idbKey,
           };
-          if (!saveEntry(entry)) return;
+          if (!saveEntry(entry)) {
+            // メタ情報の保存に失敗したら IndexedDB の実体も片付ける
+            try { await idbDeleteBlob(idbKey); } catch (e2) {}
+            return;
+          }
           setStatus(`✅ 保管しました: ${entry.name}`, 'success');
           render();
+          // ⑰ RMS-元CSVアップロード側の表示も更新
+          if (typeof renderUploadOriginalArchive === 'function') { try { renderUploadOriginalArchive(); } catch (e3) {} }
         } catch (err) {
           setStatus('❌ 保管失敗: ' + (err.message || String(err)), 'error');
           console.error(err);
         }
       }
 
-      function downloadCurrent() {
+      async function downloadCurrent() {
         const { entry } = loadEntry();
-        if (!entry || !entry.dataB64) return;
-        const u8 = b642u8(entry.dataB64);
+        if (!entry) return;
+        let u8 = null;
+        if (entry.storage === 'idb' && entry.idbKey) {
+          try { u8 = await idbGetBlob(entry.idbKey); } catch (e) { u8 = null; }
+          if (u8 && !(u8 instanceof Uint8Array)) u8 = new Uint8Array(u8);
+        } else if (entry.dataB64) {
+          u8 = b642u8(entry.dataB64);
+        }
+        if (!u8) { setStatus('❌ 保管データが見つかりませんでした', 'error'); return; }
         const blob = new Blob([u8], { type: 'application/octet-stream' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -12463,9 +12550,15 @@
       }
       function deleteCurrent() {
         if (!confirm('保管中のファイルを削除します。よろしいですか?')) return;
+        // v0.52.288: IndexedDB の実体も削除
+        const { entry } = loadEntry();
+        if (entry && entry.storage === 'idb' && entry.idbKey) {
+          idbDeleteBlob(entry.idbKey).catch(() => {});
+        }
         if (!saveEntry(null)) return;
         setStatus('🗑️ 削除しました', '');
         render();
+        if (typeof renderUploadOriginalArchive === 'function') { try { renderUploadOriginalArchive(); } catch (e) {} }
       }
 
       // ドロップゾーンのクリック → file input
