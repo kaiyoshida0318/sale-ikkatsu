@@ -4087,7 +4087,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.283</span>
+      <span class="version">v0.52.285</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4260,7 +4260,7 @@
 
         <div class="card ps-result-card">
           <p class="card-lead">ADcheck・RMSを見て、実際にセールに参加させる商品にチェックを入れてください（初期は全てON）。<br>
-          「参加決定商品をダウンロード」したファイルを<b>ADcheckにアップすると実施中へ一括移動</b>します。同じ商品管理番号は<b>参加商品データ追加でのRMSデータ絞り込み</b>にもそのまま使えます。</p>
+          「参加決定商品をダウンロード」したファイルを<b>ADcheckにアップすると実施中へ一括移動</b>します。「決定分をコピー」でコピーした商品管理番号は<b>「参加商品データ追加」でのRMSデータ絞り込み</b>にそのまま使えます。</p>
           <div class="ps-result-actions">
             <button type="button" id="btn-ps-check-all" class="dl-ready">全チェック</button>
             <button type="button" id="btn-ps-uncheck-all" class="secondary">全解除</button>
@@ -13254,6 +13254,23 @@
         container.querySelectorAll('.mgr-nav-next').forEach(b => { b.disabled = (idx < 0 || idx >= total - 1); });
       })();
 
+      // v0.52.285: 帯内の画像読込やフォント確定でバンド高さが後から変わり、
+      //   sticky の top オフセットが古いままだと表ヘッダー/本体が帯の上に飛び出すため、
+      //   画像load・遅延タイミングで高さを再計測する(既存計測への上乗せのみ)。
+      try {
+        const remeasure = () => { if (typeof window._positionFeeToggleFloating === 'function') window._positionFeeToggleFloating(); };
+        container.querySelectorAll('img').forEach(img => {
+          if (!img.complete) {
+            img.addEventListener('load', remeasure, { once: true });
+            img.addEventListener('error', remeasure, { once: true });
+          }
+        });
+        setTimeout(remeasure, 60);
+        setTimeout(remeasure, 250);
+        if (document.fonts && document.fonts.ready && typeof document.fonts.ready.then === 'function') {
+          document.fonts.ready.then(remeasure).catch(() => {});
+        }
+      } catch (e) { /* 再計測の上乗せ失敗は無視 */ }
       // product-group-header の高さを再計測 (--mgr-header-h 更新 → sub-header-row の sticky 位置)
       if (typeof window._positionFeeToggleFloating === 'function') {
         requestAnimationFrame(() => window._positionFeeToggleFloating());
