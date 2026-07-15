@@ -4087,7 +4087,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.288</span>
+      <span class="version">v0.52.289</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -13048,7 +13048,19 @@
       const out = [];
       // 文字単位で走査 (サロゲートペアも含めて codePoint で扱う)
       for (const ch of String(text)) {
-        const bytes = map.get(ch);
+        let bytes = map.get(ch);
+        if (!bytes) {
+          // v0.52.289: Shift_JISに無い文字の救済。
+          //   ・各種スペース類(NBSP等) → 半角スペースに変換（「?」化を防止）
+          //   ・ゼロ幅/不可視文字 → 出力しない（削除）
+          const cp = ch.codePointAt(0);
+          if (cp === 0x200B || cp === 0x200C || cp === 0x200D || cp === 0x2060 || cp === 0xFEFF) {
+            continue; // ゼロ幅・BOM等は破棄
+          }
+          if (cp === 0x00A0 || (cp >= 0x2000 && cp <= 0x200A) || cp === 0x202F || cp === 0x205F) {
+            bytes = [0x20]; // 各種スペース → 半角スペース
+          }
+        }
         if (bytes) {
           for (const b of bytes) out.push(b);
         } else {
