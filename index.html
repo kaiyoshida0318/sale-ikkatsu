@@ -4087,7 +4087,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.291</span>
+      <span class="version">v0.52.292</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4392,7 +4392,7 @@
           <div id="decide-price-table-container">
             <div class="empty-state">
               まだデータがありません。<br>
-              「セール作業手順」の <b>①〜④</b> をすべて取り込んでください。
+              「セール作業手順」の <b>①②④⑤</b> をすべて取り込んでください。
             </div>
           </div>
         </div>
@@ -4406,7 +4406,7 @@
         <p class="tool-panel-description">セール用のタイトルを記入していく。<br>
         <span class="n-ss">スーパーSALEであれば先頭を「【スーパーSALE★◯％OFF】」のようにする。文字数は <b>127文字以内</b>。</span><span class="n-ma">お買い物マラソンであれば先頭を「【お買い物マラソン★◯％OFF】」のようにする。文字数は <b>127文字以内</b>。</span><br>
         <span style="font-size:12px; color:var(--muted);">
-          ※ <b style="color:#d83838;">セール用タイトルのセルが赤い</b>場合は、タイトル内の「○%OFF」が ⑤で選んだ割引率と一致していません（文字数オーバーは「文字数」列が赤くなります）。
+          ※ <b style="color:#d83838;">セール用タイトルのセルが赤い</b>場合は、タイトル内の「○%OFF」が ⑥で選んだ割引率と一致していません（文字数オーバーは「文字数」列が赤くなります）。
         </span></p>
 
         <div id="decide-title-table-wrap" class="product-table-wrap">
@@ -4430,7 +4430,7 @@
         <div class="card">
           <h2>1. アップ用ファイルのダウンロード(SALE一括内から)</h2>
           <p class="card-lead">
-            すでに取り込み済みのデータと、⑤で選んだ割引率・⑥で入力したセール用タイトルから、
+            すでに取り込み済みのデータと、⑥で選んだ割引率・⑦で入力したセール用タイトルから、
             RMSアップ用のCSVを生成してダウンロードします。<br>
             割引率が <b>未選択</b> の商品はスキップされます。<span id="dl-rms-unselected-count" class="unselected-count"></span>
           </p>
@@ -4482,16 +4482,16 @@
         <div class="tool-panel-header">
           <h2>⑧ RMSアップ用CSV作成</h2>
         </div>
-        <p class="tool-panel-description">セール開始準備<span class="n-ss">⑦</span><span class="n-ma">⑧</span>で用意した2つのファイルをアップロードして組み合わせることで、RMSにアップするセールバージョンのCSVファイルを作成する。</p>
+        <p class="tool-panel-description">セール開始準備<span class="n-ss">⑧</span><span class="n-ma">⑨</span>で用意した2つのファイルをアップロードして組み合わせることで、RMSにアップするセールバージョンのCSVファイルを作成する。</p>
 
         <div class="card">
           <h2>1. 2つのファイルをアップロード</h2>
-          <p class="card-lead">下の2つのスロットに、<span class="n-ss">⑦</span><span class="n-ma">⑧</span>で用意したファイルをそれぞれセットしてください。両方セットされるとCSV作成が可能になります。</p>
+          <p class="card-lead">下の2つのスロットに、<span class="n-ss">⑧</span><span class="n-ma">⑨</span>で用意したファイルをそれぞれセットしてください。両方セットされるとCSV作成が可能になります。</p>
 
           <div class="mk-slots">
             <div class="mk-slot" data-slot="sale">
               <div class="mk-slot-label"><span class="mk-slot-badge">A</span>SALE一括内で生成したCSV</div>
-              <div class="mk-slot-sub"><span class="n-ss">⑦</span><span class="n-ma">⑧</span>手順1でSALE一括からDLしたファイル(RMSアップ用素材)</div>
+              <div class="mk-slot-sub"><span class="n-ss">⑧</span><span class="n-ma">⑨</span>手順1でSALE一括からDLしたファイル(RMSアップ用素材)</div>
               <div id="mk-slot-sale-zone" class="archive-dropzone" tabindex="0" role="button" aria-label="クリックまたはドラッグでファイルをセット">
                 <div class="archive-dropzone-empty">
                   <div class="archive-dropzone-icon">📂</div>
@@ -4504,7 +4504,7 @@
 
             <div class="mk-slot" data-slot="rms">
               <div class="mk-slot-label"><span class="mk-slot-badge">B</span>RMSからダウンロードしたCSV</div>
-              <div class="mk-slot-sub"><span class="n-ss">⑦</span><span class="n-ma">⑧</span>手順2でRMSからDLしたファイル (normal-item…)</div>
+              <div class="mk-slot-sub"><span class="n-ss">⑧</span><span class="n-ma">⑨</span>手順2でRMSからDLしたファイル (normal-item…)</div>
               <div id="mk-slot-rms-zone" class="archive-dropzone" tabindex="0" role="button" aria-label="クリックまたはドラッグでファイルをセット">
                 <div class="archive-dropzone-empty">
                   <div class="archive-dropzone-icon">📂</div>
@@ -4624,12 +4624,12 @@
           <h2>④ 原価特定-NE-セット構成物原価特定</h2>
         </div>
         <p class="tool-panel-description">割引率を決定するために必要となる原価情報を収集する。<br>
-        ③の2でネクストエンジンからダウンロードしたセット商品データには、セット商品を構成している商品の個別原価が現れない。そのため、ここではそれらの構成物をネクストエンジンで検索し直し個別の原価を特定していく。</p>
+        ④の2でネクストエンジンからダウンロードしたセット商品データには、セット商品を構成している商品の個別原価が現れない。そのため、ここではそれらの構成物をネクストエンジンで検索し直し個別の原価を特定していく。</p>
 
         <div class="card">
           <h2>1. 検索用ファイルのダウンロード(SALE一括内から)</h2>
           <div class="howto-list" style="padding-left: 0;">
-            セール開始準備<b>③の2</b>でアップしたセット商品CSVから、商品コードを抽出した検索用CSVをダウンロードします。<br>
+            セール開始準備<b>④の2</b>でアップしたセット商品CSVから、商品コードを抽出した検索用CSVをダウンロードします。<br>
             <span style="color: var(--muted); font-size: 12px;">※「<code>"</code>」は除去・重複は1件にまとめ・ヘッダー「商品コード」付き</span>
           </div>
           <div class="actions" style="margin-top: 12px;">
@@ -4692,7 +4692,7 @@
           <span id="make-thumb-pending-count" class="st-pending-count"></span>
         </div>
         <div id="make-thumb-history-container" class="st-table-scroll">
-          <div class="empty-state">割引率が決まっている商品がありません。④「割引率決定」で割引率を選んでください。</div>
+          <div class="empty-state">割引率が決まっている商品がありません。⑥「割引率決定」で割引率を選んでください。</div>
         </div>
       </div>
 
@@ -4702,7 +4702,7 @@
         <div class="tool-panel-header">
           <h2>⑩ RMS-完成CSVアップロード</h2>
         </div>
-        <p class="tool-panel-description">セール開始準備<span class="n-ss">⑧</span><span class="n-ma">⑨</span>で作成した「normal-item-sale」ファイルをRMSにアップロードしていく。<br>
+        <p class="tool-panel-description">セール開始準備<span class="n-ss">⑨</span><span class="n-ma">⑩</span>で作成した「normal-item-sale」ファイルをRMSにアップロードしていく。<br>
         アップロードにはWinSCPを使用する。</p>
 
         <div class="card">
@@ -4867,7 +4867,7 @@
         <div class="tool-panel-header">
           <h2>⑯ 広告復活</h2>
         </div>
-        <p class="tool-panel-description">セール開始準備⑫で除外商品に入れた商品の広告を復活させる。</p>
+        <p class="tool-panel-description">セール開始準備⑬で除外商品に入れた商品の広告を復活させる。</p>
 
         <div class="card">
           <h2>1. 広告一括復活ファイルのダウンロード</h2>
@@ -4892,17 +4892,17 @@
         <div class="tool-panel-header">
           <h2>⑰ RMS-元CSVアップロード</h2>
         </div>
-        <p class="tool-panel-description">セール開始準備の「<span class="n-ss">⑦</span><span class="n-ma">⑧</span> RMSアップ用素材ダウンロード」で保管しておいたCSVファイルをRMSにアップロードする。それにより商品情報をセール前の状態に戻すことができる。<br>
+        <p class="tool-panel-description">セール開始準備の「<span class="n-ss">⑧</span><span class="n-ma">⑨</span> RMSアップ用素材ダウンロード」で保管しておいたCSVファイルをRMSにアップロードする。それにより商品情報をセール前の状態に戻すことができる。<br>
         アップロードにはWinSCPを使用する。</p>
 
         <div class="card">
           <h2>1. 保管ファイルをダウンロード</h2>
-          <p class="card-lead"><span class="n-ss">⑦</span><span class="n-ma">⑧</span>で保管したCSVファイルをここからダウンロードしてください。差し替えや削除は <span class="n-ss">⑦</span><span class="n-ma">⑧</span> RMSアップ用素材ダウンロード から行ってください。</p>
+          <p class="card-lead"><span class="n-ss">⑧</span><span class="n-ma">⑨</span>で保管したCSVファイルをここからダウンロードしてください。差し替えや削除は <span class="n-ss">⑧</span><span class="n-ma">⑨</span> RMSアップ用素材ダウンロード から行ってください。</p>
           <div class="archive-file-area" id="upload-original-archive-area">
             <div id="upload-original-display" class="archive-dropzone" style="cursor:default;">
               <div class="archive-dropzone-empty">
                 <div class="archive-dropzone-icon">📂</div>
-                <div class="archive-dropzone-text">保管ファイルがありません<br><span class="archive-dropzone-sub"><span class="n-ss">⑦</span><span class="n-ma">⑧</span> RMSアップ用素材ダウンロード でファイルを保管してください</span></div>
+                <div class="archive-dropzone-text">保管ファイルがありません<br><span class="archive-dropzone-sub"><span class="n-ss">⑧</span><span class="n-ma">⑨</span> RMSアップ用素材ダウンロード でファイルを保管してください</span></div>
               </div>
             </div>
           </div>
@@ -4947,7 +4947,7 @@
         <div class="tool-panel-header">
           <h2>⑱ 審査落ちSKU倉庫出し</h2>
         </div>
-        <p class="tool-panel-description">セール開始準備⑮で倉庫に入れたSKUを販売中に戻していく。</p>
+        <p class="tool-panel-description">セール開始準備⑯で倉庫に入れたSKUを販売中に戻していく。</p>
 
         <div class="card">
           <h2>1. 倉庫から出す手順</h2>
@@ -7407,7 +7407,7 @@
       const curMap = getMgrDiscountMapForMonth(ym); // mgr -> Set (通常1個)
       const curMgrs = Object.keys(curMap);
       if (curMgrs.length === 0) {
-        container.innerHTML = `<div class="empty-state">割引率が決まっている商品がありません。④「割引率決定」で割引率を選んでください。</div>`;
+        container.innerHTML = `<div class="empty-state">割引率が決まっている商品がありません。⑥「割引率決定」で割引率を選んでください。</div>`;
         return;
       }
       // 商品名・画像・コードを引くため rows / RMS を参照
@@ -8491,7 +8491,7 @@
         hintText = '';
       } else {
         if (currentOffRate !== 'all') {
-          hintText = `${currentOffRate}%OFF に設定された商品はありません。⑤「割引率決定」で各商品に割引率を選んでください。`;
+          hintText = `${currentOffRate}%OFF に設定された商品はありません。⑥「割引率決定」で各商品に割引率を選んでください。`;
         } else if (currentYM) {
           hintText = currentYM.replace('/', '年') + '月 のセール参加商品（「参加商品追加」からRMSデータCSVを取り込んでください）';
         } else {
@@ -8920,8 +8920,8 @@
         className: 'block-prep',
         buttons: [
           { id: 'prep-add-products', label: '参加商品追加', action: 'open-add-products' },
-          { id: 'prep-okurikomi', label: '送り込みグループ設定', action: 'open-okurikomi' },
           { id: 'prep-ad-info', label: '区分＆広告状況追加', action: 'open-ad-info' },
+          { id: 'prep-okurikomi', label: '送り込みグループ設定', action: 'open-okurikomi' },
           { id: 'prep-cost-set-item', label: '原価特定-NE-単一orセット商品仕分け', action: 'open-cost-set-item' },
           { id: 'prep-cost-set-component', label: '原価特定-NE-セット構成物原価特定', action: 'open-cost-set-component' },
           { id: 'prep-decide-price', label: '割引率決定', action: 'open-decide-price' },
@@ -11743,7 +11743,7 @@
         display.innerHTML = `
           <div class="archive-dropzone-empty">
             <div class="archive-dropzone-icon">📂</div>
-            <div class="archive-dropzone-text">保管ファイルがありません<br><span class="archive-dropzone-sub"><span class="n-ss">⑦</span><span class="n-ma">⑧</span> RMSアップ用素材ダウンロード でファイルを保管してください</span></div>
+            <div class="archive-dropzone-text">保管ファイルがありません<br><span class="archive-dropzone-sub"><span class="n-ss">⑧</span><span class="n-ma">⑨</span> RMSアップ用素材ダウンロード でファイルを保管してください</span></div>
           </div>
         `;
         return;
@@ -12399,7 +12399,7 @@
         try {
           const { headers, dataRows, stats } = buildRmsUploadCsvRows();
           if (dataRows.length === 0) {
-            setStatus('❌ 対象データがありません。⑤で割引率を選択した商品が必要です。', 'error');
+            setStatus('❌ 対象データがありません。⑥で割引率を選択した商品が必要です。', 'error');
             return;
           }
           const csvText = rowsToCsvText(headers, dataRows);
@@ -13300,7 +13300,7 @@
       } catch (err) {
         container.innerHTML = `<div class="empty-state">
           ${escapeHtml(err.message)}<br>
-          <span style="font-size:12px;color:var(--muted);">「セール作業手順」の ①〜④ をすべて取り込んでください。</span>
+          <span style="font-size:12px;color:var(--muted);">「セール作業手順」の ①②④⑤ をすべて取り込んでください。</span>
         </div>`;
         return;
       }
