@@ -4087,7 +4087,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.290</span>
+      <span class="version">v0.52.291</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4274,6 +4274,15 @@
           </div>
           <textarea id="ps-result-textarea" class="ps-result-textarea" readonly hidden></textarea>
         </div>
+      </div>
+
+      <!-- サブビュー: 送り込みグループ設定 (v0.52.291) -->
+      <div id="tool-okurikomi" class="tool-panel">
+        <div class="tool-panel-header">
+          <h2><span class="vstep-num" data-vstep="okurikomi"></span>送り込みグループ設定</h2>
+        </div>
+        <p class="tool-panel-description">親商品（順位を上げたい商品）を1つ選び、そこへ送り込む子商品を、このセールの参加商品から検索して追加します。子は1つの親にのみ所属します。ここで作った親子は、次段でセール参加商品一覧にグループ表示され、送り込みリンクも出力できるようになります。</p>
+        <div id="okurikomi-container"></div>
       </div>
 
       <!-- サブビュー: 参加商品追加 (RMSデータCSV → 商品一覧) -->
@@ -5298,7 +5307,7 @@
     // ※旧 cost-non-set は v0.52.88 で廃止(②のセクション1=単一商品 に統合)
     // ※サブビュー間は forward/back で履歴を残す。同一サブビュー間は履歴に積まない。
     // 履歴に積まれた viewId は、ブラウザ戻る/進むで復元される。
-    const VALID_VIEWS = ['products','workflow','sale-thumb','pre-select','join-decide','add-products','ad-info','decide-price','decide-title','dl-rms-csv','make-rms-csv','make-thumb','cost-set-item','cost-set-component','upload-rms','rms-event','sku-record','ad-delete','ad-restore','upload-original','sku-restore','thumb-change','sp-banner','top-image-back'];
+    const VALID_VIEWS = ['products','workflow','sale-thumb','pre-select','join-decide','add-products','ad-info','decide-price','decide-title','dl-rms-csv','make-rms-csv','make-thumb','cost-set-item','cost-set-component','upload-rms','rms-event','sku-record','ad-delete','ad-restore','upload-original','sku-restore','thumb-change','sp-banner','top-image-back','okurikomi'];
     // ブラウザ/マウスの「戻る」でサブビューから戻れるよう、サブビュー遷移時は history.pushState する
     let _suppressPushState = false; // popstate由来の呼び出しでは積まない
     const MAIN_TABS = ['products', 'workflow', 'sale-thumb'];
@@ -5400,6 +5409,10 @@
       }
       if (viewId === 'cost-set-component') {
         if (typeof restoreStatusMessage === 'function') restoreStatusMessage('cost-set-component-status');
+      }
+      // v0.52.291: 送り込みグループ設定を開いたら描画
+      if (viewId === 'okurikomi') {
+        if (typeof renderOkurikomiSetting === 'function') renderOkurikomiSetting();
       }
 
       // products タブを開くときは選択中の年月で再描画
@@ -6647,6 +6660,209 @@
       const archive = loadArchive();
       return (archive[currentYM] && archive[currentYM].rows) || [];
     }
+
+    // ===== v0.52.291: 送り込みグループ (親商品へ同ジャンル子商品から送客する施策) =====
+    //   保存構造: archive[YYYY/MM].okurikomiGroups = [{ parent: 商品管理番号, children: [商品管理番号,...] }]
+    //   子は1つの親にのみ所属 (追加時に他グループから自動的に外す)。親は子になれない/子は親になれない。
+    let _okDraft = { parent: '', children: [], editing: false };
+    let _okSearch = '';
+    function loadOkurikomiGroups() {
+      if (!currentYM) return [];
+      const archive = loadArchive();
+      const g = archive[currentYM] && archive[currentYM].okurikomiGroups;
+      return Array.isArray(g) ? g : [];
+    }
+    function saveOkurikomiGroups(groups) {
+      if (!currentYM) return false;
+      const archive = loadArchive();
+      if (!archive[currentYM]) archive[currentYM] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
+      archive[currentYM].okurikomiGroups = groups;
+      return saveArchive(archive);
+    }
+    function _okProductMap() {
+      const map = {};
+      getCurrentRows().forEach(r => { if (r && r.mgr) map[r.mgr] = r; });
+      return map;
+    }
+    function _okChildOwner(groups, code, exceptParent) {
+      for (const g of groups) {
+        if (g.parent === exceptParent) continue;
+        if ((g.children || []).includes(code)) return g.parent;
+      }
+      return null;
+    }
+    function renderOkurikomiSetting() {
+      const container = document.getElementById('okurikomi-container');
+      if (!container) return;
+      const rows = getCurrentRows();
+      if (!currentYM || rows.length === 0) {
+        container.innerHTML = '<div class="empty-state">まだ参加商品がありません。「参加商品追加」でRMSデータを取り込んでから設定してください。</div>';
+        return;
+      }
+      const pmap = _okProductMap();
+      const groups = loadOkurikomiGroups();
+      const nameOf = (code) => { const r = pmap[code]; return r ? (r.name || code) : code; };
+      const codeOf = (code) => { const r = pmap[code]; return r ? (r.itemCode || '') : ''; };
+
+      const parentOpts = ['<option value="">親商品を選択…</option>'].concat(
+        rows.map(r => `<option value="${escapeHtml(r.mgr)}"${_okDraft.parent === r.mgr ? ' selected' : ''}>${escapeHtml(r.mgr)} ${escapeHtml(r.name || '')}</option>`)
+      ).join('');
+
+      const q = (_okSearch || '').trim();
+      const candidates = rows.filter(r => {
+        if (r.mgr === _okDraft.parent) return false;
+        if (_okDraft.children.includes(r.mgr)) return false;
+        if (!q) return true;
+        const hay = (r.mgr + ' ' + (r.itemCode || '') + ' ' + (r.name || '')).toLowerCase();
+        return hay.indexOf(q.toLowerCase()) >= 0;
+      }).slice(0, 40);
+
+      const candHtml = candidates.length ? candidates.map(r => {
+        const owner = _okChildOwner(groups, r.mgr, _okDraft.editing ? _okDraft.parent : null);
+        const ownerNote = owner ? `<span style="color:#c07a10;font-size:11px;margin-left:6px;">（別グループ「${escapeHtml(nameOf(owner))}」の子 → 付け替え）</span>` : '';
+        return `<div style="display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid #f0f0f0;">
+          <div style="flex:1;min-width:0;"><div style="font-size:12px;">${escapeHtml(r.name || '')}${ownerNote}</div><code style="font-size:11px;color:#888;">${escapeHtml(r.mgr)}${r.itemCode ? ' / ' + escapeHtml(r.itemCode) : ''}</code></div>
+          <button type="button" class="ok-add-child" data-code="${escapeHtml(r.mgr)}" style="border:1px solid #e0a020;color:#8a5e08;background:#fbf3df;border-radius:5px;padding:3px 8px;font-size:11px;cursor:pointer;">＋子に追加</button>
+        </div>`;
+      }).join('') : '<div style="color:#999;font-size:12px;padding:8px 4px;">該当する参加商品がありません</div>';
+
+      const chipHtml = _okDraft.children.length ? _okDraft.children.map(code =>
+        `<span style="display:inline-flex;align-items:center;gap:6px;background:#f5e6c0;color:#8a5e08;border-radius:12px;padding:3px 10px;font-size:12px;">${escapeHtml(nameOf(code))}<button type="button" class="ok-del-child" data-code="${escapeHtml(code)}" aria-label="外す" style="border:none;background:none;color:#8a5e08;cursor:pointer;font-size:13px;line-height:1;">×</button></span>`
+      ).join('') : '<span style="color:#999;font-size:12px;">まだありません</span>';
+
+      const groupsHtml = groups.length ? groups.map(g =>
+        `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #f0f0f0;">
+          <span style="background:#2e9043;color:#fff;border-radius:4px;padding:1px 7px;font-size:11px;">親</span>
+          <span style="font-size:13px;flex:1;min-width:0;">${escapeHtml(nameOf(g.parent))} <code style="font-size:11px;color:#888;">${escapeHtml(g.parent)}</code></span>
+          <span style="font-size:12px;color:#8a5e08;background:#fbf3df;border-radius:10px;padding:2px 9px;">子 ${(g.children || []).length}件</span>
+          <button type="button" class="ok-edit-group" data-parent="${escapeHtml(g.parent)}" style="border:1px solid #ccc;background:#fff;color:#555;border-radius:5px;padding:4px 10px;font-size:12px;cursor:pointer;">編集</button>
+          <button type="button" class="ok-delete-group" data-parent="${escapeHtml(g.parent)}" style="border:1px solid #e5b4b4;background:#fff;color:#c0392b;border-radius:5px;padding:4px 10px;font-size:12px;cursor:pointer;">削除</button>
+        </div>`
+      ).join('') : '<div style="color:#999;font-size:13px;padding:12px 14px;">まだ送り込みグループはありません</div>';
+
+      container.innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:12px;">
+          <div style="background:#fff;border:1px solid #e6e6ea;border-radius:12px;padding:12px 14px;">
+            <div style="font-size:13px;font-weight:500;color:#1f6b39;margin-bottom:8px;">親商品（順位を上げたい商品）</div>
+            <select id="ok-parent-select" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:6px;font-size:13px;">${parentOpts}</select>
+          </div>
+          <div style="background:#fff;border:1px solid #e6e6ea;border-radius:12px;padding:12px 14px;">
+            <div style="font-size:13px;font-weight:500;color:#8a5e08;margin-bottom:8px;">子商品を追加（送り込み元／このセールの参加商品から検索）</div>
+            <input type="text" id="ok-child-search" placeholder="商品管理番号・商品コード・商品名で検索" value="${escapeHtml(_okSearch)}" style="width:100%;padding:6px 10px;border:1px solid #ccc;border-radius:6px;font-size:12px;margin-bottom:8px;box-sizing:border-box;" />
+            <div style="max-height:220px;overflow:auto;">${candHtml}</div>
+            <div style="font-size:11px;color:#999;margin:10px 0 4px;">追加済みの子（子は親1つのみ）</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;">${chipHtml}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin:0 0 18px;justify-content:flex-end;align-items:center;">
+          <span id="ok-save-status" style="margin-right:auto;font-size:13px;"></span>
+          <button type="button" id="ok-copy-prev" style="border:1px solid #ccc;color:#555;background:#fff;border-radius:6px;padding:7px 16px;font-size:13px;cursor:pointer;">前回セールからコピー</button>
+          <button type="button" id="ok-clear-draft" style="border:1px solid #ccc;color:#555;background:#fff;border-radius:6px;padding:7px 16px;font-size:13px;cursor:pointer;">入力クリア</button>
+          <button type="button" id="ok-save-group" style="border:1px solid #2e9043;background:#2e9043;color:#fff;border-radius:6px;padding:7px 18px;font-size:13px;font-weight:500;cursor:pointer;">このグループを保存</button>
+        </div>
+        <div style="font-size:13px;font-weight:500;margin:0 0 8px;">作成済みの送り込みグループ</div>
+        <div style="background:#fff;border:1px solid #e6e6ea;border-radius:12px;overflow:hidden;">${groupsHtml}</div>
+      `;
+
+      const setStatus = (msg, ok) => {
+        const el = container.querySelector('#ok-save-status');
+        if (el) { el.textContent = msg || ''; el.style.color = ok === false ? '#c0392b' : '#1f6b39'; }
+      };
+
+      const parentSel = container.querySelector('#ok-parent-select');
+      if (parentSel) parentSel.addEventListener('change', () => {
+        _okDraft.parent = parentSel.value;
+        _okDraft.children = _okDraft.children.filter(c => c !== _okDraft.parent);
+        renderOkurikomiSetting();
+      });
+      const searchEl = container.querySelector('#ok-child-search');
+      if (searchEl) {
+        searchEl.addEventListener('input', () => {
+          _okSearch = searchEl.value;
+          renderOkurikomiSetting();
+          const s = document.getElementById('ok-child-search');
+          if (s) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
+        });
+      }
+      container.querySelectorAll('.ok-add-child').forEach(b => b.addEventListener('click', () => {
+        const code = b.getAttribute('data-code');
+        if (code && !_okDraft.children.includes(code)) _okDraft.children.push(code);
+        renderOkurikomiSetting();
+      }));
+      container.querySelectorAll('.ok-del-child').forEach(b => b.addEventListener('click', () => {
+        const code = b.getAttribute('data-code');
+        _okDraft.children = _okDraft.children.filter(c => c !== code);
+        renderOkurikomiSetting();
+      }));
+      const clearBtn = container.querySelector('#ok-clear-draft');
+      if (clearBtn) clearBtn.addEventListener('click', () => { _okDraft = { parent: '', children: [], editing: false }; _okSearch = ''; renderOkurikomiSetting(); });
+
+      const saveBtn = container.querySelector('#ok-save-group');
+      if (saveBtn) saveBtn.addEventListener('click', () => {
+        if (!_okDraft.parent) { setStatus('❌ 親商品を選択してください', false); return; }
+        if (_okDraft.children.length === 0) { setStatus('❌ 子商品を1つ以上追加してください', false); return; }
+        let gs = loadOkurikomiGroups().map(g => ({ parent: g.parent, children: (g.children || []).slice() }));
+        // 子は親1つのみ: 選んだ子を他グループから外す
+        const childSet = new Set(_okDraft.children);
+        gs.forEach(g => { if (g.parent !== _okDraft.parent) g.children = g.children.filter(c => !childSet.has(c)); });
+        // 親が他グループの子なら外す / 子が他の親なら、その親グループは解消しない（子として付け替えるだけ）
+        gs.forEach(g => { if (g.parent !== _okDraft.parent) g.children = g.children.filter(c => c !== _okDraft.parent); });
+        // 対象の親グループを upsert
+        const idx = gs.findIndex(g => g.parent === _okDraft.parent);
+        const entry = { parent: _okDraft.parent, children: _okDraft.children.slice() };
+        if (idx >= 0) gs[idx] = entry; else gs.push(entry);
+        // 子が空になったグループは削除
+        gs = gs.filter(g => (g.children || []).length > 0);
+        if (!saveOkurikomiGroups(gs)) { setStatus('❌ 保存できませんでした（容量など）', false); return; }
+        _okDraft = { parent: '', children: [], editing: false };
+        _okSearch = '';
+        renderOkurikomiSetting();
+        const st = document.getElementById('ok-save-status');
+        if (st) { st.textContent = '✅ 送り込みグループを保存しました'; st.style.color = '#1f6b39'; }
+      });
+
+      container.querySelectorAll('.ok-edit-group').forEach(b => b.addEventListener('click', () => {
+        const parent = b.getAttribute('data-parent');
+        const g = loadOkurikomiGroups().find(x => x.parent === parent);
+        if (g) { _okDraft = { parent: g.parent, children: (g.children || []).slice(), editing: true }; _okSearch = ''; renderOkurikomiSetting(); }
+      }));
+      container.querySelectorAll('.ok-delete-group').forEach(b => b.addEventListener('click', () => {
+        const parent = b.getAttribute('data-parent');
+        if (!confirm('この送り込みグループを削除します。よろしいですか？')) return;
+        const gs = loadOkurikomiGroups().filter(g => g.parent !== parent);
+        saveOkurikomiGroups(gs);
+        if (_okDraft.parent === parent) _okDraft = { parent: '', children: [], editing: false };
+        renderOkurikomiSetting();
+      }));
+
+      const copyBtn = container.querySelector('#ok-copy-prev');
+      if (copyBtn) copyBtn.addEventListener('click', () => {
+        const archive = loadArchive();
+        const yms = sortYMs(Object.keys(archive));
+        const idx = yms.indexOf(currentYM);
+        const prevYm = idx >= 0 ? yms[idx + 1] : null; // 1つ古い期間
+        if (!prevYm || !archive[prevYm] || !Array.isArray(archive[prevYm].okurikomiGroups) || archive[prevYm].okurikomiGroups.length === 0) {
+          setStatus('前回セールに送り込みグループがありません', false); return;
+        }
+        const validCodes = new Set(getCurrentRows().map(r => r.mgr));
+        const copied = archive[prevYm].okurikomiGroups
+          .map(g => ({ parent: g.parent, children: (g.children || []).filter(c => validCodes.has(c)) }))
+          .filter(g => validCodes.has(g.parent) && g.children.length > 0);
+        if (copied.length === 0) { setStatus('前回の親子がこのセールの参加商品に見つかりませんでした', false); return; }
+        // 既存に上書きマージ（同じ親は置換、無い親は追加）
+        const cur = loadOkurikomiGroups().map(g => ({ parent: g.parent, children: (g.children || []).slice() }));
+        copied.forEach(cg => {
+          const i = cur.findIndex(g => g.parent === cg.parent);
+          if (i >= 0) cur[i] = cg; else cur.push(cg);
+        });
+        saveOkurikomiGroups(cur);
+        renderOkurikomiSetting();
+        const st = document.getElementById('ok-save-status');
+        if (st) { st.textContent = `✅ 前回セールから ${copied.length}グループをコピーしました`; st.style.color = '#1f6b39'; }
+      });
+    }
+    window.renderOkurikomiSetting = renderOkurikomiSetting;
+
 
     function formatYen(n) {
       if (n === null || n === undefined || n === '') return '';
@@ -8704,6 +8920,7 @@
         className: 'block-prep',
         buttons: [
           { id: 'prep-add-products', label: '参加商品追加', action: 'open-add-products' },
+          { id: 'prep-okurikomi', label: '送り込みグループ設定', action: 'open-okurikomi' },
           { id: 'prep-ad-info', label: '区分＆広告状況追加', action: 'open-ad-info' },
           { id: 'prep-cost-set-item', label: '原価特定-NE-単一orセット商品仕分け', action: 'open-cost-set-item' },
           { id: 'prep-cost-set-component', label: '原価特定-NE-セット構成物原価特定', action: 'open-cost-set-component' },
