@@ -2338,9 +2338,8 @@
     .product-table td.mgr .ok-sq-p { background:#2e9043; }
     .product-table td.mgr .ok-sq-c { background:#e0a020; }
     .ok-filter-bar { display:flex; align-items:center; gap:10px; margin:2px 0 8px; flex-wrap:wrap; }
-    .ok-only-toggle, .ok-copy-links { border:1px solid #ccc; background:#fff; color:#444; border-radius:6px; padding:5px 12px; font-size:13px; cursor:pointer; }
+    .ok-only-toggle { border:1px solid #ccc; background:#fff; color:#444; border-radius:6px; padding:5px 12px; font-size:13px; cursor:pointer; }
     .ok-only-toggle.is-on { border-color:#2e9043; background:#2e9043; color:#fff; }
-    .ok-copy-links:hover { background:#f4f6f8; }
     .product-table th.col-decide-link { min-width: 110px; white-space: nowrap; }
     .product-table td.col-decide-link { text-align: center; }
     .product-table .decide-link-btn {
@@ -4101,7 +4100,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.295</span>
+      <span class="version">v0.52.296</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4181,11 +4180,9 @@
           <button type="button" class="tab tab-50" data-offrate="50" role="tab">50%OFF</button>
         </div>
 
-        <!-- v0.52.294: 送り込みグループ フィルタ / リンク出力 -->
+        <!-- v0.52.294: 送り込みグループ フィルタ -->
         <div class="ok-filter-bar">
           <button type="button" id="ok-only-toggle" class="ok-only-toggle" aria-pressed="false">送り込みのみ</button>
-          <button type="button" id="ok-copy-links" class="ok-copy-links">送り込みリンクをコピー</button>
-          <span id="ok-copy-status" style="font-size:12px;color:#1f6b39;"></span>
         </div>
 
         <div class="product-table-wrap">
@@ -9461,32 +9458,12 @@
       });
     });
 
-    // v0.52.294: 送り込みグループ フィルタ / リンク一括コピー
+    // v0.52.296: 送り込みグループ フィルタ（「送り込みのみ」トグル）
     (function bindOkurikomiToolbar() {
       const toggle = document.getElementById('ok-only-toggle');
       if (toggle) toggle.addEventListener('click', () => {
         _okOnlyFilter = !_okOnlyFilter;
         renderProductTable();
-      });
-      const copyBtn = document.getElementById('ok-copy-links');
-      const statusEl = document.getElementById('ok-copy-status');
-      if (copyBtn) copyBtn.addEventListener('click', () => {
-        const groups = (typeof loadOkurikomiGroups === 'function') ? loadOkurikomiGroups() : [];
-        const rows = (typeof getCurrentRows === 'function') ? getCurrentRows() : [];
-        const nameMap = {}; rows.forEach(r => { if (r && r.mgr) nameMap[r.mgr] = r.name || ''; });
-        const lines = ['子商品管理番号\t子商品名\t送り込み先(親)ページURL'];
-        let count = 0;
-        groups.forEach(g => {
-          const url = okurikomiParentUrl(g.parent);
-          (g.children || []).forEach(cm => { lines.push(`${cm}\t${nameMap[cm] || ''}\t${url}`); count++; });
-        });
-        const setMsg = (m) => { if (statusEl) { statusEl.textContent = m; setTimeout(() => { statusEl.textContent = ''; }, 2500); } };
-        if (count === 0) { setMsg('送り込みグループがありません（③送り込みグループ設定で作成してください）'); return; }
-        if (!okurikomiShopId()) { setMsg('店舗IDが未対応のためURLを生成できません'); return; }
-        const text = lines.join('\n');
-        const done = () => setMsg(`✅ ${count}件の送り込みリンクをコピーしました`);
-        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done).catch(() => setMsg('コピーに失敗しました'));
-        else { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch (e) {} document.body.removeChild(ta); done(); }
       });
     })();
 
