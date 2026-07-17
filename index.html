@@ -2328,13 +2328,15 @@
     }
     /* ④割引率決定表へのリンク列 */
     /* v0.52.294: 送り込みグループ 親=緑/子=黄 アイコン・子インデント */
-    .product-table td.mgr .ok-dot { display:inline-block; width:16px; height:16px; border-radius:4px; vertical-align:-3px; margin-right:6px; }
-    .product-table td.mgr .ok-dot-p { background:#e7f7ee; border:1px solid #37a866; }
-    .product-table td.mgr .ok-dot-c { background:#fdf3da; border:1px solid #e0a020; }
-    .product-table td.mgr.ok-child { padding-left:20px; }
-    .product-table td.mgr .ok-branch { color:#b9b9c0; margin-right:4px; }
-    .product-table td.mgr .ok-link-copy { border:1px solid #cfd8e3; background:#fff; color:#357; border-radius:4px; font-size:11px; padding:1px 6px; margin-left:8px; cursor:pointer; }
-    .product-table td.mgr .ok-link-copy:hover { background:#eef3f9; }
+    /* v0.52.295: 送り込み 親=緑四角/子=黄四角。左揃え・少し左寄せ・スロットで位置を揃える */
+    .product-table td.mgr.ok-parent,
+    .product-table td.mgr.ok-child { text-align:left; padding-left:8px; white-space:nowrap; }
+    .product-table td.mgr .ok-slot { display:inline-block; width:24px; vertical-align:middle; }
+    .product-table td.mgr .ok-branch { color:#9aa0a6; }
+    .product-table td.mgr .ok-sq { display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:4px; vertical-align:middle; margin-right:5px; }
+    .product-table td.mgr .ok-sq svg { width:12px; height:12px; display:block; }
+    .product-table td.mgr .ok-sq-p { background:#2e9043; }
+    .product-table td.mgr .ok-sq-c { background:#e0a020; }
     .ok-filter-bar { display:flex; align-items:center; gap:10px; margin:2px 0 8px; flex-wrap:wrap; }
     .ok-only-toggle, .ok-copy-links { border:1px solid #ccc; background:#fff; color:#444; border-radius:6px; padding:5px 12px; font-size:13px; cursor:pointer; }
     .ok-only-toggle.is-on { border-color:#2e9043; background:#2e9043; color:#fff; }
@@ -4099,7 +4101,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.294</span>
+      <span class="version">v0.52.295</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -8567,16 +8569,15 @@
       if (_okOnlyFilter) {
         displayRows = displayRows.filter(r => r.okRole === 'parent' || r.okRole === 'child');
       }
+      const OK_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 4l3 3l-3 3"/><path d="M18 14l3 3l-3 3"/><path d="M3 7h3a5 5 0 0 1 5 5a5 5 0 0 0 5 5h5"/><path d="M3 17h3a5 5 0 0 0 5 -5a5 5 0 0 1 5 -5h5"/></svg>';
       const okMgrCellHtml = (r) => {
         const code = escapeHtml(r.mgr || '');
         if (r.okRole === 'parent') {
           const n = (okParentToChildren[r.mgr] || []).length;
-          return `<td class="mgr ok-parent"><span class="ok-dot ok-dot-p" title="親（送り込み先）／子${n}件"></span>${code}</td>`;
+          return `<td class="mgr ok-parent"><span class="ok-slot"><span class="ok-sq ok-sq-p" title="親（送り込み先）／子${n}件">${OK_ICON_SVG}</span></span>${code}</td>`;
         }
         if (r.okRole === 'child') {
-          const url = okurikomiParentUrl(r.okParent);
-          const copyBtn = url ? `<button type="button" class="ok-link-copy" data-url="${escapeHtml(url)}" title="送り込み先（親）ページURLをコピー">🔗リンク</button>` : '';
-          return `<td class="mgr ok-child"><span class="ok-branch">└</span><span class="ok-dot ok-dot-c" title="子（送り込み元）→ 親: ${escapeHtml(r.okParent)}"></span>${code}${copyBtn}</td>`;
+          return `<td class="mgr ok-child"><span class="ok-slot ok-branch">└</span><span class="ok-sq ok-sq-c" title="子（送り込み元）→ 親: ${escapeHtml(r.okParent)}">${OK_ICON_SVG}</span>${code}</td>`;
         }
         return `<td class="mgr">${code}</td>`;
       };
