@@ -2340,6 +2340,17 @@
     .ok-filter-bar { display:flex; align-items:center; gap:10px; margin:2px 0 8px; flex-wrap:wrap; }
     .ok-only-toggle { border:1px solid #ccc; background:#fff; color:#444; border-radius:6px; padding:5px 12px; font-size:13px; cursor:pointer; }
     .ok-only-toggle.is-on { border-color:#2e9043; background:#2e9043; color:#fff; }
+    /* v0.52.298: 送り込みヘルプ */
+    .ok-help-btn { border:1px solid #cfd8e3; background:#f4f7fb; color:#33628f; border-radius:6px; padding:5px 10px; font-size:12px; cursor:pointer; }
+    .ok-help-btn:hover { background:#e9f0f8; }
+    .ok-help-panel { border:1px solid #d9e2ec; background:#f8fafc; border-radius:8px; padding:12px 14px; margin:0 0 10px; font-size:13px; line-height:1.7; color:#2b3a4a; max-width:820px; }
+    .ok-help-panel .ok-help-title { font-weight:600; color:#1f6b39; }
+    .ok-help-panel p { margin:4px 0 0; }
+    .ok-help-steps { margin:6px 0 0; padding-left:1.4em; }
+    .ok-help-steps li { margin:3px 0; }
+    .ok-inline-p, .ok-inline-c { display:inline-block; width:12px; height:12px; border-radius:3px; vertical-align:-2px; }
+    .ok-inline-p { background:#2e9043; }
+    .ok-inline-c { background:#e0a020; }
     .product-table th.col-decide-link { min-width: 110px; white-space: nowrap; }
     .product-table td.col-decide-link { text-align: center; }
     .product-table .decide-link-btn {
@@ -4100,7 +4111,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.297</span>
+      <span class="version">v0.52.298</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4180,9 +4191,25 @@
           <button type="button" class="tab tab-50" data-offrate="50" role="tab">50%OFF</button>
         </div>
 
-        <!-- v0.52.294: 送り込みグループ フィルタ -->
+        <!-- v0.52.294: 送り込みグループ フィルタ / v0.52.298: ヘルプ追加 -->
         <div class="ok-filter-bar">
           <button type="button" id="ok-only-toggle" class="ok-only-toggle" aria-pressed="false">送り込みのみ</button>
+          <button type="button" id="ok-help-btn" class="ok-help-btn" aria-expanded="false" title="送り込みとは？">? 送り込みとは</button>
+        </div>
+        <div id="ok-help-panel" class="ok-help-panel" style="display:none;">
+          <div class="ok-help-title">「送り込み」とは</div>
+          <p>順位を上げたい商品（＝<b>親</b>）へ、同ジャンルの別商品（＝<b>子</b>）の商品ページから送客リンクを貼って誘導し、親の順位アップを狙う施策です。ここで親子を「送り込みグループ」として登録すると、この一覧で <span class="ok-inline-p"></span> 親／<span class="ok-inline-c"></span> 子 がまとまって表示されます。</p>
+          <div class="ok-help-title" style="margin-top:10px;">「送り込みのみ」ボタン</div>
+          <p>ONにすると、<b>送り込みグループに登録されている商品だけ</b>を絞り込んで表示します（緑=親／黄=子）。もう一度押すと全商品表示に戻ります。</p>
+          <div class="ok-help-title" style="margin-top:10px;">送り込みグループを設定する流れ</div>
+          <ol class="ok-help-steps">
+            <li>参加商品を取り込む（「参加商品追加／参加商品データ追加」まで済ませる）。</li>
+            <li>ワークフロー（セール作業手順）で <b>「送り込みグループ設定」</b> を開く（スーパーSALEは③／マラソンは④）。</li>
+            <li><b>親商品</b>を検索して「親に設定」。</li>
+            <li><b>子商品</b>を検索して「＋子に追加」（複数可・子は親1つのみ）。</li>
+            <li><b>「このグループを保存」</b>。必要なら「前回セールからコピー」も利用。</li>
+            <li>このセール参加商品一覧に親→子でグループ表示されます。「送り込みのみ」で絞り込み可能。</li>
+          </ol>
         </div>
 
         <div class="product-table-wrap">
@@ -9465,6 +9492,14 @@
       if (toggle) toggle.addEventListener('click', () => {
         _okOnlyFilter = !_okOnlyFilter;
         renderProductTable();
+      });
+      // v0.52.298: ヘルプ開閉
+      const helpBtn = document.getElementById('ok-help-btn');
+      const helpPanel = document.getElementById('ok-help-panel');
+      if (helpBtn && helpPanel) helpBtn.addEventListener('click', () => {
+        const show = helpPanel.style.display === 'none';
+        helpPanel.style.display = show ? '' : 'none';
+        helpBtn.setAttribute('aria-expanded', show ? 'true' : 'false');
       });
     })();
 
