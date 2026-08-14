@@ -2351,6 +2351,30 @@
     .ok-inline-p, .ok-inline-c { display:inline-block; width:12px; height:12px; border-radius:3px; vertical-align:-2px; }
     .ok-inline-p { background:#2e9043; }
     .ok-inline-c { background:#e0a020; }
+    /* v0.52.299: 参加履歴検索 */
+    .history-search-bar { max-width:900px; margin:8px auto 0; padding:0 12px; }
+    .history-title { font-size:18px; font-weight:600; color:#222; }
+    .history-desc { font-size:13px; color:#666; line-height:1.6; margin:4px 0 10px; }
+    #history-search-input { width:100%; box-sizing:border-box; padding:10px 14px; font-size:15px; border:1px solid #ccc; border-radius:8px; }
+    #history-search-input:focus { outline:none; border-color:#185fa5; box-shadow:0 0 0 2px rgba(24,95,165,.15); }
+    #history-results { max-width:900px; margin:14px auto 40px; padding:0 12px; }
+    .history-hint { color:#999; font-size:13px; padding:18px 4px; text-align:center; }
+    .history-count { font-size:13px; color:#555; margin:0 0 8px 2px; }
+    .hist-table { width:100%; border-collapse:collapse; font-size:13px; background:#fff; border:1px solid #e6e6ea; border-radius:10px; overflow:hidden; }
+    .hist-table th { background:#fafafa; color:#666; font-weight:500; text-align:left; padding:9px 12px; border-bottom:1px solid #eee; white-space:nowrap; }
+    .hist-table td { padding:10px 12px; border-bottom:1px solid #f0f0f0; vertical-align:top; }
+    .hist-table td.hist-img { width:56px; }
+    .hist-table td.hist-img .product-image-thumb { max-width:48px; max-height:48px; border-radius:5px; }
+    .hist-table td.hist-img .img-placeholder { font-size:10px; color:#b3b8bd; }
+    .hist-num { text-align:center; font-weight:600; }
+    .hist-num.ss { color:#185fa5; }
+    .hist-num.ma { color:#d36916; }
+    .hist-num.total { color:#1f6b39; font-size:15px; }
+    .hist-periods { display:flex; flex-wrap:wrap; gap:5px; }
+    .hist-chip { display:inline-block; border-radius:11px; padding:2px 9px; font-size:11px; }
+    .hist-chip.ss { background:#e7effa; color:#185fa5; }
+    .hist-chip.ma { background:#fbeee0; color:#b45f13; }
+    code.hist-code { font-size:12px; color:#333; }
     .product-table th.col-decide-link { min-width: 110px; white-space: nowrap; }
     .product-table td.col-decide-link { text-align: center; }
     .product-table .decide-link-btn {
@@ -4111,7 +4135,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.298</span>
+      <span class="version">v0.52.299</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4148,6 +4172,13 @@
       </svg>
       セール用サムネイル
     </button>
+    <button type="button" class="main-tab" data-main-tab="history" role="tab">
+      <svg class="icon-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="11" cy="11" r="7"/>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      参加履歴
+    </button>
     <button type="button" id="btn-toggle-header" class="header-toggle-btn" title="ヘッダーを隠す / 表示" aria-label="ヘッダーを隠す / 表示">
       <svg class="icon-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <polyline points="6 15 12 9 18 15"></polyline>
@@ -4172,6 +4203,16 @@
 
   <main>
     <div id="app">
+      <!-- メインタブ: 参加履歴検索 (v0.52.299) -->
+      <div id="tool-history" class="tool-panel">
+        <div class="history-search-bar">
+          <div class="history-title">参加履歴検索</div>
+          <p class="history-desc">商品管理番号・商品コードで検索すると、その商品が過去にスーパーSALE／お買い物マラソンへ何回参加したか（時期・合計）を表示します。対象ショップ: <b id="history-shop-label"></b></p>
+          <input type="text" id="history-search-input" placeholder="商品管理番号・商品コードで検索" autocomplete="off" />
+        </div>
+        <div id="history-results"></div>
+      </div>
+
       <!-- メインタブ: セール参加商品 (デフォルト表示) -->
       <div id="tool-products" class="tool-panel active">
         <div class="archive-selector-bar">
@@ -5353,10 +5394,10 @@
     // ※旧 cost-non-set は v0.52.88 で廃止(②のセクション1=単一商品 に統合)
     // ※サブビュー間は forward/back で履歴を残す。同一サブビュー間は履歴に積まない。
     // 履歴に積まれた viewId は、ブラウザ戻る/進むで復元される。
-    const VALID_VIEWS = ['products','workflow','sale-thumb','pre-select','join-decide','add-products','ad-info','decide-price','decide-title','dl-rms-csv','make-rms-csv','make-thumb','cost-set-item','cost-set-component','upload-rms','rms-event','sku-record','ad-delete','ad-restore','upload-original','sku-restore','thumb-change','sp-banner','top-image-back','okurikomi'];
+    const VALID_VIEWS = ['products','workflow','sale-thumb','pre-select','join-decide','add-products','ad-info','decide-price','decide-title','dl-rms-csv','make-rms-csv','make-thumb','cost-set-item','cost-set-component','upload-rms','rms-event','sku-record','ad-delete','ad-restore','upload-original','sku-restore','thumb-change','sp-banner','top-image-back','okurikomi','history'];
     // ブラウザ/マウスの「戻る」でサブビューから戻れるよう、サブビュー遷移時は history.pushState する
     let _suppressPushState = false; // popstate由来の呼び出しでは積まない
-    const MAIN_TABS = ['products', 'workflow', 'sale-thumb'];
+    const MAIN_TABS = ['products', 'workflow', 'sale-thumb', 'history'];
     const LAST_VIEW_KEY = 'sale-ikkatsu-last-view';
     // 直近のメインタブ(サブビューから戻る時の戻り先)
     let _lastMainTab = 'products';
@@ -5459,6 +5500,11 @@
       // v0.52.291: 送り込みグループ設定を開いたら描画
       if (viewId === 'okurikomi') {
         if (typeof renderOkurikomiSetting === 'function') renderOkurikomiSetting();
+      }
+      // v0.52.299: 参加履歴タブを開いたら描画＋フォーカス
+      if (viewId === 'history') {
+        if (typeof renderHistorySearch === 'function') renderHistorySearch();
+        setTimeout(() => { const el = document.getElementById('history-search-input'); if (el) el.focus(); }, 0);
       }
 
       // products タブを開くときは選択中の年月で再描画
@@ -6707,6 +6753,86 @@
       const archive = loadArchive();
       return (archive[currentYM] && archive[currentYM].rows) || [];
     }
+
+    // ===== v0.52.299: 参加履歴検索 (商品管理番号/商品コードで過去の参加回数を集計) =====
+    function searchParticipationHistory(query) {
+      const q = String(query || '').trim().toLowerCase();
+      if (!q) return [];
+      const v2 = (typeof _loadArchiveV2 === 'function') ? (_loadArchiveV2() || {}) : {};
+      const shop = getCurrentShop();
+      const shopData = v2[shop] || {};
+      const products = {}; // mgr -> {mgr,itemCode,name,imageUrl,ss:Set,ma:Set}
+      SALE_NAMES.forEach(sn => {
+        const saleData = shopData[sn] || {};
+        Object.keys(saleData).forEach(ym => {
+          const rows = (saleData[ym] && saleData[ym].rows) || [];
+          rows.forEach(r => {
+            if (!r || !r.mgr) return;
+            const mgrL = String(r.mgr).toLowerCase();
+            const codeL = String(r.itemCode || '').toLowerCase();
+            if (mgrL.indexOf(q) < 0 && codeL.indexOf(q) < 0) return;
+            let p = products[r.mgr];
+            if (!p) { p = products[r.mgr] = { mgr: r.mgr, itemCode: r.itemCode || '', name: r.name || '', imageUrl: r.imageUrl || '', ss: new Set(), ma: new Set() }; }
+            if (r.itemCode) p.itemCode = r.itemCode;
+            if (r.name) p.name = r.name;
+            if (r.imageUrl) p.imageUrl = r.imageUrl;
+            if (sn === 'super-sale') p.ss.add(ym);
+            else if (sn === 'marathon') p.ma.add(ym);
+          });
+        });
+      });
+      const list = Object.keys(products).map(mgr => {
+        const p = products[mgr];
+        const ss = Array.from(p.ss).sort();
+        const ma = Array.from(p.ma).sort();
+        return { mgr: p.mgr, itemCode: p.itemCode, name: p.name, imageUrl: p.imageUrl, ss, ma, ssCount: ss.length, maCount: ma.length, total: ss.length + ma.length };
+      });
+      list.sort((a, b) => b.total - a.total || String(a.mgr).localeCompare(String(b.mgr)));
+      return list;
+    }
+
+    function renderHistorySearch() {
+      const input = document.getElementById('history-search-input');
+      const results = document.getElementById('history-results');
+      const shopLabel = document.getElementById('history-shop-label');
+      if (!results) return;
+      if (shopLabel) shopLabel.textContent = getCurrentShop();
+      const q = input ? input.value.trim() : '';
+      if (!q) {
+        results.innerHTML = '<div class="history-hint">商品管理番号または商品コードを入力してください。</div>';
+        return;
+      }
+      const list = searchParticipationHistory(q);
+      if (list.length === 0) {
+        results.innerHTML = '<div class="history-hint">該当する商品が見つかりませんでした。（対象は現在のショップの全アーカイブです）</div>';
+        return;
+      }
+      const chips = (yms, cls) => yms.map(ym => `<span class="hist-chip ${cls}">${escapeHtml(ymLabel(ym))}</span>`).join('');
+      const rowsHtml = list.map(p => {
+        const ssChips = p.ss.length ? chips(p.ss, 'ss') : '';
+        const maChips = p.ma.length ? chips(p.ma, 'ma') : '';
+        const periods = (ssChips || maChips) ? `<div class="hist-periods">${ssChips}${maChips}</div>` : '<span style="color:#aaa;">-</span>';
+        return `<tr>
+          <td class="hist-img">${imageCellHtml(p.imageUrl || '')}</td>
+          <td><code class="hist-code">${escapeHtml(p.mgr)}</code><div style="color:#666;font-size:12px;margin-top:2px;">${escapeHtml(p.name || '')}</div></td>
+          <td><code class="hist-code">${escapeHtml(p.itemCode || '')}</code></td>
+          <td class="hist-num ss">${p.ssCount}</td>
+          <td class="hist-num ma">${p.maCount}</td>
+          <td class="hist-num total">${p.total}</td>
+          <td>${periods}</td>
+        </tr>`;
+      }).join('');
+      results.innerHTML = `
+        <div class="history-count">${list.length}件ヒット</div>
+        <table class="hist-table">
+          <thead><tr>
+            <th>画像</th><th>商品管理番号 / 商品名</th><th>商品コード</th>
+            <th>スーパーSALE</th><th>マラソン</th><th>合計</th><th>参加時期</th>
+          </tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>`;
+    }
+    window.renderHistorySearch = renderHistorySearch;
 
     // ===== v0.52.291: 送り込みグループ (親商品へ同ジャンル子商品から送客する施策) =====
     //   保存構造: archive[YYYY/MM].okurikomiGroups = [{ parent: 商品管理番号, children: [商品管理番号,...] }]
@@ -9501,6 +9627,9 @@
         helpPanel.style.display = show ? '' : 'none';
         helpBtn.setAttribute('aria-expanded', show ? 'true' : 'false');
       });
+      // v0.52.299: 参加履歴 検索入力
+      const histInput = document.getElementById('history-search-input');
+      if (histInput) histInput.addEventListener('input', () => { if (typeof renderHistorySearch === 'function') renderHistorySearch(); });
     })();
 
     // ファイル選択のラベル更新 + v0.52.204: 未取り込みファイルのクリア(選択解除)ボタン
