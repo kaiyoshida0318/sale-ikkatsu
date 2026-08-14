@@ -52,6 +52,27 @@
       top: 0;
       z-index: 50;
     }
+    /* v0.52.300: 案B 2行ヘッダー (上段=コンテキスト / 下段=操作系) */
+    .header-rows {
+      flex: 1 1 auto;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      justify-content: center;
+    }
+    .header-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    /* 上段(ショップ/セール名/セール期間/開始-終了)は現状の90%サイズ */
+    .header-row-context { zoom: 0.9; }
+    .header-row-ops {
+      border-top: 1px solid var(--border);
+      padding-top: 10px;
+    }
     /* 横長プレートロゴ */
     .logo-plate {
       display: inline-flex;
@@ -1790,7 +1811,8 @@
       box-sizing: border-box;
     }
     body[data-view="products"] #workflow-shared,
-    body[data-view="sale-thumb"] #workflow-shared { display: none; } /* v0.52.181: セール用サムネイルでもワークフロー非表示 */
+    body[data-view="sale-thumb"] #workflow-shared,
+    body[data-view="history"] #workflow-shared { display: none; } /* v0.52.181: セール用サムネイルでもワークフロー非表示 / v0.52.300: 参加履歴でも非表示 */
     /* workflow 画面そのもの (3ブロックのみ表示) のときは区切り線・下マージン不要 */
     body[data-view="workflow"] #workflow-shared {
       border-bottom: 0;
@@ -2363,9 +2385,12 @@
     .hist-table { width:100%; border-collapse:collapse; font-size:13px; background:#fff; border:1px solid #e6e6ea; border-radius:10px; overflow:hidden; }
     .hist-table th { background:#fafafa; color:#666; font-weight:500; text-align:left; padding:9px 12px; border-bottom:1px solid #eee; white-space:nowrap; }
     .hist-table td { padding:10px 12px; border-bottom:1px solid #f0f0f0; vertical-align:top; }
-    .hist-table td.hist-img { width:56px; }
-    .hist-table td.hist-img .product-image-thumb { max-width:48px; max-height:48px; border-radius:5px; }
+    .hist-table td.hist-img, .hist-table th.hist-img { width:112px; } /* v0.52.300: 画像を倍サイズに */
+    .hist-table td.hist-img .product-image-thumb { max-width:96px; max-height:96px; border-radius:6px; }
     .hist-table td.hist-img .img-placeholder { font-size:10px; color:#b3b8bd; }
+    /* v0.52.300: 画像拡大分、商品管理番号/商品名列を狭く */
+    .hist-table td.hist-nm, .hist-table th.hist-nm { width:200px; max-width:200px; }
+    .hist-table td.hist-nm code.hist-code { word-break:break-all; }
     .hist-num { text-align:center; font-weight:600; }
     .hist-num.ss { color:#185fa5; }
     .hist-num.ma { color:#d36916; }
@@ -4056,10 +4081,9 @@
       </svg>
     </div>
 
-    <!-- v0.52.250: セール参加商品画面を新しいタブで開くボタン -->
-    <button type="button" id="btn-open-products-tab" class="open-tab-btn" title="セール参加商品画面を新しいタブで開く">
-      <span class="ot-icon" aria-hidden="true">↗</span><span>新しいタブ</span>
-    </button>
+    <!-- v0.52.300: 案B 2行ヘッダー。上段=コンテキスト(ショップ/セール名/期間/日時)、下段=操作系 -->
+    <div class="header-rows">
+      <div class="header-row header-row-context">
 
     <!-- v0.52.216: ショップ選択 (ヘッダー) -->
     <div id="shop-wrap" class="shop-wrap">
@@ -4130,12 +4154,19 @@
       </div>
     </div>
 
+      </div><!-- /header-row-context -->
+
+      <div class="header-row header-row-ops">
+    <!-- v0.52.250: セール参加商品画面を新しいタブで開くボタン -->
+    <button type="button" id="btn-open-products-tab" class="open-tab-btn" title="セール参加商品画面を新しいタブで開く">
+      <span class="ot-icon" aria-hidden="true">↗</span><span>新しいタブ</span>
+    </button>
     <div class="header-right">
       <span id="py-status" class="py-status" title="アプリ準備状況">
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.299</span>
+      <span class="version">v0.52.300</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4146,6 +4177,8 @@
         <span class="lc-icon">🐛</span><span class="lc-label">ログを取る</span>
       </button>
     </div>
+      </div><!-- /header-row-ops -->
+    </div><!-- /header-rows -->
   </header>
 
   <nav class="main-tabs-bar" role="tablist">
@@ -6814,7 +6847,7 @@
         const periods = (ssChips || maChips) ? `<div class="hist-periods">${ssChips}${maChips}</div>` : '<span style="color:#aaa;">-</span>';
         return `<tr>
           <td class="hist-img">${imageCellHtml(p.imageUrl || '')}</td>
-          <td><code class="hist-code">${escapeHtml(p.mgr)}</code><div style="color:#666;font-size:12px;margin-top:2px;">${escapeHtml(p.name || '')}</div></td>
+          <td class="hist-nm"><code class="hist-code">${escapeHtml(p.mgr)}</code><div style="color:#666;font-size:12px;margin-top:2px;">${escapeHtml(p.name || '')}</div></td>
           <td><code class="hist-code">${escapeHtml(p.itemCode || '')}</code></td>
           <td class="hist-num ss">${p.ssCount}</td>
           <td class="hist-num ma">${p.maCount}</td>
@@ -6826,7 +6859,7 @@
         <div class="history-count">${list.length}件ヒット</div>
         <table class="hist-table">
           <thead><tr>
-            <th>画像</th><th>商品管理番号 / 商品名</th><th>商品コード</th>
+            <th class="hist-img">画像</th><th class="hist-nm">商品管理番号 / 商品名</th><th>商品コード</th>
             <th>スーパーSALE</th><th>マラソン</th><th>合計</th><th>参加時期</th>
           </tr></thead>
           <tbody>${rowsHtml}</tbody>
