@@ -4169,7 +4169,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.302</span>
+      <span class="version">v0.52.303</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -6105,6 +6105,13 @@
           if (typeof renderWorkflow === 'function') renderWorkflow();
         }
       }
+      // v0.52.303: 文脈(ショップ/セール/期間)が変わったので、全アップロードファイルの
+      //   チップDOMを描き直す。前ショップのファイルチップが残って見える不具合の修正。
+      if (typeof rerenderAllUploadSlots === 'function') rerenderAllUploadSlots();
+      // v0.52.303: 各サブビューの取り込み完了ステータスも新しい文脈で復元/クリア
+      if (typeof restoreAllStatusMessages === 'function') {
+        try { restoreAllStatusMessages(); } catch (e) {}
+      }
       // v0.52.232: 下のサブビュー(説明画面)を文脈に合わせて切替。
       //   現在開いているビューが今のセールで無効なら「セール作業手順」に戻す。
       let v = document.body.getAttribute('data-view') || 'workflow';
@@ -6683,6 +6690,30 @@
           renderUploadedFileSlot(slotKey, containerId, onClear);
           if (typeof onClear === 'function') { try { onClear(); } catch (e) {} }
         });
+      }
+    }
+    // v0.52.303: 全アップロードファイルスロットを現在の文脈(ショップ/セール/期間)で描き直す。
+    //   ショップ切替時などに、前ショップのアップロード済みファイルのチップDOMが
+    //   #uf-slot-rms 等に残って見えてしまう不具合の対策。getUploadedFile は現在の
+    //   ショップ/セールのアーカイブを参照するので、該当が無ければチップは空になる。
+    const UPLOAD_SLOT_CONTAINERS = [
+      ['rms', 'uf-slot-rms'],
+      ['adInfo', 'uf-slot-adInfo'],
+      ['setItem', 'uf-slot-setItem'],
+      ['nonSet', 'uf-slot-nonSet'],
+      ['setComponent', 'uf-slot-setComponent'],
+      ['mkSale', 'uf-slot-mkSale'],
+      ['mkRms', 'uf-slot-mkRms'],
+    ];
+    function rerenderAllUploadSlots() {
+      if (typeof renderUploadedFileSlot !== 'function') return;
+      for (const [slotKey, containerId] of UPLOAD_SLOT_CONTAINERS) {
+        if (!document.getElementById(containerId)) continue;
+        try {
+          renderUploadedFileSlot(slotKey, containerId, () => {
+            if (typeof renderProductTable === 'function') renderProductTable();
+          });
+        } catch (e) { /* 個別スロットの失敗は無視 */ }
       }
     }
     // 年月の昇順→降順の並び替え(最新優先)
