@@ -1520,6 +1520,36 @@
     .no-period-warn .npw-title { font-weight: 700; font-size: 15px; color: #9a5b00; margin-bottom: 3px; }
     .no-period-warn .npw-text { font-size: 13.5px; color: #6b4a12; line-height: 1.6; }
     .no-period-warn .npw-text b { color: #b5480b; }
+    /* v0.52.305: ストレージ容量の管理パネル */
+    .storage-panel { margin: 0 0 18px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fbfcfd; overflow: hidden; }
+    .storage-panel-toggle { width: 100%; display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: #f4f6f8; border: 0; border-bottom: 1px solid #e6eaee; cursor: pointer; font-family: inherit; font-size: 13.5px; font-weight: 600; color: #47535f; text-align: left; }
+    .storage-panel-toggle .sp-chev { font-size: 10px; transition: transform .15s; color: #8a97a3; }
+    .storage-panel.is-open .storage-panel-toggle .sp-chev { transform: rotate(90deg); }
+    .storage-panel-toggle .sp-badge { margin-left: auto; font-size: 12px; font-weight: 700; }
+    .storage-panel-toggle .sp-badge.warn { color: #c0392b; }
+    .storage-panel-toggle .sp-badge.ok { color: #2e8b57; }
+    .storage-panel-body { padding: 14px 16px; }
+    .sp-desc { margin: 0 0 12px; font-size: 12.8px; color: #5a6672; line-height: 1.65; }
+    .sp-desc b { color: #33414d; }
+    .sp-usage { margin: 0 0 14px; }
+    .sp-bar { height: 14px; background: #e9edf1; border-radius: 7px; overflow: hidden; margin: 6px 0; }
+    .sp-bar > span { display: block; height: 100%; background: linear-gradient(90deg,#4a90d9,#2e6fb0); }
+    .sp-bar.warn > span { background: linear-gradient(90deg,#e88,#c0392b); }
+    .sp-usage-text { font-size: 12.5px; color: #566; }
+    .sp-usage-text b { color: #33414d; }
+    .sp-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+    .sp-btn { padding: 9px 14px; border-radius: 8px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid #cdd5dd; background: #fff; color: #37424d; }
+    .sp-btn:hover { background: #f5f7f9; }
+    .sp-btn-backup { border-color: #9fc7ea; color: #1c5a94; }
+    .sp-btn-backup:hover { background: #eef6fd; }
+    .sp-btn-free { border-color: #e0b48a; color: #9a5b00; }
+    .sp-btn-free:hover { background: #fff6ea; }
+    .sp-free-list { margin: 6px 0 0; font-size: 12.5px; color: #566; }
+    .sp-free-list ul { margin: 6px 0; padding-left: 18px; }
+    .sp-free-list li { margin: 2px 0; }
+    .sp-status { margin-top: 10px; font-size: 13px; min-height: 1px; }
+    .sp-status.success { color: #1f7a3d; font-weight: 600; }
+    .sp-status.error { color: #c0392b; font-weight: 600; }
     /* v0.52.243: 説明文中のステップ番号をセール名で出し分ける (参加商品追加=超SALE①/マラソン②等) */
     .n-ma { display: none; }
     body[data-sale-name="marathon"] .n-ss { display: none; }
@@ -4185,7 +4215,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.304</span>
+      <span class="version">v0.52.305</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4436,6 +4466,25 @@
           <div class="npw-body">
             <div class="npw-title">セール期間（年月）が未選択です</div>
             <div class="npw-text">先にヘッダーの<b>「セール期間」</b>で対象の年月を選択（無ければ<b>「＋新規作成」</b>）してください。<b>未選択のままではCSVを取り込んでも「セール参加商品」に反映されません。</b></div>
+          </div>
+        </div>
+
+        <!-- v0.52.305: ストレージ容量の管理 (localStorage上限対策) -->
+        <div id="storage-panel" class="storage-panel">
+          <button type="button" id="storage-panel-toggle" class="storage-panel-toggle" aria-expanded="false">
+            <span class="sp-chev" aria-hidden="true">▶</span>
+            <span>⚙ ストレージ容量の管理</span>
+            <span id="storage-panel-badge" class="sp-badge"></span>
+          </button>
+          <div id="storage-panel-body" class="storage-panel-body" style="display:none;">
+            <p class="sp-desc">このツールはブラウザの保存領域(localStorage)にデータを保存します。上限に達すると取り込みが保存できません。まず<b>バックアップ</b>を書き出し、その後<b>過去セールの取り込みCSV</b>を削除すると容量を空けられます（商品行・タイトル・結果は残ります）。</p>
+            <div id="storage-usage" class="sp-usage"></div>
+            <div class="sp-actions">
+              <button type="button" id="btn-storage-backup" class="sp-btn sp-btn-backup">💾 バックアップを書き出す（JSON）</button>
+              <button type="button" id="btn-storage-free" class="sp-btn sp-btn-free">🧹 過去セールの取り込みCSVを削除して空ける</button>
+            </div>
+            <div id="storage-free-list" class="sp-free-list"></div>
+            <div id="storage-panel-status" class="sp-status" aria-live="polite"></div>
           </div>
         </div>
 
@@ -5647,7 +5696,7 @@
       }
       // v0.52.203: 各アップロードページを開くとき、保持中ファイルのチップを再描画
       if (typeof renderUploadedFileSlot === 'function') {
-        if (viewId === 'add-products') { renderUploadedFileSlot('rms', 'uf-slot-rms', () => { if (typeof renderProductTable === 'function') renderProductTable(); }); if (typeof updateAddProductsPeriodWarn === 'function') updateAddProductsPeriodWarn(); }
+        if (viewId === 'add-products') { renderUploadedFileSlot('rms', 'uf-slot-rms', () => { if (typeof renderProductTable === 'function') renderProductTable(); }); if (typeof updateAddProductsPeriodWarn === 'function') updateAddProductsPeriodWarn(); if (typeof renderStoragePanel === 'function') renderStoragePanel(); }
         if (viewId === 'ad-info') renderUploadedFileSlot('adInfo', 'uf-slot-adInfo', () => { if (typeof renderProductTable === 'function') renderProductTable(); });
         if (viewId === 'cost-set-item') { renderUploadedFileSlot('setItem', 'uf-slot-setItem'); renderUploadedFileSlot('nonSet', 'uf-slot-nonSet'); }
         if (viewId === 'cost-set-component') renderUploadedFileSlot('setComponent', 'uf-slot-setComponent');
@@ -6751,6 +6800,203 @@
       const ym = currentYM || (typeof getCurrentYM === 'function' ? getCurrentYM() : null);
       el.style.display = ym ? 'none' : 'flex';
     }
+
+    // ===== v0.52.305: ストレージ容量の管理 (localStorage上限対策) =====
+    //   このgithub.ioドメインは複数ツールとlocalStorageを共有しており上限(約5.2M文字)に達しやすい。
+    //   再取得可能な大きいCSV実体(rmsCsvB64等)を「過去セール」から削除して容量を空ける。
+    const SP_LIMIT_CHARS = 5200000; // 目安の上限(文字数)。正確な上限はブラウザ依存。
+    // 削除対象(=再取得可能な大きいデータ)フィールド
+    const SP_REOBTAINABLE_BLOB_KEYS = ['rmsCsvB64', 'setItemCsvB64', 'setComponentCsvB64', 'nonSetCsvB64'];
+    function _fmtChars(n) {
+      n = Number(n) || 0;
+      if (n < 1000) return n + '文字';
+      if (n < 1000000) return (n / 1000).toFixed(0) + 'K文字';
+      return (n / 1000000).toFixed(2) + 'M文字';
+    }
+    function spTotalLsChars() {
+      let total = 0;
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          const v = localStorage.getItem(k) || '';
+          total += (k ? k.length : 0) + v.length;
+        }
+      } catch (e) {}
+      return total;
+    }
+    function spSaleKeyChars() {
+      let total = 0;
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.indexOf('sale-ikkatsu') === 0) total += k.length + (localStorage.getItem(k) || '').length;
+        }
+      } catch (e) {}
+      return total;
+    }
+    // 1データ内の再取得可能blobの文字数を数える
+    function spReobtainableCharsOf(data) {
+      let n = 0;
+      if (!data || typeof data !== 'object') return 0;
+      for (const key of SP_REOBTAINABLE_BLOB_KEYS) {
+        if (typeof data[key] === 'string') n += data[key].length;
+      }
+      if (data.uploadedFiles && typeof data.uploadedFiles === 'object') {
+        for (const sk of Object.keys(data.uploadedFiles)) {
+          const e = data.uploadedFiles[sk];
+          if (e && typeof e.dataB64 === 'string') n += e.dataB64.length;
+        }
+      }
+      return n;
+    }
+    // 過去セール(=現在選択中のショップ/セール/年月 以外)の再取得可能blobを列挙
+    function spListFreeablePeriods() {
+      const out = [];
+      const v2 = _loadArchiveV2() || {};
+      const curShop = getCurrentShop();
+      const curSale = getCurrentSaleName();
+      const curYm = currentYM || (typeof getCurrentYM === 'function' ? getCurrentYM() : null);
+      for (const shop of Object.keys(v2)) {
+        const byName = v2[shop] || {};
+        for (const sn of Object.keys(byName)) {
+          const byYm = byName[sn] || {};
+          for (const ym of Object.keys(byYm)) {
+            const isCurrent = (shop === curShop && sn === curSale && ym === curYm);
+            if (isCurrent) continue; // 現在作業中のセールは温存
+            const chars = spReobtainableCharsOf(byYm[ym]);
+            if (chars > 0) out.push({ shop, sn, ym, chars });
+          }
+        }
+      }
+      out.sort((a, b) => b.chars - a.chars);
+      return out;
+    }
+    function spSaleLabel(sn) { return sn === 'marathon' ? 'マラソン' : (sn === 'super-sale' ? 'スーパーSALE' : sn); }
+    function setStoragePanelStatus(msg, kind) {
+      const el = document.getElementById('storage-panel-status');
+      if (!el) return;
+      el.className = 'sp-status' + (kind ? ' ' + kind : '');
+      el.innerHTML = msg || '';
+    }
+    function renderStoragePanel() {
+      const usageEl = document.getElementById('storage-usage');
+      const badge = document.getElementById('storage-panel-badge');
+      const freeList = document.getElementById('storage-free-list');
+      if (!usageEl) return;
+      const total = spTotalLsChars();
+      const sale = spSaleKeyChars();
+      const pct = Math.min(100, Math.round(total / SP_LIMIT_CHARS * 100));
+      const warn = pct >= 85;
+      usageEl.innerHTML =
+        `<div class="sp-bar${warn ? ' warn' : ''}"><span style="width:${pct}%"></span></div>` +
+        `<div class="sp-usage-text">使用量の目安: <b>${_fmtChars(total)}</b> / 約${_fmtChars(SP_LIMIT_CHARS)}（<b>${pct}%</b>）　うちこのツール: <b>${_fmtChars(sale)}</b></div>`;
+      if (badge) {
+        badge.textContent = warn ? `⚠ ${pct}%` : `${pct}%`;
+        badge.className = 'sp-badge ' + (warn ? 'warn' : 'ok');
+      }
+      if (freeList) {
+        const list = spListFreeablePeriods();
+        const freeable = list.reduce((s, x) => s + x.chars, 0);
+        if (list.length === 0) {
+          freeList.innerHTML = '<div style="color:#8a97a3;">空けられる過去セールの取り込みCSVはありません。</div>';
+        } else {
+          freeList.innerHTML =
+            `<div>削除で空く容量: <b>約${_fmtChars(freeable)}</b>（過去 ${list.length} セール分）</div>` +
+            '<ul>' + list.map(x => `<li>${escapeHtml(x.shop)} / ${spSaleLabel(x.sn)} / ${escapeHtml(ymLabel(x.ym))} … 約${_fmtChars(x.chars)}</li>`).join('') + '</ul>';
+        }
+      }
+    }
+    function showStoragePanel() {
+      const panel = document.getElementById('storage-panel');
+      const body = document.getElementById('storage-panel-body');
+      const toggle = document.getElementById('storage-panel-toggle');
+      if (!panel || !body) return;
+      panel.classList.add('is-open');
+      body.style.display = '';
+      if (toggle) toggle.setAttribute('aria-expanded', 'true');
+      renderStoragePanel();
+    }
+    // 全データ(archive-v2 + thumbs-v2 + その他 sale-ikkatsu キー)をJSONで書き出す
+    function exportBackupJson() {
+      try {
+        const dump = {};
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.indexOf('sale-ikkatsu') === 0) dump[k] = localStorage.getItem(k);
+        }
+        const payload = { _type: 'sale-ikkatsu-backup', _version: 'v0.52.305', keys: dump };
+        const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+        const stamp = (localStorage.getItem(SALE_PERIOD_START) || '').replace(/[^0-9]/g, '').slice(0, 8) || 'backup';
+        saveBlobAs(blob, 'sale-ikkatsu-backup-' + stamp + '.json');
+        setStoragePanelStatus('✅ バックアップを書き出しました。復元が必要になったらこのJSONを保管してください。', 'success');
+      } catch (e) {
+        setStoragePanelStatus('❌ バックアップの書き出しに失敗しました: ' + (e && e.message ? e.message : e), 'error');
+      }
+    }
+    // 過去セールの再取得可能blobを削除して容量を空ける
+    function freeSpacePastPeriods() {
+      const list = spListFreeablePeriods();
+      if (list.length === 0) { setStoragePanelStatus('空けられる過去セールの取り込みCSVはありません。', ''); return; }
+      const freeable = list.reduce((s, x) => s + x.chars, 0);
+      const msg = '過去 ' + list.length + ' セール分の「取り込み用CSVの実体」を削除して、約' + _fmtChars(freeable) + ' を空けます。\n\n'
+        + '・商品行 / タイトル / 割引率 / 区分 / 結果などは残ります。\n'
+        + '・削除するのは①②のRMS/NE取り込みCSVの実体のみ（後で再取り込みできます）。\n'
+        + '・念のため先に「バックアップを書き出す」をおすすめします。\n\n実行しますか？';
+      if (!window.confirm(msg)) return;
+      try {
+        const v2 = _loadArchiveV2() || {};
+        const curShop = getCurrentShop();
+        const curSale = getCurrentSaleName();
+        const curYm = currentYM || (typeof getCurrentYM === 'function' ? getCurrentYM() : null);
+        let freed = 0;
+        for (const shop of Object.keys(v2)) {
+          const byName = v2[shop] || {};
+          for (const sn of Object.keys(byName)) {
+            const byYm = byName[sn] || {};
+            for (const ym of Object.keys(byYm)) {
+              if (shop === curShop && sn === curSale && ym === curYm) continue;
+              const data = byYm[ym];
+              if (!data || typeof data !== 'object') continue;
+              freed += spReobtainableCharsOf(data);
+              for (const bk of SP_REOBTAINABLE_BLOB_KEYS) { if (bk in data) delete data[bk]; }
+              if (data.uploadedFiles && typeof data.uploadedFiles === 'object') {
+                for (const sk of Object.keys(data.uploadedFiles)) {
+                  const e = data.uploadedFiles[sk];
+                  if (e && typeof e.dataB64 === 'string') { delete e.dataB64; delete e.mime; }
+                }
+              }
+            }
+          }
+        }
+        const ok = _saveArchiveV2(v2);
+        if (!ok) {
+          setStoragePanelStatus('❌ 削除後の保存に失敗しました。他のツールのデータも容量を使っています。ブラウザのデータ量が非常に多い可能性があります。', 'error');
+        } else {
+          setStoragePanelStatus('✅ 約' + _fmtChars(freed) + ' を空けました。もう一度①でCSVを取り込み直してください。', 'success');
+        }
+        renderStoragePanel();
+      } catch (e) {
+        setStoragePanelStatus('❌ 容量の解放に失敗しました: ' + (e && e.message ? e.message : e), 'error');
+      }
+    }
+    // ストレージ管理パネルのボタン/トグルを結線 (静的DOMなので即バインド可能)
+    (function bindStoragePanel() {
+      const toggle = document.getElementById('storage-panel-toggle');
+      const body = document.getElementById('storage-panel-body');
+      const panel = document.getElementById('storage-panel');
+      if (toggle && body && panel) {
+        toggle.addEventListener('click', () => {
+          const open = panel.classList.toggle('is-open');
+          body.style.display = open ? '' : 'none';
+          toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+          if (open) renderStoragePanel();
+        });
+      }
+      const bBackup = document.getElementById('btn-storage-backup');
+      if (bBackup) bBackup.addEventListener('click', exportBackupJson);
+      const bFree = document.getElementById('btn-storage-free');
+      if (bFree) bFree.addEventListener('click', freeSpacePastPeriods);
+    })();
     // 年月の昇順→降順の並び替え(最新優先)
     function sortYMs(yms) {
       return yms.slice().sort((a, b) => b.localeCompare(a));
@@ -10145,7 +10391,14 @@
       const period = getCurrentPeriod();
       if (period.startDt) archive[ym].startDt = period.startDt;
       if (period.endDt) archive[ym].endDt = period.endDt;
-      saveArchive(archive);
+      // v0.52.305: 保存成否を確認。容量超過(false)なら、商品行すら保存できていないので
+      //   呼び出し側で正直にエラーを出せるよう例外を投げる。
+      const ok = saveArchive(archive);
+      if (!ok) {
+        const err = new Error('QUOTA');
+        err.isQuota = true;
+        throw err;
+      }
       currentYM = ym;
       localStorage.setItem(SALE_ARCHIVE_CURRENT, ym);
       refreshArchiveSelect();
@@ -10318,6 +10571,9 @@
         saveProductRowsToArchive(productRows);
         // RMSバイト列もアーカイブに保存(⑤ セール価格決定の表構築や ④ の検索用CSV作成で再利用)
         // v0.52.115: 同月で①を追加取り込みした場合、SKU単位でマージ (既存SKUは更新、新規SKUは追加)
+        // v0.52.305: rmsCsvB64 は大きいため保存が容量超過で失敗しうる。ここが失敗しても
+        //   商品行(rows)は既に保存済みなので、セール参加商品には反映される。失敗は控えめに通知。
+        let rmsBlobSaved = true;
         try {
           const ym = currentYM || getCurrentYM();
           if (ym) {
@@ -10327,27 +10583,47 @@
             archive[ym].rmsCsvB64 = ab2b64(mergedBytes);
             // v0.52.134: 直近①で取り込んだCSVのSKU数を記録 (②のSKU数チェックの期待値に使う)
             archive[ym].lastImportSkuCount = countUniqueValuesInColumn(text, 'システム連携用SKU番号');
-            saveArchive(archive);
+            rmsBlobSaved = saveArchive(archive);
           }
         } catch (err) {
+          rmsBlobSaved = false;
           console.warn('RMSバイト保存失敗:', err);
         }
         // 商品一覧タブの再描画(裏で更新)
         renderProductTable();
         // v0.52.203: アップロードファイルを保持表示
-        recordUploadedFile('rms', _uploadedFile);
+        try { recordUploadedFile('rms', _uploadedFile); } catch (e) {}
         renderUploadedFileSlot('rms', 'uf-slot-rms', () => { renderProductTable(); });
-        setAddProductsStatus(
-          `✅ ${productRows.length}件の商品を取り込みました。「セール参加商品」タブで確認できます。`,
-          'success'
-        );
+        if (rmsBlobSaved) {
+          setAddProductsStatus(
+            `✅ ${productRows.length}件の商品を取り込みました。「セール参加商品」タブで確認できます。`,
+            'success'
+          );
+        } else {
+          // 商品行は保存できたが、CSV実体(⑤/④で使用)は容量不足で保存できなかった
+          setAddProductsStatus(
+            `⚠️ ${productRows.length}件の商品は取り込めました（「セール参加商品」に反映されます）。ただし保存容量が上限のため、後工程(⑤割引率決定・④原価特定)で使うCSV実体を保存できませんでした。下の「ストレージ容量の管理」で容量を空けてから、もう一度①のCSVを取り込み直してください。`,
+            'error'
+          );
+          if (typeof showStoragePanel === 'function') showStoragePanel();
+        }
       } catch (err) {
-        setAddProductsStatus('❌ エラー: ' + err.message, 'error');
+        if (err && err.isQuota) {
+          // v0.52.305: 容量超過で商品行すら保存できなかった → 正直に伝え、容量管理パネルを開く
+          setAddProductsStatus(
+            '❌ 保存できませんでした。ブラウザの保存容量（localStorage）が上限に達しています。下の「ストレージ容量の管理」で、まずバックアップを書き出してから、過去セールの取り込みCSVを削除して容量を空け、もう一度取り込んでください。',
+            'error'
+          );
+          if (typeof showStoragePanel === 'function') showStoragePanel();
+        } else {
+          setAddProductsStatus('❌ エラー: ' + err.message, 'error');
+        }
         console.error(err);
       } finally {
         btn.disabled = false;
         // v0.52.304: 期間未選択の警告バナーを最新化
         if (typeof updateAddProductsPeriodWarn === 'function') updateAddProductsPeriodWarn();
+        if (typeof renderStoragePanel === 'function') renderStoragePanel();
       }
     });
 
