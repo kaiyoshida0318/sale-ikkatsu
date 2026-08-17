@@ -4169,7 +4169,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.301</span>
+      <span class="version">v0.52.302</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -6703,7 +6703,11 @@
         opt.textContent = '（履歴なし）';
         sel.appendChild(opt);
         currentYM = null;
-        document.getElementById('archive-period').textContent = '';
+        // v0.52.302: #archive-period は現行UIに存在しないためnullチェック必須。
+        //  未ガードだと「セール期間が1件も無いショップ/セール」を開いた瞬間に例外→
+        //  以降の初期化(renderProductTable等)が中断し、CSVを取り込んでも一覧に反映されない不具合になっていた。
+        const _apEl = document.getElementById('archive-period');
+        if (_apEl) _apEl.textContent = '';
         return;
       }
       for (const ym of yms) {
@@ -14781,7 +14785,8 @@
     });
 
 
-    refreshArchiveSelect();
+    // v0.52.302: 初期化を止めないよう保険のtry/catch (以降のrenderProductTable等を必ず実行させる)
+    try { refreshArchiveSelect(); } catch (e) { console.warn('refreshArchiveSelect(init)失敗:', e); }
     // v0.52.223: 初期化時、ヘッダーの新ym selectと旧archive-selectの値ズレを補正
     //   両方とも localStorage の SALE_ARCHIVE_CURRENT を信頼して同期
     try {
