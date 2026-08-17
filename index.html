@@ -1508,6 +1508,9 @@
     .n-ma { display: none; }
     body[data-sale-name="marathon"] .n-ss { display: none; }
     body[data-sale-name="marathon"] .n-ma { display: inline; }
+    /* v0.52.301: RMSダウンロード リンクは「ゆかい屋 × 楽天スーパーSALE」の①のときだけ表示 */
+    .ap-rms-dl-link { display: none; }
+    body[data-shop="ゆかい屋"][data-sale-name="super-sale"] .ap-rms-dl-link { display: block; }
     /* チェックボックス風リスト (取り込み手順内の "✔項目") */
     .howto-checklist {
       list-style: none;
@@ -4166,7 +4169,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.300</span>
+      <span class="version">v0.52.301</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4427,7 +4430,9 @@
           <h2 class="ap-h2-supersale">2. RMSデータのダウンロード</h2>
           <h2 class="ap-h2-marathon">1. RMSデータのダウンロード</h2>
           <ol class="howto-list">
-            <li>RMS - 店舗設定 - <b>1 商品管理</b> - <b>2 CSV一括編集</b> - <b>CSVダウンロード</b></li>
+            <li>RMS - 店舗設定 - <b>1 商品管理</b> - <b>2 CSV一括編集</b> - <b>CSVダウンロード</b>
+              <div class="card-lead ap-rms-dl-link" style="margin-top:6px;">リンク先ページ: <a href="https://item.rms.rakuten.co.jp/rms-item-download/shops/354660" target="_blank" rel="noopener noreferrer">https://item.rms.rakuten.co.jp/rms-item-download/shops/354660</a></div>
+            </li>
             <!-- 手順2: ソースが異なる (スーパーSALE=ADcheck, マラソン=①参加可能商品特定) -->
             <li class="ap-li-supersale">上でダウンロードしたADcheckデータの商品管理番号をコピーし、「<b>商品管理番号で絞り込む</b>」に一括貼り付け</li>
             <li class="ap-li-marathon"><b>②参加商品決定</b>で<b>参加決定</b>した商品管理番号（「決定分をコピー」ボタン、または「参加決定商品をダウンロード」したCSV）を、「<b>商品管理番号で絞り込む</b>」に一括貼り付け</li>
@@ -5812,6 +5817,8 @@
     function setCurrentShop(shop) {
       if (SHOPS.indexOf(shop) < 0) return;
       localStorage.setItem(SALE_CURRENT_SHOP_KEY, shop);
+      // v0.52.301: body の data-shop を更新 → CSSでショップ別の出し分けに使用
+      document.body.setAttribute('data-shop', shop);
     }
     function getCurrentSaleName() {
       const v = localStorage.getItem(SALE_TYPE_KEY);
@@ -5980,6 +5987,8 @@
 
     // 初期: 保存されたショップを反映
     if (shopSelectEl) shopSelectEl.value = getCurrentShop();
+    // v0.52.301: 初期表示でも body の data-shop を反映 (CSSのショップ別出し分け用)
+    document.body.setAttribute('data-shop', getCurrentShop());
 
     // v0.52.266: ym キー → 表示ラベル。マラソンは "YYYY/MM-1"(前半)/"YYYY/MM-2"(後半) を許容。
     function ymLabel(ym) {
