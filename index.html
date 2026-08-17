@@ -1504,6 +1504,22 @@
     body[data-sale-name="marathon"] .ap-h2-marathon { display: block; }
     body[data-sale-name="marathon"] .ap-li-marathon { display: list-item; }
     body[data-sale-name="marathon"] .ap-card-adcheck { display: none; }
+    /* v0.52.304: セール期間未選択の警告バナー (① 参加商品追加 上部) */
+    .no-period-warn {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin: 4px 0 18px;
+      padding: 14px 18px;
+      background: #fff7e6;
+      border: 2px solid #f0a500;
+      border-left: 6px solid #f0a500;
+      border-radius: 10px;
+    }
+    .no-period-warn .npw-icon { font-size: 22px; line-height: 1.2; flex: none; }
+    .no-period-warn .npw-title { font-weight: 700; font-size: 15px; color: #9a5b00; margin-bottom: 3px; }
+    .no-period-warn .npw-text { font-size: 13.5px; color: #6b4a12; line-height: 1.6; }
+    .no-period-warn .npw-text b { color: #b5480b; }
     /* v0.52.243: 説明文中のステップ番号をセール名で出し分ける (参加商品追加=超SALE①/マラソン②等) */
     .n-ma { display: none; }
     body[data-sale-name="marathon"] .n-ss { display: none; }
@@ -4169,7 +4185,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.303</span>
+      <span class="version">v0.52.304</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4414,6 +4430,14 @@
           <h2 class="ap-h2-marathon">③ 参加商品データ追加</h2>
         </div>
         <p class="tool-panel-description">セール参加商品のデータをRMSからダウンロードし、それをSALE一括内に取り込んでいく。</p>
+        <!-- v0.52.304: セール期間(年月)未選択の警告。未選択のまま取り込むと保存されないため、上部に大きく表示 -->
+        <div id="add-products-no-period-warn" class="no-period-warn" style="display:none;">
+          <span class="npw-icon" aria-hidden="true">⚠️</span>
+          <div class="npw-body">
+            <div class="npw-title">セール期間（年月）が未選択です</div>
+            <div class="npw-text">先にヘッダーの<b>「セール期間」</b>で対象の年月を選択（無ければ<b>「＋新規作成」</b>）してください。<b>未選択のままではCSVを取り込んでも「セール参加商品」に反映されません。</b></div>
+          </div>
+        </div>
 
         <!-- v0.52.225: マラソン時は1.ADcheckの手順を非表示 -->
         <div class="card ap-card-adcheck">
@@ -5623,7 +5647,7 @@
       }
       // v0.52.203: 各アップロードページを開くとき、保持中ファイルのチップを再描画
       if (typeof renderUploadedFileSlot === 'function') {
-        if (viewId === 'add-products') renderUploadedFileSlot('rms', 'uf-slot-rms', () => { if (typeof renderProductTable === 'function') renderProductTable(); });
+        if (viewId === 'add-products') { renderUploadedFileSlot('rms', 'uf-slot-rms', () => { if (typeof renderProductTable === 'function') renderProductTable(); }); if (typeof updateAddProductsPeriodWarn === 'function') updateAddProductsPeriodWarn(); }
         if (viewId === 'ad-info') renderUploadedFileSlot('adInfo', 'uf-slot-adInfo', () => { if (typeof renderProductTable === 'function') renderProductTable(); });
         if (viewId === 'cost-set-item') { renderUploadedFileSlot('setItem', 'uf-slot-setItem'); renderUploadedFileSlot('nonSet', 'uf-slot-nonSet'); }
         if (viewId === 'cost-set-component') renderUploadedFileSlot('setComponent', 'uf-slot-setComponent');
@@ -6108,6 +6132,8 @@
       // v0.52.303: 文脈(ショップ/セール/期間)が変わったので、全アップロードファイルの
       //   チップDOMを描き直す。前ショップのファイルチップが残って見える不具合の修正。
       if (typeof rerenderAllUploadSlots === 'function') rerenderAllUploadSlots();
+      // v0.52.304: セール期間未選択の警告バナーも更新
+      if (typeof updateAddProductsPeriodWarn === 'function') updateAddProductsPeriodWarn();
       // v0.52.303: 各サブビューの取り込み完了ステータスも新しい文脈で復元/クリア
       if (typeof restoreAllStatusMessages === 'function') {
         try { restoreAllStatusMessages(); } catch (e) {}
@@ -6715,6 +6741,15 @@
           });
         } catch (e) { /* 個別スロットの失敗は無視 */ }
       }
+    }
+    // v0.52.304: ① 参加商品追加 の「セール期間未選択」警告バナーの表示切替。
+    //   取り込み保存は年月(currentYM||getCurrentYM)必須。未選択のまま取り込むと保存されず
+    //   一覧に反映されないため、未選択時は上部に大きく警告を出す。
+    function updateAddProductsPeriodWarn() {
+      const el = document.getElementById('add-products-no-period-warn');
+      if (!el) return;
+      const ym = currentYM || (typeof getCurrentYM === 'function' ? getCurrentYM() : null);
+      el.style.display = ym ? 'none' : 'flex';
     }
     // 年月の昇順→降順の並び替え(最新優先)
     function sortYMs(yms) {
@@ -10311,6 +10346,8 @@
         console.error(err);
       } finally {
         btn.disabled = false;
+        // v0.52.304: 期間未選択の警告バナーを最新化
+        if (typeof updateAddProductsPeriodWarn === 'function') updateAddProductsPeriodWarn();
       }
     });
 
