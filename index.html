@@ -668,7 +668,7 @@
     body[data-view="make-thumb"] .st-search-bar,
     body[data-view="make-thumb"] #make-thumb-history-container,
     body[data-view="make-thumb"] .thumb-dl-section {
-      width: 1180px; /* v0.52.317: 10/20/30/50%の4列すべてが横スクロールなしで収まる幅に拡張 */
+      width: 1300px; /* v0.52.324: 通常サムネURL列追加で表幅が増えたため、横スクロールが出ないよう更に拡張 */
       max-width: 100%;
       box-sizing: border-box;
     }
@@ -4324,7 +4324,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.323</span>
+      <span class="version">v0.52.325</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4991,8 +4991,8 @@
           <button type="button" class="mt-pending-toggle disc-20" data-rate="20" aria-pressed="false" title="20%OFFで今回の割引率のサムネが未作成の商品だけ表示">20%OFF</button>
           <button type="button" class="mt-pending-toggle disc-30" data-rate="30" aria-pressed="false" title="30%OFFで今回の割引率のサムネが未作成の商品だけ表示">30%OFF</button>
           <button type="button" class="mt-pending-toggle disc-50" data-rate="50" aria-pressed="false" title="50%OFFで今回の割引率のサムネが未作成の商品だけ表示">50%OFF</button>
-          <span id="make-thumb-search-count" class="st-search-count"></span>
           <span id="make-thumb-pending-count" class="st-pending-count"></span>
+          <span id="make-thumb-search-count" class="st-search-count"></span>
         </div>
         <div id="make-thumb-history-container" class="st-table-scroll">
           <div class="empty-state">割引率が決まっている商品がありません。⑥「割引率決定」で割引率を選んでください。</div>
@@ -8383,30 +8383,42 @@
         });
         orderedMgrs = decorated.map(o => o.mgr);
       }
-      // 件数表示
-      const cntEl = document.getElementById('make-thumb-search-count');
-      if (cntEl) {
-        cntEl.textContent = (q || _makeThumbPendingRates.size > 0) ? `${orderedMgrs.length} / ${totalMgrs} 件` : `${totalMgrs} 件`;
+      // v0.52.325: 割引率別の要作成件数を集計 (全件ベース)。ボタン末尾に (件数)、右に未対応合計・総合計を表示
+      const pendingByRate = { 10: 0, 20: 0, 30: 0, 50: 0 };
+      let pendingTotal = 0;
+      for (const mgr of allOrderedMgrs) {
+        const d = [...(curMap[mgr] || [])][0];
+        const rn = parseInt(d, 10);
+        const tt = (typeof getSaleThumb === 'function') ? getSaleThumb(mgr, d) : null;
+        if (!(tt && tt.img)) {
+          pendingTotal++;
+          if (pendingByRate[rn] !== undefined) pendingByRate[rn]++;
+        }
       }
-      // v0.52.154: 未対応(要作成)件数を全件ベースで集計し、完了したら光らせる
+      // 各%OFFボタンの末尾に該当(要作成)件数を表示
+      document.querySelectorAll('.mt-pending-toggle').forEach(btn => {
+        const rt = parseInt(btn.getAttribute('data-rate'), 10);
+        const c = pendingByRate[rt] !== undefined ? pendingByRate[rt] : 0;
+        btn.textContent = `${rt}%OFF (${c})`;
+      });
+      // 未対応合計
       const pendingEl = document.getElementById('make-thumb-pending-count');
       if (pendingEl) {
-        let pending = 0;
-        for (const mgr of allOrderedMgrs) {
-          const d = [...(curMap[mgr] || [])][0];
-          const tt = (typeof getSaleThumb === 'function') ? getSaleThumb(mgr, d) : null;
-          if (!(tt && tt.img)) pending++;
-        }
         if (totalMgrs === 0) {
           pendingEl.textContent = '';
           pendingEl.classList.remove('is-done');
-        } else if (pending === 0) {
+        } else if (pendingTotal === 0) {
           pendingEl.textContent = '✓ 全件作成済み';
           pendingEl.classList.add('is-done');
         } else {
-          pendingEl.textContent = `未対応 ${pending} 件`;
+          pendingEl.textContent = `未対応 ${pendingTotal} 件`;
           pendingEl.classList.remove('is-done');
         }
+      }
+      // 総合計
+      const cntEl = document.getElementById('make-thumb-search-count');
+      if (cntEl) {
+        cntEl.textContent = `総合計 ${totalMgrs} 件`;
       }
       if (orderedMgrs.length === 0) {
         const emptyMsg = _makeThumbPendingRates.size > 0
