@@ -923,26 +923,30 @@
       padding: 6px 0;
     }
     /* v0.52.154: ⑧ 未対応件数バッジ。完了(0件)で光る */
-    /* v0.52.322: 「要作成のみ」トグルボタン */
+    /* v0.52.323: 「要作成のみ」を割引率別に絞る4ボタン */
+    .mt-pending-label { font-size: 12.5px; font-weight: 700; color: #6b7683; white-space: nowrap; flex-shrink: 0; margin-left: 4px; }
     .mt-pending-toggle {
       font-family: inherit;
-      font-size: 13px;
+      font-size: 12.5px;
       font-weight: 700;
-      padding: 6px 12px;
-      border: 1.5px solid #e0b48a;
+      padding: 5px 10px;
+      border: 1.5px solid #ccc;
       border-radius: 8px;
       background: #fff;
-      color: #b5480b;
       cursor: pointer;
       white-space: nowrap;
       flex-shrink: 0;
     }
-    .mt-pending-toggle:hover { background: #fff6ea; }
-    .mt-pending-toggle.is-on {
-      background: #f0a500;
-      border-color: #f0a500;
-      color: #fff;
-    }
+    .mt-pending-toggle.disc-10 { border-color: #2d6cb8; color: #2d6cb8; }
+    .mt-pending-toggle.disc-20 { border-color: #d36916; color: #d36916; }
+    .mt-pending-toggle.disc-30 { border-color: #2a8a45; color: #2a8a45; }
+    .mt-pending-toggle.disc-50 { border-color: #d83838; color: #d83838; }
+    .mt-pending-toggle:hover { filter: brightness(0.97); background: #f7f8fa; }
+    .mt-pending-toggle.is-on { color: #fff; }
+    .mt-pending-toggle.disc-10.is-on { background: #2d6cb8; }
+    .mt-pending-toggle.disc-20.is-on { background: #d36916; }
+    .mt-pending-toggle.disc-30.is-on { background: #2a8a45; }
+    .mt-pending-toggle.disc-50.is-on { background: #d83838; }
     .st-pending-count {
       font-size: 13px;
       font-weight: 700;
@@ -4320,7 +4324,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.322</span>
+      <span class="version">v0.52.323</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4982,7 +4986,11 @@
         <!-- v0.52.319: 「通常のサムネイルをダウンロード」機能は廃止 -->
         <div class="st-search-bar">
           <input type="text" id="make-thumb-search" class="st-search-input" placeholder="🔍 商品管理番号・商品コードで検索" />
-          <button type="button" id="make-thumb-pending-only" class="mt-pending-toggle" aria-pressed="false" title="今回の割引率のサムネが未作成の商品だけ表示">要作成のみ</button>
+          <span class="mt-pending-label">要作成のみ:</span>
+          <button type="button" class="mt-pending-toggle disc-10" data-rate="10" aria-pressed="false" title="10%OFFで今回の割引率のサムネが未作成の商品だけ表示">10%OFF</button>
+          <button type="button" class="mt-pending-toggle disc-20" data-rate="20" aria-pressed="false" title="20%OFFで今回の割引率のサムネが未作成の商品だけ表示">20%OFF</button>
+          <button type="button" class="mt-pending-toggle disc-30" data-rate="30" aria-pressed="false" title="30%OFFで今回の割引率のサムネが未作成の商品だけ表示">30%OFF</button>
+          <button type="button" class="mt-pending-toggle disc-50" data-rate="50" aria-pressed="false" title="50%OFFで今回の割引率のサムネが未作成の商品だけ表示">50%OFF</button>
           <span id="make-thumb-search-count" class="st-search-count"></span>
           <span id="make-thumb-pending-count" class="st-pending-count"></span>
         </div>
@@ -8283,7 +8291,7 @@
     //   画像があればその画像、なければ「要作成」。画像のアップ/D&D/URL入力ができる(タブと連動)。
     let _makeThumbSearchQuery = ''; // v0.52.146 ⑧検索キーワード
     let _makeThumbDiscSort = 0; // v0.52.153 ⑧今回の割引率ソート: 0=既定(行順) / 1=降順 / 2=昇順
-    let _makeThumbPendingOnly = false; // v0.52.322 「要作成のみ」(今回の割引率のサムネ未作成)フィルタ
+    const _makeThumbPendingRates = new Set(); // v0.52.323 「要作成のみ」を割引率別(10/20/30/50)に絞り込むフィルタ
     window._renderThumbHistory = function _renderThumbHistory() {
       const container = document.getElementById('make-thumb-history-container');
       if (!container) return;
@@ -8351,10 +8359,12 @@
           (mgr && mgr.toLowerCase().includes(q)) ||
           (resolveCode(mgr) && resolveCode(mgr).toLowerCase().includes(q)));
       }
-      // v0.52.322: 「要作成のみ」フィルタ (今回の割引率のサムネが未作成の商品だけ)
-      if (_makeThumbPendingOnly) {
+      // v0.52.323: 「要作成のみ」を割引率別に絞り込み。選択中の割引率で、今回の割引率のサムネが未作成の商品だけ表示
+      if (_makeThumbPendingRates.size > 0) {
         orderedMgrs = orderedMgrs.filter(mgr => {
           const d = [...(curMap[mgr] || [])][0];
+          const rn = parseInt(d, 10);
+          if (!_makeThumbPendingRates.has(rn)) return false;
           const tt = (typeof getSaleThumb === 'function') ? getSaleThumb(mgr, d) : null;
           return !(tt && tt.img);
         });
@@ -8376,7 +8386,7 @@
       // 件数表示
       const cntEl = document.getElementById('make-thumb-search-count');
       if (cntEl) {
-        cntEl.textContent = (q || _makeThumbPendingOnly) ? `${orderedMgrs.length} / ${totalMgrs} 件` : `${totalMgrs} 件`;
+        cntEl.textContent = (q || _makeThumbPendingRates.size > 0) ? `${orderedMgrs.length} / ${totalMgrs} 件` : `${totalMgrs} 件`;
       }
       // v0.52.154: 未対応(要作成)件数を全件ベースで集計し、完了したら光らせる
       const pendingEl = document.getElementById('make-thumb-pending-count');
@@ -8399,8 +8409,8 @@
         }
       }
       if (orderedMgrs.length === 0) {
-        const emptyMsg = _makeThumbPendingOnly
-          ? (q ? `「${escapeHtml(_makeThumbSearchQuery)}」に一致する要作成の商品がありません。` : '要作成の商品はありません（今回の割引率のサムネは全て作成済みです）。')
+        const emptyMsg = _makeThumbPendingRates.size > 0
+          ? (q ? `「${escapeHtml(_makeThumbSearchQuery)}」に一致する要作成の商品がありません。` : '選択中の割引率で要作成の商品はありません（該当割引率のサムネは全て作成済みです）。')
           : `「${escapeHtml(_makeThumbSearchQuery)}」に一致する商品がありません。`;
         container.innerHTML = `<div class="empty-state">${emptyMsg}</div>`;
         return;
@@ -8480,16 +8490,17 @@
         if (timer) clearTimeout(timer);
         timer = setTimeout(() => { if (window._renderThumbHistory) window._renderThumbHistory(); }, 120);
       });
-      // v0.52.322: 「要作成のみ」トグル
-      const pendingBtn = document.getElementById('make-thumb-pending-only');
-      if (pendingBtn) {
-        pendingBtn.addEventListener('click', () => {
-          _makeThumbPendingOnly = !_makeThumbPendingOnly;
-          pendingBtn.classList.toggle('is-on', _makeThumbPendingOnly);
-          pendingBtn.setAttribute('aria-pressed', _makeThumbPendingOnly ? 'true' : 'false');
+      // v0.52.323: 「要作成のみ」を割引率別の4ボタンで絞り込み (複数選択可)
+      document.querySelectorAll('.mt-pending-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const rate = parseInt(btn.getAttribute('data-rate'), 10);
+          if (_makeThumbPendingRates.has(rate)) _makeThumbPendingRates.delete(rate);
+          else _makeThumbPendingRates.add(rate);
+          btn.classList.toggle('is-on', _makeThumbPendingRates.has(rate));
+          btn.setAttribute('aria-pressed', _makeThumbPendingRates.has(rate) ? 'true' : 'false');
           if (window._renderThumbHistory) window._renderThumbHistory();
         });
-      }
+      });
       // v0.52.154: ✕クリアボタンは廃止
     })();
 
