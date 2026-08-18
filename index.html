@@ -1215,6 +1215,12 @@
     .make-thumb-table .thumb-hist-img .img-placeholder {
       width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; margin: 0 auto;
     }
+    /* v0.52.320: 通常サムネの画像URL (サムネイル戻しと同じ値) */
+    .make-thumb-table .thumb-hist-img { width: 150px; }
+    .make-thumb-table .mt-normal-url { margin-top: 6px; font-size: 10.5px; line-height: 1.4; text-align: left; }
+    .make-thumb-table .mt-normal-url-label { color: #8a97a3; display: block; margin-bottom: 1px; }
+    .make-thumb-table .mt-normal-url-text { color: #33414d; word-break: break-all; }
+    .make-thumb-table .mt-normal-url-none { color: #b3b8bd; }
     .thumb-hist-badges { white-space: nowrap; }
     /* 割引率バッジ */
     .thumb-rate-badge {
@@ -2370,6 +2376,21 @@
       font-weight: 500;
       font-size: 12px;
     }
+    /* v0.52.318: 割引率ドロップダウン (色は td の disc-* を継承) */
+    .product-table .pdiscount-select {
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      color: inherit;
+      padding: 4px 6px;
+      border: 1px solid #c9c9d1;
+      border-radius: 6px;
+      background: #fff;
+      cursor: pointer;
+      width: auto;
+    }
+    .product-table .pdiscount-select:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 2px rgba(30,58,95,0.15); }
+    .product-table .pdiscount-select:disabled { opacity: .5; cursor: not-allowed; }
     /* v0.52.127: チェックボックス列 */
     .product-table th.col-check,
     .product-table td.col-check {
@@ -4265,7 +4286,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.317</span>
+      <span class="version">v0.52.320</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4925,16 +4946,7 @@
         </div>
         <p class="tool-panel-description">今回割引率が決まっている商品について、今回の割引率のセール用サムネイルを作成・管理します。<br>
         画像が登録済みの商品はその画像を表示、未登録の商品は <span class="thumb-make-badge">要作成</span> と表示されます。内容は「セール用サムネイル」タブと連動します。</p>
-        <div class="thumb-dl-section">
-          <h3 class="thumb-dl-heading">通常のサムネイルをダウンロード <span class="thumb-dl-note">（「作成不要」「作成済み」を除いた、これから作成が必要な商品のみ）</span></h3>
-          <div class="top-image-dl-grid">
-            <button type="button" data-rate="10" class="top-image-dl-btn disc-10">10%OFF商品</button>
-            <button type="button" data-rate="20" class="top-image-dl-btn disc-20">20%OFF商品</button>
-            <button type="button" data-rate="30" class="top-image-dl-btn disc-30">30%OFF商品</button>
-            <button type="button" data-rate="50" class="top-image-dl-btn disc-50">50%OFF商品</button>
-          </div>
-          <div id="make-thumb-dl-status" class="top-image-dl-status" aria-live="polite"></div>
-        </div>
+        <!-- v0.52.319: 「通常のサムネイルをダウンロード」機能は廃止 -->
         <div class="st-search-bar">
           <input type="text" id="make-thumb-search" class="st-search-input" placeholder="🔍 商品管理番号・商品コードで検索" />
           <span id="make-thumb-search-count" class="st-search-count"></span>
@@ -8362,7 +8374,7 @@
         return `<tr>
           <td class="thumb-hist-mgr">${escapeHtml(mgr)}</td>
           <td class="thumb-hist-code">${escapeHtml(resolveCode(mgr))}</td>
-          <td class="thumb-hist-img">${imageCellHtml(row.imageUrl || '')}</td>
+          <td class="thumb-hist-img">${imageCellHtml(row.imageUrl || '')}${row.imageUrl ? `<div class="mt-normal-url"><span class="mt-normal-url-label">画像URL</span><span class="mt-normal-url-text">${escapeHtml(String(row.imageUrl).trim())}</span></div>` : `<div class="mt-normal-url"><span class="mt-normal-url-none">画像URLなし</span></div>`}</td>
           ${rateCells}
         </tr>`;
       }).join('');
@@ -9377,7 +9389,15 @@
             <td class="img-cell">${imageCellHtml(r.imageUrl)}</td>
             <td class="col-pstatus pstatus-${st}"><select class="pstatus-select" data-mgr="${escapeHtml(r.mgr || '')}" aria-label="区分">${optsHtml}</select></td>
             <td class="col-adstatus adstatus-${r.adStatus === 'yes' ? 'yes' : 'no'}">${r.adStatus === 'yes' ? '出稿中' : '未出稿'}</td>
-            <td class="col-discount${discClass}">${discLabel}</td>
+            <td class="col-discount${discClass}">
+              <select class="pdiscount-select" data-mgr="${escapeHtml(r.mgr || '')}" data-firstsku="${escapeHtml(mgrToFirstSku[r.mgr] || '')}" aria-label="割引率"${mgrToFirstSku[r.mgr] ? '' : ' disabled title="SKUが無いため割引率を設定できません"'}>
+                <option value=""${disc == null ? ' selected' : ''}>未選択</option>
+                <option value="10"${disc === 10 ? ' selected' : ''}>10%OFF</option>
+                <option value="20"${disc === 20 ? ' selected' : ''}>20%OFF</option>
+                <option value="30"${disc === 30 ? ' selected' : ''}>30%OFF</option>
+                <option value="50"${disc === 50 ? ' selected' : ''}>50%OFF</option>
+              </select>
+            </td>
             <td class="col-decide-link"><a href="?view=decide-price&mgr=${encodeURIComponent(r.mgr || '')}" class="decide-link-btn" data-mgr="${escapeHtml(r.mgr || '')}" title="この商品の割引率決定表へ">割引率決定表へ</a></td>
           </tr>`;
         }).join('');
@@ -9426,6 +9446,21 @@
           setProductStatus(mgr, sel.value);
           // 更新するとソートは解除される
           _productStatusSort = null;
+          renderProductTable();
+        });
+      });
+      // v0.52.318: 割引率ドロップダウンの変更 → 代表SKUに保存（⑥割引率決定表と自動同期）
+      container.querySelectorAll('.pdiscount-select').forEach(sel => {
+        sel.addEventListener('change', () => {
+          const firstSku = sel.getAttribute('data-firstsku');
+          if (!firstSku) return;
+          const mgr = sel.getAttribute('data-mgr');
+          const raw = sel.value;
+          const v = raw === '' ? null : parseInt(raw, 10);
+          const old = (typeof _readDiscountRaw === 'function') ? _readDiscountRaw(firstSku) : undefined;
+          if (typeof saveDiscount === 'function') saveDiscount(firstSku, v);
+          if (typeof recordDiscountChange === 'function') recordDiscountChange(firstSku, old, v === null ? undefined : v);
+          if (typeof updateMgrTabDiscColor === 'function' && mgr) { try { updateMgrTabDiscColor(mgr, v); } catch (e) {} }
           renderProductTable();
         });
       });
