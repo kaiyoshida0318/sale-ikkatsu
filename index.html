@@ -4339,7 +4339,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.328</span>
+      <span class="version">v0.52.329</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -6029,6 +6029,11 @@
     const SALE_THUMBS_KEY = 'sale-ikkatsu-thumbs';
     const SALE_THUMBS_KEY_V2 = 'sale-ikkatsu-thumbs-v2';
     const SALE_THUMBS_PRE_MIGRATION_BACKUP = 'sale-ikkatsu-thumbs-pre-migration-backup';
+    // v0.52.329: サムネイルは localStorage(約5MB・全ツール共有) を圧迫し QuotaExceededError の原因になるため
+    //   IndexedDB(実質数百MB〜) に移行。_thumbsCacheV2 は { [shop]: data } の同期ミラー。
+    //   null のままなら IDB未初期化 or 非対応 → 旧localStorage方式にフォールバック。
+    let _thumbsCacheV2 = null;
+    let _thumbsReady = false;
     const SALE_CURRENT_SHOP_KEY = 'sale-ikkatsu-current-shop';
     const SHOPS = ['ゆかい屋', 'KAIRY'];
     const SALE_NAMES = ['super-sale', 'marathon'];
@@ -6079,7 +6084,8 @@
         }
       } catch (e) { console.warn('archive移行失敗:', e); }
       try {
-        const v2raw = localStorage.getItem(SALE_THUMBS_KEY_V2);
+        // v0.52.329: IDBへ移行済みなら localStorage のサムネは再生成しない (容量解放を維持)
+        const v2raw = _thumbsCacheV2 ? '_idb_' : localStorage.getItem(SALE_THUMBS_KEY_V2);
         if (!v2raw) {
           const oldRaw = localStorage.getItem(SALE_THUMBS_KEY);
           let oldThumbs = null;
@@ -9693,17 +9699,59 @@
     const SALE_THUMB_KEY = 'sale-ikkatsu-thumbs';
     const SALE_THUMB_RATES = [10, 20, 30, 50];
 
+    // v0.52.329: 起動時に一度だけ — IDBからサムネを読み込み、旧localStorage分をIDBへ移行してLSを解放する
+    async function initThumbsStore() {
+      try {
+        if (typeof indexedDB === 'undefined') { _thumbsReady = true; return; }
+        let stored = null;
+        try { stored = await idbGetBlob('thumbs-v2'); } catch (e) { stored = null; }
+        // IDBが空なら localStorage(旧方式) から移行
+        try { ensureMigrationV2(); } catch (e) {}
+        let lsRaw = null;
+        try { lsRaw = localStorage.getItem(SALE_THUMBS_KEY_V2); } catch (e) {}
+        if ((!stored || typeof stored !== 'object') && lsRaw) {
+          try { stored = JSON.parse(lsRaw) || {}; } catch (e) { stored = {}; }
+          try { await idbPutBlob('thumbs-v2', stored); } catch (e) {}
+        }
+        _thumbsCacheV2 = (stored && typeof stored === 'object') ? stored : {};
+        // IDBへ退避できたので localStorage 上のサムネを削除して容量を解放
+        try { if (lsRaw) localStorage.removeItem(SALE_THUMBS_KEY_V2); } catch (e) {}
+        try { localStorage.removeItem(SALE_THUMB_KEY); } catch (e) {}
+        _thumbsReady = true;
+        // 既に開いているサムネ系ビューを再描画 (初期化前に空表示されていた場合の反映)
+        try {
+          const view = document.body.getAttribute('data-view');
+          if (view === 'sale-thumb' && typeof window._renderSaleThumbTable === 'function') window._renderSaleThumbTable();
+          if (view === 'make-thumb' && typeof window._renderThumbHistory === 'function') window._renderThumbHistory();
+        } catch (e) {}
+      } catch (e) {
+        _thumbsReady = true; // フォールバック(localStorage)で継続
+        console.warn('initThumbsStore失敗:', e);
+      }
+    }
+    // キャッシュ全体をIDBへ非同期保存 (失敗時のみ警告)
+    function _persistThumbsToIdb() {
+      if (!_thumbsCacheV2) return;
+      idbPutBlob('thumbs-v2', _thumbsCacheV2).catch((e) => {
+        alert('サムネイルの保存に失敗しました。\n（' + (e && e.name ? e.name : 'error') + '）');
+      });
+    }
     function loadSaleThumbs() {
       try {
+        const shop = getCurrentShop();
+        // IDBモード: メモリキャッシュから同期返却
+        if (_thumbsCacheV2) {
+          const d = _thumbsCacheV2[shop];
+          return (d && typeof d === 'object') ? d : {};
+        }
+        // フォールバック(旧localStorage方式): 初期化前 or IDB非対応
         ensureMigrationV2();
         const v2raw = localStorage.getItem(SALE_THUMBS_KEY_V2);
         if (v2raw) {
           const v2 = JSON.parse(v2raw) || {};
-          const shop = getCurrentShop();
           const data = v2[shop];
           return (data && typeof data === 'object') ? data : {};
         }
-        // フォールバック
         const raw = localStorage.getItem(SALE_THUMB_KEY);
         if (!raw) return {};
         const obj = JSON.parse(raw);
@@ -9711,11 +9759,18 @@
       } catch (e) { return {}; }
     }
     function saveSaleThumbs(data) {
+      const shop = getCurrentShop();
+      // IDBモード: キャッシュを同期更新→IDBへ非同期保存 (localStorageの5MB制限を回避)
+      if (_thumbsCacheV2) {
+        _thumbsCacheV2[shop] = data;
+        _persistThumbsToIdb();
+        return true;
+      }
+      // フォールバック(旧localStorage方式): 初期化前 or IDB非対応
       try {
         ensureMigrationV2();
         let v2 = null;
         try { v2 = JSON.parse(localStorage.getItem(SALE_THUMBS_KEY_V2) || '{}') || {}; } catch(e) { v2 = {}; }
-        const shop = getCurrentShop();
         v2[shop] = data;
         localStorage.setItem(SALE_THUMBS_KEY_V2, JSON.stringify(v2));
         return true;
@@ -15635,6 +15690,8 @@
       if (typeof refreshSalePeriodChip === 'function') refreshSalePeriodChip();
     } catch (e) { console.warn('初期同期失敗:', e); }
     renderProductTable();
+    // v0.52.329: サムネイルを IndexedDB へ移行 (localStorage容量オーバー対策)。非同期で読み込み→ビュー再描画
+    if (typeof initThumbsStore === "function") { try { initThumbsStore(); } catch (e) { console.warn('initThumbsStore起動失敗:', e); } }
     if (typeof renderWorkflow === "function") renderWorkflow();
     if (typeof bindTopImageDlButtons === "function") bindTopImageDlButtons();
     if (typeof restoreAllStatusMessages === "function") restoreAllStatusMessages();
