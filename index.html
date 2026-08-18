@@ -923,6 +923,26 @@
       padding: 6px 0;
     }
     /* v0.52.154: ⑧ 未対応件数バッジ。完了(0件)で光る */
+    /* v0.52.322: 「要作成のみ」トグルボタン */
+    .mt-pending-toggle {
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 6px 12px;
+      border: 1.5px solid #e0b48a;
+      border-radius: 8px;
+      background: #fff;
+      color: #b5480b;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .mt-pending-toggle:hover { background: #fff6ea; }
+    .mt-pending-toggle.is-on {
+      background: #f0a500;
+      border-color: #f0a500;
+      color: #fff;
+    }
     .st-pending-count {
       font-size: 13px;
       font-weight: 700;
@@ -1218,8 +1238,22 @@
     /* v0.52.320: 通常サムネの画像URL (サムネイル戻しと同じ値) */
     .make-thumb-table .thumb-hist-img { width: 150px; }
     .make-thumb-table .mt-normal-url { margin-top: 6px; font-size: 10.5px; line-height: 1.4; text-align: left; }
-    .make-thumb-table .mt-normal-url-label { color: #8a97a3; display: block; margin-bottom: 1px; }
-    .make-thumb-table .mt-normal-url-text { color: #33414d; word-break: break-all; }
+    .make-thumb-table .mt-normal-url-label { color: #8a97a3; display: block; margin-bottom: 2px; }
+    /* v0.52.321: URLを枠で囲み、入り切らない場合は…省略。ダブルクリックで全選択 */
+    .make-thumb-table .mt-normal-url-box {
+      display: block;
+      max-width: 140px; /* v0.52.321: 自動レイアウトで列が伸びないよう上限を固定し、…省略を効かせる */
+      box-sizing: border-box;
+      border: 1px solid #d5dbe1;
+      border-radius: 5px;
+      padding: 3px 6px;
+      background: #fff;
+      color: #33414d;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      cursor: text;
+    }
     .make-thumb-table .mt-normal-url-none { color: #b3b8bd; }
     .thumb-hist-badges { white-space: nowrap; }
     /* 割引率バッジ */
@@ -4286,7 +4320,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.320</span>
+      <span class="version">v0.52.322</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4944,11 +4978,11 @@
         <div class="tool-panel-header">
           <h2>⑨ セール用サムネイル作成</h2>
         </div>
-        <p class="tool-panel-description">今回割引率が決まっている商品について、今回の割引率のセール用サムネイルを作成・管理します。<br>
-        画像が登録済みの商品はその画像を表示、未登録の商品は <span class="thumb-make-badge">要作成</span> と表示されます。内容は「セール用サムネイル」タブと連動します。</p>
+        <p class="tool-panel-description">今回割引率が決まっている商品について、今回の割引率のセール用サムネイルを作成・管理します。内容は「セール用サムネイル」タブと連動します。</p>
         <!-- v0.52.319: 「通常のサムネイルをダウンロード」機能は廃止 -->
         <div class="st-search-bar">
           <input type="text" id="make-thumb-search" class="st-search-input" placeholder="🔍 商品管理番号・商品コードで検索" />
+          <button type="button" id="make-thumb-pending-only" class="mt-pending-toggle" aria-pressed="false" title="今回の割引率のサムネが未作成の商品だけ表示">要作成のみ</button>
           <span id="make-thumb-search-count" class="st-search-count"></span>
           <span id="make-thumb-pending-count" class="st-pending-count"></span>
         </div>
@@ -8249,6 +8283,7 @@
     //   画像があればその画像、なければ「要作成」。画像のアップ/D&D/URL入力ができる(タブと連動)。
     let _makeThumbSearchQuery = ''; // v0.52.146 ⑧検索キーワード
     let _makeThumbDiscSort = 0; // v0.52.153 ⑧今回の割引率ソート: 0=既定(行順) / 1=降順 / 2=昇順
+    let _makeThumbPendingOnly = false; // v0.52.322 「要作成のみ」(今回の割引率のサムネ未作成)フィルタ
     window._renderThumbHistory = function _renderThumbHistory() {
       const container = document.getElementById('make-thumb-history-container');
       if (!container) return;
@@ -8316,6 +8351,14 @@
           (mgr && mgr.toLowerCase().includes(q)) ||
           (resolveCode(mgr) && resolveCode(mgr).toLowerCase().includes(q)));
       }
+      // v0.52.322: 「要作成のみ」フィルタ (今回の割引率のサムネが未作成の商品だけ)
+      if (_makeThumbPendingOnly) {
+        orderedMgrs = orderedMgrs.filter(mgr => {
+          const d = [...(curMap[mgr] || [])][0];
+          const tt = (typeof getSaleThumb === 'function') ? getSaleThumb(mgr, d) : null;
+          return !(tt && tt.img);
+        });
+      }
       // v0.52.153: 今回の割引率でソート (0=既定/1=降順/2=昇順)。安定ソートで既定の行順を保持
       if (_makeThumbDiscSort !== 0) {
         const discOf = (mgr) => {
@@ -8333,7 +8376,7 @@
       // 件数表示
       const cntEl = document.getElementById('make-thumb-search-count');
       if (cntEl) {
-        cntEl.textContent = q ? `${orderedMgrs.length} / ${totalMgrs} 件` : `${totalMgrs} 件`;
+        cntEl.textContent = (q || _makeThumbPendingOnly) ? `${orderedMgrs.length} / ${totalMgrs} 件` : `${totalMgrs} 件`;
       }
       // v0.52.154: 未対応(要作成)件数を全件ベースで集計し、完了したら光らせる
       const pendingEl = document.getElementById('make-thumb-pending-count');
@@ -8356,7 +8399,10 @@
         }
       }
       if (orderedMgrs.length === 0) {
-        container.innerHTML = `<div class="empty-state">「${escapeHtml(_makeThumbSearchQuery)}」に一致する商品がありません。</div>`;
+        const emptyMsg = _makeThumbPendingOnly
+          ? (q ? `「${escapeHtml(_makeThumbSearchQuery)}」に一致する要作成の商品がありません。` : '要作成の商品はありません（今回の割引率のサムネは全て作成済みです）。')
+          : `「${escapeHtml(_makeThumbSearchQuery)}」に一致する商品がありません。`;
+        container.innerHTML = `<div class="empty-state">${emptyMsg}</div>`;
         return;
       }
 
@@ -8374,7 +8420,7 @@
         return `<tr>
           <td class="thumb-hist-mgr">${escapeHtml(mgr)}</td>
           <td class="thumb-hist-code">${escapeHtml(resolveCode(mgr))}</td>
-          <td class="thumb-hist-img">${imageCellHtml(row.imageUrl || '')}${row.imageUrl ? `<div class="mt-normal-url"><span class="mt-normal-url-label">画像URL</span><span class="mt-normal-url-text">${escapeHtml(String(row.imageUrl).trim())}</span></div>` : `<div class="mt-normal-url"><span class="mt-normal-url-none">画像URLなし</span></div>`}</td>
+          <td class="thumb-hist-img">${imageCellHtml(row.imageUrl || '')}${row.imageUrl ? `<div class="mt-normal-url"><span class="mt-normal-url-label">画像URL</span><span class="mt-normal-url-box" title="${escapeHtml(String(row.imageUrl).trim())}">${escapeHtml(String(row.imageUrl).trim())}</span></div>` : `<div class="mt-normal-url"><span class="mt-normal-url-none">画像URLなし</span></div>`}</td>
           ${rateCells}
         </tr>`;
       }).join('');
@@ -8398,6 +8444,18 @@
       if (typeof bindSaleThumbCellEvents === 'function') {
         bindSaleThumbCellEvents(container, () => window._renderThumbHistory());
       }
+      // v0.52.321: 通常サムネURLの枠をダブルクリックで全選択 (省略表示でも全文コピー可)
+      container.querySelectorAll('.mt-normal-url-box').forEach(el => {
+        el.addEventListener('dblclick', () => {
+          try {
+            const range = document.createRange();
+            range.selectNodeContents(el);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+          } catch (e) {}
+        });
+      });
       // v0.52.153: 「今回の割引率」ヘッダーのソートボタン
       const sortTh = container.querySelector('#make-thumb-disc-sort');
       if (sortTh) {
@@ -8422,6 +8480,16 @@
         if (timer) clearTimeout(timer);
         timer = setTimeout(() => { if (window._renderThumbHistory) window._renderThumbHistory(); }, 120);
       });
+      // v0.52.322: 「要作成のみ」トグル
+      const pendingBtn = document.getElementById('make-thumb-pending-only');
+      if (pendingBtn) {
+        pendingBtn.addEventListener('click', () => {
+          _makeThumbPendingOnly = !_makeThumbPendingOnly;
+          pendingBtn.classList.toggle('is-on', _makeThumbPendingOnly);
+          pendingBtn.setAttribute('aria-pressed', _makeThumbPendingOnly ? 'true' : 'false');
+          if (window._renderThumbHistory) window._renderThumbHistory();
+        });
+      }
       // v0.52.154: ✕クリアボタンは廃止
     })();
 
