@@ -4339,7 +4339,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.329</span>
+      <span class="version">v0.52.330</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -8536,14 +8536,20 @@
         if (timer) clearTimeout(timer);
         timer = setTimeout(() => { if (window._renderThumbHistory) window._renderThumbHistory(); }, 120);
       });
-      // v0.52.323: 「要作成のみ」を割引率別の4ボタンで絞り込み (複数選択可)
+      // v0.52.330: 「要作成のみ」の割引率ボタンは単一選択 (1つだけ選択可)。
+      //   別の率を押すと直前の選択は解除。同じ率を再度押すと解除(全表示)。
       document.querySelectorAll('.mt-pending-toggle').forEach(btn => {
         btn.addEventListener('click', () => {
           const rate = parseInt(btn.getAttribute('data-rate'), 10);
-          if (_makeThumbPendingRates.has(rate)) _makeThumbPendingRates.delete(rate);
-          else _makeThumbPendingRates.add(rate);
-          btn.classList.toggle('is-on', _makeThumbPendingRates.has(rate));
-          btn.setAttribute('aria-pressed', _makeThumbPendingRates.has(rate) ? 'true' : 'false');
+          const wasOnlyThis = _makeThumbPendingRates.has(rate) && _makeThumbPendingRates.size === 1;
+          _makeThumbPendingRates.clear();
+          if (!wasOnlyThis) _makeThumbPendingRates.add(rate); // 同じボタン再クリックなら解除、それ以外は単一選択
+          document.querySelectorAll('.mt-pending-toggle').forEach(b => {
+            const r = parseInt(b.getAttribute('data-rate'), 10);
+            const on = _makeThumbPendingRates.has(r);
+            b.classList.toggle('is-on', on);
+            b.setAttribute('aria-pressed', on ? 'true' : 'false');
+          });
           _makeThumbPendingSnapshot = null; // v0.52.328: 絞り込み条件が変わったのでスナップショット再計算
           if (window._renderThumbHistory) window._renderThumbHistory();
         });
