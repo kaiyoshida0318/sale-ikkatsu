@@ -1531,6 +1531,8 @@
     .storage-panel-body { padding: 14px 16px; }
     .sp-desc { margin: 0 0 12px; font-size: 12.8px; color: #5a6672; line-height: 1.65; }
     .sp-desc b { color: #33414d; }
+    .sp-guide { margin-top: 12px; padding: 10px 12px; background: #eef4fb; border-left: 4px solid #4a90d9; border-radius: 6px; color: #2c4a6b; }
+    .sp-guide b { color: #1c5a94; }
     .sp-usage { margin: 0 0 14px; }
     .sp-bar { height: 14px; background: #e9edf1; border-radius: 7px; overflow: hidden; margin: 6px 0; }
     .sp-bar > span { display: block; height: 100%; background: linear-gradient(90deg,#4a90d9,#2e6fb0); }
@@ -1550,6 +1552,30 @@
     .sp-status { margin-top: 10px; font-size: 13px; min-height: 1px; }
     .sp-status.success { color: #1f7a3d; font-weight: 600; }
     .sp-status.error { color: #c0392b; font-weight: 600; }
+    /* v0.52.306: ツール内不要データ削除 ビュー */
+    .cln-explain { background: #f6f9fc; border: 1px solid #e0e8f0; border-radius: 10px; padding: 14px 16px; margin: 0 0 16px; }
+    .cln-explain-title { font-weight: 700; font-size: 14.5px; color: #b5480b; margin-bottom: 8px; }
+    .cln-explain p { margin: 0 0 8px; font-size: 13.2px; color: #47535f; line-height: 1.7; }
+    .cln-explain p:last-child { margin-bottom: 0; }
+    .cln-explain b { color: #33414d; }
+    .cln-explain .cln-keep { background: #eef7f0; border-left: 4px solid #4caf6e; padding: 8px 12px; border-radius: 6px; color: #2c6b42; }
+    .cln-explain .cln-keep b { color: #1f7a3d; }
+    .cln-list-head { font-size: 13px; font-weight: 700; color: #47535f; margin: 16px 0 8px; }
+    .cln-list { margin: 0 0 4px; }
+    .cln-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .cln-table th { text-align: left; font-weight: 600; color: #77828d; font-size: 12px; padding: 6px 10px; border-bottom: 1px solid #eceff2; }
+    .cln-table td { padding: 8px 10px; border-bottom: 1px solid #f1f3f5; vertical-align: middle; }
+    .cln-table .cln-size { font-family: ui-monospace, monospace; color: #555; white-space: nowrap; }
+    .cln-clear-btn { padding: 5px 12px; border-radius: 7px; border: 1px solid #e0b48a; background: #fff; color: #9a5b00; font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .cln-clear-btn:hover { background: #fff6ea; }
+    .cln-current-tag { display: inline-block; font-size: 11px; color: #1c5a94; background: #e7f0fa; border-radius: 5px; padding: 2px 8px; white-space: nowrap; }
+    .cln-empty { color: #8a97a3; font-size: 13px; padding: 10px 2px; }
+    .cln-done-tag { display:inline-block; font-size: 11.5px; color: #1f7a3d; }
+    .cln-current-box { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; background: #fff7e6; border: 2px solid #f0a500; border-radius: 10px; padding: 14px 16px; margin: 4px 0 4px; }
+    .cln-current-info { font-size: 13.5px; color: #6b4a12; }
+    .cln-current-info b { color: #9a5b00; font-size: 15px; }
+    .cln-current-box .sp-btn-free { margin-left: auto; }
+    .cln-current-box .sp-btn-free:disabled { opacity: .5; cursor: not-allowed; }
     /* v0.52.243: 説明文中のステップ番号をセール名で出し分ける (参加商品追加=超SALE①/マラソン②等) */
     .n-ma { display: none; }
     body[data-sale-name="marathon"] .n-ss { display: none; }
@@ -4215,7 +4241,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.305</span>
+      <span class="version">v0.52.309</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4477,14 +4503,9 @@
             <span id="storage-panel-badge" class="sp-badge"></span>
           </button>
           <div id="storage-panel-body" class="storage-panel-body" style="display:none;">
-            <p class="sp-desc">このツールはブラウザの保存領域(localStorage)にデータを保存します。上限に達すると取り込みが保存できません。まず<b>バックアップ</b>を書き出し、その後<b>過去セールの取り込みCSV</b>を削除すると容量を空けられます（商品行・タイトル・結果は残ります）。</p>
+            <p class="sp-desc">このツールはブラウザの保存領域(localStorage)にデータを保存します。上限に達すると取り込みが保存できません。</p>
             <div id="storage-usage" class="sp-usage"></div>
-            <div class="sp-actions">
-              <button type="button" id="btn-storage-backup" class="sp-btn sp-btn-backup">💾 バックアップを書き出す（JSON）</button>
-              <button type="button" id="btn-storage-free" class="sp-btn sp-btn-free">🧹 過去セールの取り込みCSVを削除して空ける</button>
-            </div>
-            <div id="storage-free-list" class="sp-free-list"></div>
-            <div id="storage-panel-status" class="sp-status" aria-live="polite"></div>
+            <p class="sp-desc sp-guide">容量を空けるには、<b>「セール作業手順」→ セール後 →「ツール内不要データ削除」</b>（スーパーSALE=㉑ / マラソン=㉒）を開いて、終わったセール期間の取り込みCSVを削除してください。</p>
           </div>
         </div>
 
@@ -5182,6 +5203,34 @@
           </div>
         </div>
       </div>
+
+      <!-- v0.52.306: ツール内不要データ削除 (localStorage容量オーバー対策) -->
+      <div id="tool-cleanup" class="tool-panel">
+        <div class="tool-panel-header">
+          <h2><span class="vstep-num"></span>ツール内不要データ削除</h2>
+        </div>
+        <p class="tool-panel-description">ブラウザの保存容量（localStorage）を空けます。終わった過去セールの「取り込みCSVの実体」だけを削除できます。<b>参加履歴・セール用サムネイルは残ります。</b></p>
+
+        <div class="card">
+          <div class="cln-explain">
+            <div class="cln-explain-title">⚠️ 容量オーバーとは？</div>
+            <p>このツールはデータをブラウザの保存領域(localStorage)に保存します。この領域は同じサイトの他ツールと共有で、上限は約5MBです。上限に達すると<b>新しい取り込みが保存されず</b>、CSVを取り込んでも「セール参加商品」に反映されません。</p>
+            <p>容量の大半を占めているのは、各セールの<b>「取り込みCSVの実体」</b>です。具体的には、作業手順の <b>①参加商品追加</b>・<b>④原価特定-単一orセット商品仕分け</b>・<b>⑤原価特定-セット構成物原価特定</b>・<b>⑨RMSアップ用CSV作成</b> で取り込んだCSVがそのまま保持されています。これらは<b>そのセールを進めるときの入力にすぎず、終わった過去セールでは不要</b>です。</p>
+            <p class="cln-keep">残すもの: <b>参加履歴</b>（商品行）と<b>セール用サムネイル</b>（貼付画像）。削除するのは上記の取り込みCSV実体のみで、あとから再取り込みできます。</p>
+          </div>
+
+          <div id="cleanup-usage" class="sp-usage"></div>
+
+          <div class="cln-current-box" id="cleanup-current-box">
+            <div class="cln-current-info">削除対象（現在ヘッダーで選択中のセール期間）: <b id="cleanup-current-label">-</b> <span id="cleanup-current-size" class="cln-size"></span></div>
+            <button type="button" id="btn-cleanup-current" class="sp-btn sp-btn-free">🧹 このセール期間の取り込みCSVを削除</button>
+          </div>
+
+          <div class="cln-list-head">他のセール期間（必要なら個別に削除できます）</div>
+          <div id="cleanup-list" class="cln-list"></div>
+          <div id="cleanup-status" class="sp-status"></div>
+        </div>
+      </div>
     </div>
   </main>
 
@@ -5505,7 +5554,7 @@
     // ※旧 cost-non-set は v0.52.88 で廃止(②のセクション1=単一商品 に統合)
     // ※サブビュー間は forward/back で履歴を残す。同一サブビュー間は履歴に積まない。
     // 履歴に積まれた viewId は、ブラウザ戻る/進むで復元される。
-    const VALID_VIEWS = ['products','workflow','sale-thumb','pre-select','join-decide','add-products','ad-info','decide-price','decide-title','dl-rms-csv','make-rms-csv','make-thumb','cost-set-item','cost-set-component','upload-rms','rms-event','sku-record','ad-delete','ad-restore','upload-original','sku-restore','thumb-change','sp-banner','top-image-back','okurikomi','history'];
+    const VALID_VIEWS = ['products','workflow','sale-thumb','pre-select','join-decide','add-products','ad-info','decide-price','decide-title','dl-rms-csv','make-rms-csv','make-thumb','cost-set-item','cost-set-component','upload-rms','rms-event','sku-record','ad-delete','ad-restore','upload-original','sku-restore','thumb-change','sp-banner','top-image-back','okurikomi','history','cleanup'];
     // ブラウザ/マウスの「戻る」でサブビューから戻れるよう、サブビュー遷移時は history.pushState する
     let _suppressPushState = false; // popstate由来の呼び出しでは積まない
     const MAIN_TABS = ['products', 'workflow', 'sale-thumb', 'history'];
@@ -5701,6 +5750,10 @@
         if (viewId === 'cost-set-item') { renderUploadedFileSlot('setItem', 'uf-slot-setItem'); renderUploadedFileSlot('nonSet', 'uf-slot-nonSet'); }
         if (viewId === 'cost-set-component') renderUploadedFileSlot('setComponent', 'uf-slot-setComponent');
         if (viewId === 'make-rms-csv') { if (window._mkRestoreSlots) window._mkRestoreSlots(); renderUploadedFileSlot('mkSale', 'uf-slot-mkSale', () => { if (window._mkClearSlot) window._mkClearSlot('sale'); }); renderUploadedFileSlot('mkRms', 'uf-slot-mkRms', () => { if (window._mkClearSlot) window._mkClearSlot('rms'); }); }
+      }
+      // v0.52.306: ツール内不要データ削除ビューを開くときは使用量とセール別リストを再描画
+      if (viewId === 'cleanup') {
+        if (typeof renderCleanupView === 'function') renderCleanupView();
       }
       // upload-original サブビュー (セール後①) を開くときは保管ファイル表示を更新
       if (viewId === 'upload-original') {
@@ -6957,6 +7010,8 @@
               if (shop === curShop && sn === curSale && ym === curYm) continue;
               const data = byYm[ym];
               if (!data || typeof data !== 'object') continue;
+              // v0.52.308: 削除前に過去割引率を恒久記録へ退避
+              _preserveDiscHistBeforeDelete(shop, sn, ym, data);
               freed += spReobtainableCharsOf(data);
               for (const bk of SP_REOBTAINABLE_BLOB_KEYS) { if (bk in data) delete data[bk]; }
               if (data.uploadedFiles && typeof data.uploadedFiles === 'object') {
@@ -6996,6 +7051,184 @@
       if (bBackup) bBackup.addEventListener('click', exportBackupJson);
       const bFree = document.getElementById('btn-storage-free');
       if (bFree) bFree.addEventListener('click', freeSpacePastPeriods);
+    })();
+
+    // ===== v0.52.306: 「ツール内不要データ削除」ビュー =====
+    // 全ショップ/セール/年月のうち、再取得可能blobを持つ期間を列挙 (現在作業中の期間には isCurrent)
+    function spListAllReobtainable() {
+      const out = [];
+      const v2 = _loadArchiveV2() || {};
+      const curShop = getCurrentShop();
+      const curSale = getCurrentSaleName();
+      const curYm = currentYM || (typeof getCurrentYM === 'function' ? getCurrentYM() : null);
+      for (const shop of Object.keys(v2)) {
+        const byName = v2[shop] || {};
+        for (const sn of Object.keys(byName)) {
+          const byYm = byName[sn] || {};
+          for (const ym of Object.keys(byYm)) {
+            const chars = spReobtainableCharsOf(byYm[ym]);
+            if (chars > 0) out.push({ shop, sn, ym, chars, isCurrent: (shop === curShop && sn === curSale && ym === curYm) });
+          }
+        }
+      }
+      out.sort((a, b) => b.chars - a.chars);
+      return out;
+    }
+    // v0.52.308: rmsCsvB64 を消す前に、その期間の「過去割引率」を恒久インデックス
+    //   (discount-history-index-v1) へ確実に退避する。過去割引率は rmsCsvB64 由来で
+    //   算出されるため、CSVを消してもこのインデックスに記録が残れば ⑥ の「過去割引率」で
+    //   引き続き表示できる。
+    function _preserveDiscHistBeforeDelete(shop, sn, ym, data) {
+      try {
+        if (!data || !data.rmsCsvB64) return;
+        if (typeof _mgrDiscountsFromData !== 'function') return;
+        const map = _mgrDiscountsFromData(data); // mgr -> Set(disc)
+        if (!map || !Object.keys(map).length) return;
+        const all = (typeof _loadDiscHist === 'function') ? _loadDiscHist() : null;
+        if (!all) return;
+        if (!all[shop]) all[shop] = {};
+        for (const mgr of Object.keys(map)) {
+          if (!all[shop][mgr]) all[shop][mgr] = [];
+          for (const d of map[mgr]) {
+            if (!all[shop][mgr].some(e => e.ym === ym && e.sale === sn && e.disc === d)) {
+              all[shop][mgr].push({ ym, sale: sn, disc: d });
+            }
+          }
+        }
+        if (typeof _saveDiscHist === 'function') _saveDiscHist(all);
+      } catch (e) { /* 退避失敗は握りつぶし (削除自体は続行) */ }
+    }
+    // 1期間の再取得可能blobを削除
+    function spClearOnePeriod(shop, sn, ym) {
+      try {
+        const v2 = _loadArchiveV2() || {};
+        const data = v2[shop] && v2[shop][sn] && v2[shop][sn][ym];
+        if (!data || typeof data !== 'object') return false;
+        // v0.52.308: 削除前に過去割引率を恒久記録へ退避
+        _preserveDiscHistBeforeDelete(shop, sn, ym, data);
+        for (const bk of SP_REOBTAINABLE_BLOB_KEYS) { if (bk in data) delete data[bk]; }
+        if (data.uploadedFiles && typeof data.uploadedFiles === 'object') {
+          for (const sk of Object.keys(data.uploadedFiles)) {
+            const e = data.uploadedFiles[sk];
+            if (e && typeof e.dataB64 === 'string') { delete e.dataB64; delete e.mime; }
+          }
+        }
+        return _saveArchiveV2(v2);
+      } catch (e) { return false; }
+    }
+    function setCleanupStatus(msg, kind) {
+      const el = document.getElementById('cleanup-status');
+      if (!el) return;
+      el.className = 'sp-status' + (kind ? ' ' + kind : '');
+      el.innerHTML = msg || '';
+    }
+    // 現在ヘッダーで選択中のセール期間の再取得可能blobの文字数
+    function spCurrentPeriodReobtainableChars() {
+      const v2 = _loadArchiveV2() || {};
+      const shop = getCurrentShop();
+      const sn = getCurrentSaleName();
+      const ym = currentYM || (typeof getCurrentYM === 'function' ? getCurrentYM() : null);
+      if (!sn || !ym) return null; // 未選択
+      const data = v2[shop] && v2[shop][sn] && v2[shop][sn][ym];
+      return { shop, sn, ym, chars: data ? spReobtainableCharsOf(data) : 0, exists: !!data };
+    }
+    function renderCleanupView() {
+      // 使用量バー
+      const usageEl = document.getElementById('cleanup-usage');
+      if (usageEl) {
+        const total = spTotalLsChars();
+        const sale = spSaleKeyChars();
+        const pct = Math.min(100, Math.round(total / SP_LIMIT_CHARS * 100));
+        const warn = pct >= 85;
+        usageEl.innerHTML =
+          `<div class="sp-bar${warn ? ' warn' : ''}"><span style="width:${pct}%"></span></div>` +
+          `<div class="sp-usage-text">使用量の目安: <b>${_fmtChars(total)}</b> / 約${_fmtChars(SP_LIMIT_CHARS)}（<b>${pct}%</b>）　うちこのツール: <b>${_fmtChars(sale)}</b></div>`;
+      }
+      // v0.52.307: 現在選択中のセール期間 (削除対象) を表示 + ボタン活性制御
+      const labelEl = document.getElementById('cleanup-current-label');
+      const sizeEl = document.getElementById('cleanup-current-size');
+      const curBtn = document.getElementById('btn-cleanup-current');
+      const cur = spCurrentPeriodReobtainableChars();
+      if (labelEl && sizeEl && curBtn) {
+        if (!cur) {
+          labelEl.textContent = '（ヘッダーでセール期間が未選択です）';
+          sizeEl.textContent = '';
+          curBtn.disabled = true;
+        } else {
+          labelEl.textContent = `${cur.shop} / ${spSaleLabel(cur.sn)} / ${ymLabel(cur.ym)}`;
+          if (cur.chars > 0) {
+            sizeEl.textContent = `（約${_fmtChars(cur.chars)}）`;
+            curBtn.disabled = false;
+          } else {
+            sizeEl.textContent = '（削除できる取り込みCSVはありません）';
+            curBtn.disabled = true;
+          }
+        }
+      }
+      // 他のセール期間リスト (現在選択中は除外)
+      const listEl = document.getElementById('cleanup-list');
+      if (!listEl) return;
+      const list = spListFreeablePeriods();
+      if (list.length === 0) {
+        listEl.innerHTML = '<div class="cln-empty">他に削除できる取り込みCSVはありません。</div>';
+        return;
+      }
+      const rows = list.map(x => {
+        const label = `${escapeHtml(x.shop)} / ${spSaleLabel(x.sn)} / ${escapeHtml(ymLabel(x.ym))}`;
+        const btn = `<button type="button" class="cln-clear-btn" data-shop="${escapeHtml(x.shop)}" data-sn="${escapeHtml(x.sn)}" data-ym="${escapeHtml(x.ym)}">クリア</button>`;
+        return `<tr><td>${label}</td><td class="cln-size">約${_fmtChars(x.chars)}</td><td style="text-align:right;">${btn}</td></tr>`;
+      }).join('');
+      listEl.innerHTML = `<table class="cln-table"><thead><tr><th>ショップ / セール / 年月</th><th>削除で空く容量</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+    }
+    // ビューのボタン/リストを結線
+    (function bindCleanupView() {
+      // v0.52.307: 現在ヘッダーで選択中のセール期間だけをワンクリック削除
+      const bCurrent = document.getElementById('btn-cleanup-current');
+      if (bCurrent) bCurrent.addEventListener('click', () => {
+        const cur = spCurrentPeriodReobtainableChars();
+        if (!cur || cur.chars <= 0) return;
+        const label = `${cur.shop} / ${spSaleLabel(cur.sn)} / ${ymLabel(cur.ym)}`;
+        const msg = '現在選択中のセール期間\n「' + label + '」\nの取り込みCSVの実体（約' + _fmtChars(cur.chars) + '）を削除します。\n\n'
+          + '・商品行 / 参加履歴 / セール用サムネイルは残ります。\n'
+          + '・削除するのは①④⑤⑨で取り込んだCSV実体のみ（後で再取り込みできます）。\n\n実行しますか？';
+        if (!window.confirm(msg)) return;
+        const before = spTotalLsChars();
+        const ok = spClearOnePeriod(cur.shop, cur.sn, cur.ym);
+        const freed = before - spTotalLsChars();
+        if (ok) {
+          setCleanupStatus('✅ 「' + escapeHtml(label) + '」の取り込みCSVを削除しました（約' + _fmtChars(freed) + ' を解放）。', 'success');
+        } else {
+          setCleanupStatus('❌ 削除に失敗しました。', 'error');
+        }
+        renderCleanupView();
+        if (typeof renderStoragePanel === 'function') renderStoragePanel();
+      });
+      const listEl = document.getElementById('cleanup-list');
+      if (listEl) {
+        listEl.addEventListener('click', (e) => {
+          const btn = e.target.closest('.cln-clear-btn');
+          if (!btn) return;
+          const shop = btn.getAttribute('data-shop');
+          const sn = btn.getAttribute('data-sn');
+          const ym = btn.getAttribute('data-ym');
+          const ok = spClearOnePeriod(shop, sn, ym);
+          if (ok) {
+            btn.outerHTML = '<span class="cln-done-tag">✅ 削除しました</span>';
+            setCleanupStatus(`✅ ${escapeHtml(shop)} / ${spSaleLabel(sn)} / ${escapeHtml(ymLabel(ym))} の取り込みCSVを削除しました。`, 'success');
+            if (typeof renderStoragePanel === 'function') renderStoragePanel();
+            // 使用量バーだけ更新（行は消さずチェック表示のまま残す）
+            const usageEl = document.getElementById('cleanup-usage');
+            if (usageEl) {
+              const total = spTotalLsChars(), sale = spSaleKeyChars();
+              const pct = Math.min(100, Math.round(total / SP_LIMIT_CHARS * 100));
+              usageEl.innerHTML = `<div class="sp-bar${pct>=85?' warn':''}"><span style="width:${pct}%"></span></div>` +
+                `<div class="sp-usage-text">使用量の目安: <b>${_fmtChars(total)}</b> / 約${_fmtChars(SP_LIMIT_CHARS)}（<b>${pct}%</b>）　うちこのツール: <b>${_fmtChars(sale)}</b></div>`;
+            }
+          } else {
+            setCleanupStatus('❌ 削除に失敗しました。', 'error');
+          }
+        });
+      }
     })();
     // 年月の昇順→降順の並び替え(最新優先)
     function sortYMs(yms) {
@@ -9597,6 +9830,7 @@
           { id: 'after-upload-original', label: 'RMS-元CSVアップロード', action: 'open-upload-original' },
           { id: 'after-sku-restore', label: '審査落ちSKU倉庫出し', action: 'open-sku-restore' },
           { id: 'after-top-image-back', label: 'サムネイル戻し', action: 'open-top-image-back' },
+          { id: 'after-cleanup', label: 'ツール内不要データ削除', action: 'open-cleanup' },
         ],
       },
     ];
@@ -9740,7 +9974,7 @@
     }
 
     // 丸付き数字 ①〜⑳
-    const WF_NUMBER_MARKS = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫','⑬','⑭','⑮','⑯','⑰','⑱','⑲','⑳'];
+    const WF_NUMBER_MARKS = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫','⑬','⑭','⑮','⑯','⑰','⑱','⑲','⑳','㉑','㉒','㉓','㉔','㉕','㉖','㉗','㉘','㉙','㉚'];
 
     // v0.52.224: マラソン選択時のみ「① 参加可能商品特定」を先頭に追加
     function getWorkflowBlocks() {
@@ -10602,7 +10836,7 @@
         } else {
           // 商品行は保存できたが、CSV実体(⑤/④で使用)は容量不足で保存できなかった
           setAddProductsStatus(
-            `⚠️ ${productRows.length}件の商品は取り込めました（「セール参加商品」に反映されます）。ただし保存容量が上限のため、後工程(⑤割引率決定・④原価特定)で使うCSV実体を保存できませんでした。下の「ストレージ容量の管理」で容量を空けてから、もう一度①のCSVを取り込み直してください。`,
+            `⚠️ ${productRows.length}件の商品は取り込めました（「セール参加商品」に反映されます）。ただし保存容量が上限のため、後工程(⑤割引率決定・④原価特定)で使うCSV実体を保存できませんでした。「セール作業手順」→ セール後 →「ツール内不要データ削除」(スーパーSALE=㉑ / マラソン=㉒)で終わったセールの取り込みCSVを削除して容量を空けてから、もう一度①のCSVを取り込み直してください。`,
             'error'
           );
           if (typeof showStoragePanel === 'function') showStoragePanel();
@@ -10611,7 +10845,7 @@
         if (err && err.isQuota) {
           // v0.52.305: 容量超過で商品行すら保存できなかった → 正直に伝え、容量管理パネルを開く
           setAddProductsStatus(
-            '❌ 保存できませんでした。ブラウザの保存容量（localStorage）が上限に達しています。下の「ストレージ容量の管理」で、まずバックアップを書き出してから、過去セールの取り込みCSVを削除して容量を空け、もう一度取り込んでください。',
+            '❌ 保存できませんでした。ブラウザの保存容量（localStorage）が上限に達しています。「セール作業手順」→ セール後 →「ツール内不要データ削除」(スーパーSALE=㉑ / マラソン=㉒)を開き、終わったセール期間の取り込みCSVを削除して容量を空けてから、もう一度取り込んでください。',
             'error'
           );
           if (typeof showStoragePanel === 'function') showStoragePanel();
