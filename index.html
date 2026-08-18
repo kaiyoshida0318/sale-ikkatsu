@@ -4339,7 +4339,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.330</span>
+      <span class="version">v0.52.331</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -10688,7 +10688,13 @@
     }
 
     // 楽天店舗ID (cabinet画像URL組み立てに使用)
-    const RAKUTEN_SHOP_ID = 'yukaiya';
+    // v0.52.331: ショップごとに店舗IDが異なるため、現在のショップに応じて切替
+    //   ゆかい屋 → rakuten.co.jp/yukaiya/ 、KAIRY → rakuten.co.jp/kai-ry/
+    const RAKUTEN_SHOP_IDS = { 'ゆかい屋': 'yukaiya', 'KAIRY': 'kai-ry' };
+    function getRakutenShopId() {
+      const shop = (typeof getCurrentShop === 'function') ? getCurrentShop() : '';
+      return RAKUTEN_SHOP_IDS[shop] || 'yukaiya';
+    }
 
     // 楽天RMSの商品画像URL列を組み立てる
     // - RMSのCSVは「商品画像パス1」「商品画像名1」「PC用販売説明文」内のURL等、
@@ -10703,7 +10709,7 @@
       // 楽天画像パスの典型: "/tb/tb-23-03-01a.jpg" 等の相対パス
       // → https://image.rakuten.co.jp/<店舗ID>/cabinet/<パス>
       const path = s.replace(/^\/+/, '');
-      return 'https://image.rakuten.co.jp/' + RAKUTEN_SHOP_ID + '/cabinet/' + path;
+      return 'https://image.rakuten.co.jp/' + getRakutenShopId() + '/cabinet/' + path;
     }
     // CSVヘッダーから画像URL列のインデックスを返す (見つからなければ -1)
     function findImageUrlColumn(header) {
