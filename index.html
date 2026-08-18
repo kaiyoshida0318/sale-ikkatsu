@@ -947,6 +947,21 @@
     .mt-pending-toggle.disc-20.is-on { background: #d36916; }
     .mt-pending-toggle.disc-30.is-on { background: #2a8a45; }
     .mt-pending-toggle.disc-50.is-on { background: #d83838; }
+    /* v0.52.326: 要作成フィルタ 一括解除ボタン */
+    .mt-pending-clear {
+      font-family: inherit;
+      font-size: 12.5px;
+      font-weight: 700;
+      padding: 5px 10px;
+      border: 1.5px solid #b7c0ca;
+      border-radius: 8px;
+      background: #f4f6f8;
+      color: #566;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .mt-pending-clear:hover { background: #e9edf1; border-color: #93a0ad; color: #33414d; }
     .st-pending-count {
       font-size: 13px;
       font-weight: 700;
@@ -4324,7 +4339,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.325</span>
+      <span class="version">v0.52.327</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4982,7 +4997,7 @@
         <div class="tool-panel-header">
           <h2>⑨ セール用サムネイル作成</h2>
         </div>
-        <p class="tool-panel-description">今回割引率が決まっている商品について、今回の割引率のセール用サムネイルを作成・管理します。内容は「セール用サムネイル」タブと連動します。</p>
+        <p class="tool-panel-description">今回割引率が決まっている商品について、今回の割引率のセール用サムネイルを作成・管理します。内容は「セール用サムネイル」タブと連動します。<br>サムネイルの作成には、自社制作ツール「<b>画像日付変更くん</b>」をご利用ください。</p>
         <!-- v0.52.319: 「通常のサムネイルをダウンロード」機能は廃止 -->
         <div class="st-search-bar">
           <input type="text" id="make-thumb-search" class="st-search-input" placeholder="🔍 商品管理番号・商品コードで検索" />
@@ -4991,6 +5006,7 @@
           <button type="button" class="mt-pending-toggle disc-20" data-rate="20" aria-pressed="false" title="20%OFFで今回の割引率のサムネが未作成の商品だけ表示">20%OFF</button>
           <button type="button" class="mt-pending-toggle disc-30" data-rate="30" aria-pressed="false" title="30%OFFで今回の割引率のサムネが未作成の商品だけ表示">30%OFF</button>
           <button type="button" class="mt-pending-toggle disc-50" data-rate="50" aria-pressed="false" title="50%OFFで今回の割引率のサムネが未作成の商品だけ表示">50%OFF</button>
+          <button type="button" id="make-thumb-pending-clear" class="mt-pending-clear" title="要作成のみの絞り込みを解除して全商品を表示">✕ 解除（全表示）</button>
           <span id="make-thumb-pending-count" class="st-pending-count"></span>
           <span id="make-thumb-search-count" class="st-search-count"></span>
         </div>
@@ -8513,6 +8529,18 @@
           if (window._renderThumbHistory) window._renderThumbHistory();
         });
       });
+      // v0.52.326: 「解除（全表示）」— 要作成フィルタを一括解除して全商品表示
+      const clearBtn = document.getElementById('make-thumb-pending-clear');
+      if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+          _makeThumbPendingRates.clear();
+          document.querySelectorAll('.mt-pending-toggle').forEach(b => {
+            b.classList.remove('is-on');
+            b.setAttribute('aria-pressed', 'false');
+          });
+          if (window._renderThumbHistory) window._renderThumbHistory();
+        });
+      }
       // v0.52.154: ✕クリアボタンは廃止
     })();
 
