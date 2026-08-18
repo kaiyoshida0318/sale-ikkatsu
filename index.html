@@ -668,7 +668,7 @@
     body[data-view="make-thumb"] .st-search-bar,
     body[data-view="make-thumb"] #make-thumb-history-container,
     body[data-view="make-thumb"] .thumb-dl-section {
-      width: 950px;
+      width: 1180px; /* v0.52.317: 10/20/30/50%の4列すべてが横スクロールなしで収まる幅に拡張 */
       max-width: 100%;
       box-sizing: border-box;
     }
@@ -1196,12 +1196,16 @@
     .make-thumb-table .thumb-hist-sale-cell { width: 170px; min-width: 150px; }
     .make-thumb-table .thumb-hist-status { white-space: nowrap; width: 1%; }
     /* v0.52.316: 10/20/30/50% の割引率別サムネ列 */
-    .make-thumb-table .mt-rate-th { width: 190px; min-width: 170px; text-align: center; }
+    .make-thumb-table .mt-rate-th { width: 165px; min-width: 150px; text-align: center; }
     .make-thumb-table .mt-rate-th.disc-10 { color: #2d6cb8; }
     .make-thumb-table .mt-rate-th.disc-20 { color: #d36916; }
     .make-thumb-table .mt-rate-th.disc-30 { color: #2a8a45; }
     .make-thumb-table .mt-rate-th.disc-50 { color: #d83838; }
-    .make-thumb-table td.mt-rate-cell { vertical-align: top; width: 190px; min-width: 170px; }
+    .make-thumb-table td.mt-rate-cell { vertical-align: top; width: 165px; min-width: 150px; padding-left: 6px; padding-right: 6px; }
+    /* セル内のサムネセルを列幅に合わせて縮める (横スクロール防止) */
+    .make-thumb-table td.mt-rate-cell .st-cell { width: 100%; min-width: 0; }
+    .make-thumb-table td.mt-rate-cell .st-img-wrap { width: 100%; }
+    .make-thumb-table td.mt-rate-cell .st-url-input { min-width: 0; }
     .make-thumb-table td.mt-rate-cell.is-cur { background: #fff8e6; box-shadow: inset 0 0 0 2px #f0c040; }
     .make-thumb-table td.mt-rate-cell .mt-rate-cur { font-size: 11px; font-weight: 700; color: #b5480b; text-align: center; margin-bottom: 4px; }
     /* v0.52.146: ⑧通常サムネ画像を正方形に */
@@ -4261,7 +4265,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.316</span>
+      <span class="version">v0.52.317</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
