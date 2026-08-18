@@ -1537,6 +1537,13 @@
     .sp-desc b { color: #33414d; }
     .sp-guide { margin-top: 12px; padding: 10px 12px; background: #eef4fb; border-left: 4px solid #4a90d9; border-radius: 6px; color: #2c4a6b; }
     .sp-guide b { color: #1c5a94; }
+    /* v0.52.314: RMSアップ用CSV作成 の日時形式に関する注意書き */
+    .mk-date-note { margin-top: 12px; padding: 12px 14px; background: #fff7e6; border: 1.5px solid #f0a500; border-left: 5px solid #f0a500; border-radius: 8px; }
+    .mk-date-note-title { font-weight: 700; font-size: 13.5px; color: #9a5b00; margin-bottom: 6px; }
+    .mk-date-note p { margin: 0 0 6px; font-size: 12.8px; color: #6b4a12; line-height: 1.7; }
+    .mk-date-note p:last-child { margin-bottom: 0; }
+    .mk-date-note b { color: #b5480b; }
+    .mk-date-note code { background: #fbeecb; padding: 1px 5px; border-radius: 4px; font-size: 12px; color: #7a4a00; }
     .sp-usage { margin: 0 0 14px; }
     .sp-bar { height: 14px; background: #e9edf1; border-radius: 7px; overflow: hidden; margin: 6px 0; }
     .sp-bar > span { display: block; height: 100%; background: linear-gradient(90deg,#4a90d9,#2e6fb0); }
@@ -2471,13 +2478,13 @@
     .hist-table td.hist-nm, .hist-table th.hist-nm { width:200px; max-width:200px; }
     .hist-table td.hist-nm code.hist-code { word-break:break-all; }
     .hist-num { text-align:center; font-weight:600; }
-    .hist-num.ss { color:#185fa5; }
-    .hist-num.ma { color:#d36916; }
-    .hist-num.total { color:#1f6b39; font-size:15px; }
+    .hist-num.ss { color:#d63031; }
+    .hist-num.ma { color:#1b8f3a; }
+    .hist-num.total { color:#1a1a1a; font-size:15px; }
     .hist-periods { display:flex; flex-wrap:wrap; gap:5px; }
     .hist-chip { display:inline-block; border-radius:11px; padding:2px 9px; font-size:11px; }
-    .hist-chip.ss { background:#e7effa; color:#185fa5; }
-    .hist-chip.ma { background:#fbeee0; color:#b45f13; }
+    .hist-chip.ss { background:#fdecec; color:#c0392b; }
+    .hist-chip.ma { background:#e9f5ed; color:#1b7a34; }
     code.hist-code { font-size:12px; color:#333; }
     .product-table th.col-decide-link { min-width: 110px; white-space: nowrap; }
     .product-table td.col-decide-link { text-align: center; }
@@ -4245,7 +4252,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.311</span>
+      <span class="version">v0.52.314</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4665,7 +4672,9 @@
         <div class="card">
           <h2>2. RMSデータのダウンロード</h2>
           <ol class="howto-list">
-            <li>RMS - 店舗設定 - <b>1 商品管理</b> - <b>2 CSV一括編集</b> - <b>CSVダウンロード</b></li>
+            <li>RMS - 店舗設定 - <b>1 商品管理</b> - <b>2 CSV一括編集</b> - <b>CSVダウンロード</b>
+              <div class="card-lead" style="margin-top:6px;">リンク先ページ: <a href="https://item.rms.rakuten.co.jp/rms-item-download/shops/354660" target="_blank" rel="noopener noreferrer">https://item.rms.rakuten.co.jp/rms-item-download/shops/354660</a></div>
+            </li>
             <li>「<b>商品管理番号で絞り込む</b>」で、先程ダウンロードしたCSVの<b>商品管理番号列全体</b>をコピーして一括貼り付け</li>
             <li>以下の項目にチェックを入れてダウンロード
               <ul class="howto-checklist">
@@ -4746,6 +4755,11 @@
             <button type="button" id="btn-make-rms-csv" class="dl-ready" disabled>CSVをダウンロード</button>
           </div>
           <p class="card-lead" style="margin-top:6px; color:#d83838;">※ファイル名に日本語を入れると取り込みエラーが発生するため日本語は入れないこと。</p>
+          <div class="mk-date-note">
+            <div class="mk-date-note-title">⚠️ 販売期間の日時形式について</div>
+            <p>販売期間指定の日時は <b>ハイフン形式 <code>YYYY-MM-DD HH:MM</code></b>（例: <code>2026-08-04 20:00</code>）になっています。これが楽天RMSの正しい形式です。</p>
+            <p><b>中身を確認する場合は、Excelで開かないでください。</b>Excelで開くと日時が自動でスラッシュ形式（例: 2026/8/4）に変換され、そのままアップすると「販売期間指定欄に正しい日付が指定されていません」エラーの原因になります。確認するときはテキストエディタ（メモ帳等）で開いてください。</p>
+          </div>
           <div id="make-rms-csv-status" class="status"></div>
         </div>
       </div>
