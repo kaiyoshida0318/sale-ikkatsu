@@ -4339,7 +4339,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.327</span>
+      <span class="version">v0.52.328</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -5871,6 +5871,8 @@
       }
       // v0.52.128: ⑧ 過去のセール参加履歴表を描画
       if (viewId === 'make-thumb') {
+        // v0.52.328: 画面に入る(=別ページから移動してくる)たびに要作成スナップショットを更新
+        _makeThumbPendingSnapshot = null;
         if (typeof window._renderThumbHistory === 'function') window._renderThumbHistory();
       }
       // v0.52.186: ③ サムネイル戻し 表を描画
@@ -8308,6 +8310,7 @@
     let _makeThumbSearchQuery = ''; // v0.52.146 ⑧検索キーワード
     let _makeThumbDiscSort = 0; // v0.52.153 ⑧今回の割引率ソート: 0=既定(行順) / 1=降順 / 2=昇順
     const _makeThumbPendingRates = new Set(); // v0.52.323 「要作成のみ」を割引率別(10/20/30/50)に絞り込むフィルタ
+    let _makeThumbPendingSnapshot = null; // v0.52.328 絞り込み時点の対象mgr集合(スナップショット)。画像入力で即消えないよう固定。null=再計算
     window._renderThumbHistory = function _renderThumbHistory() {
       const container = document.getElementById('make-thumb-history-container');
       if (!container) return;
@@ -8375,15 +8378,24 @@
           (mgr && mgr.toLowerCase().includes(q)) ||
           (resolveCode(mgr) && resolveCode(mgr).toLowerCase().includes(q)));
       }
-      // v0.52.323: 「要作成のみ」を割引率別に絞り込み。選択中の割引率で、今回の割引率のサムネが未作成の商品だけ表示
+      // v0.52.323/328: 「要作成のみ」を割引率別に絞り込み。
+      //   ただし画像を入れた瞬間に行が消えないよう、絞り込み時点の対象mgrをスナップショットに固定する。
+      //   スナップショットは null のとき(=絞り込み適用/画面遷移/更新の直後)にだけ再計算する。
+      //   画像入力による再描画ではスナップショットを保持し、作成済みになった行も残す。
       if (_makeThumbPendingRates.size > 0) {
-        orderedMgrs = orderedMgrs.filter(mgr => {
-          const d = [...(curMap[mgr] || [])][0];
-          const rn = parseInt(d, 10);
-          if (!_makeThumbPendingRates.has(rn)) return false;
-          const tt = (typeof getSaleThumb === 'function') ? getSaleThumb(mgr, d) : null;
-          return !(tt && tt.img);
-        });
+        if (_makeThumbPendingSnapshot == null) {
+          _makeThumbPendingSnapshot = new Set();
+          for (const mgr of allOrderedMgrs) {
+            const d = [...(curMap[mgr] || [])][0];
+            const rn = parseInt(d, 10);
+            if (!_makeThumbPendingRates.has(rn)) continue;
+            const tt = (typeof getSaleThumb === 'function') ? getSaleThumb(mgr, d) : null;
+            if (!(tt && tt.img)) _makeThumbPendingSnapshot.add(mgr);
+          }
+        }
+        orderedMgrs = orderedMgrs.filter(mgr => _makeThumbPendingSnapshot.has(mgr));
+      } else {
+        _makeThumbPendingSnapshot = null;
       }
       // v0.52.153: 今回の割引率でソート (0=既定/1=降順/2=昇順)。安定ソートで既定の行順を保持
       if (_makeThumbDiscSort !== 0) {
@@ -8526,6 +8538,7 @@
           else _makeThumbPendingRates.add(rate);
           btn.classList.toggle('is-on', _makeThumbPendingRates.has(rate));
           btn.setAttribute('aria-pressed', _makeThumbPendingRates.has(rate) ? 'true' : 'false');
+          _makeThumbPendingSnapshot = null; // v0.52.328: 絞り込み条件が変わったのでスナップショット再計算
           if (window._renderThumbHistory) window._renderThumbHistory();
         });
       });
