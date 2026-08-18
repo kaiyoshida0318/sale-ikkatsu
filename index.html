@@ -4245,7 +4245,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.310</span>
+      <span class="version">v0.52.311</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4830,8 +4830,8 @@
           </div>
           <p style="margin: 8px 0 0 0; font-size: 12px; color: var(--muted);">
             ※「単一商品CSVの<b>商品コード</b>」と「セット商品CSVの<b>セット商品コード</b>」の<b>合計</b>が、
-            <b>直近<span class="n-ss">①</span><span class="n-ma">③</span>で取り込んだ分</b>の<b>システム連携用SKU番号</b>の数と<b>一致</b>している場合のみ取り込めます。
-            不一致の場合はCSVを見直してください。
+            <b>直近<span class="n-ss">①</span><span class="n-ma">③</span>で取り込んだ分</b>の<b>システム連携用SKU番号</b>の数と<b>一致</b>していれば、そのまま取り込めます。
+            <b>件数が合わない場合でも</b>、「取り込む」を押すと<b>確認ダイアログ</b>を挟んで取り込めます（内容は後で見直せます）。
           </p>
           <div id="cost-import-status" class="status" style="margin-top: 10px;"></div>
           <div id="uf-slot-setItem"></div>
@@ -10977,6 +10977,8 @@
 
     // メモリ内に未保存のファイルを保持 (ページ更新するとリセット、これは仕様)
     const _costPendingFiles = { single: null, set: null };
+    // v0.52.311: 件数チェックの状態 (不一致でも確認の上で取り込めるようにする)
+    const _costSkuState = { mismatch: false, single: 0, set: 0, sum: 0, expected: 0 };
 
     // CSVの指定列のユニーク値数を取得 (ヘッダー名で列特定)
     function countUniqueValuesInColumn(csvText, columnName) {
@@ -11055,6 +11057,12 @@
       const sum = singleCount + setCount;
       // シンプル表示: 単一N件 + セットM件 = 合計K件 / 直近①取り込み分L件
       const summary = `単一 <b>${singleCount}</b> 件 + セット <b>${setCount}</b> 件 = <b>${sum}</b> 件 / 直近①取り込み分 <b>${rmsCount}</b> 件`;
+      // v0.52.311: 状態を保持 (取り込みボタン側で不一致確認に使う)
+      _costSkuState.single = singleCount;
+      _costSkuState.set = setCount;
+      _costSkuState.sum = sum;
+      _costSkuState.expected = rmsCount;
+      _costSkuState.mismatch = false;
       if (!singleText && !setText) {
         checkEl.className = 'status';
         checkEl.innerHTML = `<span style="color: var(--muted);">${summary} - 単一・セットのいずれかのCSVを選択してください。</span>`;
@@ -11064,11 +11072,13 @@
         checkEl.innerHTML = `✅ ${summary} - 一致しています。取り込み可能です。`;
         btn.disabled = false;
       } else {
+        // v0.52.311: 不一致でもボタンは有効。押すと確認ダイアログを挟んで取り込める。
+        _costSkuState.mismatch = true;
         checkEl.className = 'status error';
         const diff = sum - rmsCount;
         const msg = diff > 0 ? `直近①取り込み分より <b>${diff}</b> 件多い` : `直近①取り込み分より <b>${-diff}</b> 件少ない`;
-        checkEl.innerHTML = `❌ ${summary} - ${msg}ため、取り込めません。CSVを確認してください。`;
-        btn.disabled = true;
+        checkEl.innerHTML = `⚠️ ${summary} - ${msg}です。件数が合っていませんが、<b>「取り込む」を押すと確認の上で取り込めます</b>。`;
+        btn.disabled = false;
       }
     }
 
@@ -11120,6 +11130,19 @@
       if (btn) {
         btn.addEventListener('click', () => {
           try {
+            // v0.52.311: 件数不一致のときは確認ダイアログを挟む
+            if (_costSkuState.mismatch) {
+              const diff = _costSkuState.sum - _costSkuState.expected;
+              const diffMsg = diff > 0 ? `直近①取り込み分より ${diff} 件多い` : `直近①取り込み分より ${-diff} 件少ない`;
+              const ok = window.confirm(
+                '件数が一致していません。\n\n'
+                + `単一 ${_costSkuState.single} 件 + セット ${_costSkuState.set} 件 = 合計 ${_costSkuState.sum} 件\n`
+                + `直近①で取り込んだ分: ${_costSkuState.expected} 件\n`
+                + `（${diffMsg}）\n\n`
+                + 'このまま取り込みますか？'
+              );
+              if (!ok) return;
+            }
             const ym = currentYM || getCurrentYM();
             if (!ym) throw new Error('セール期間(開始日時)が未入力です');
             const archive = loadArchive();
