@@ -1030,8 +1030,27 @@
     }
     .sale-thumb-table .st-col-mgr { font-family: ui-monospace, monospace; white-space: nowrap; width: 110px; }
     .sale-thumb-table .st-col-code { font-family: ui-monospace, monospace; white-space: nowrap; width: 110px; }
-    .sale-thumb-table .st-col-normal { width: 110px; }
+    .sale-thumb-table .st-col-normal { width: 170px; }
     .sale-thumb-table .st-col-rate { width: 150px; }
+    /* v0.52.333: 通常サムネの画像URL (セール用サムネ作成と同じ表示) */
+    .sale-thumb-table .mt-normal-url { margin-top: 6px; font-size: 10.5px; line-height: 1.4; text-align: left; }
+    .sale-thumb-table .mt-normal-url-label { color: #8a97a3; display: block; margin-bottom: 2px; }
+    .sale-thumb-table .mt-normal-url-box {
+      display: block;
+      max-width: 150px;
+      margin: 0 auto;
+      box-sizing: border-box;
+      border: 1px solid #d5dbe1;
+      border-radius: 5px;
+      padding: 3px 6px;
+      background: #fff;
+      color: #33414d;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      cursor: text;
+    }
+    .sale-thumb-table .mt-normal-url-none { color: #b3b8bd; text-align: center; display: block; }
     /* v0.52.145: 通常サムネ画像を正方形に */
     .sale-thumb-table .st-col-normal .product-image-thumb {
       width: 90px;
@@ -4339,7 +4358,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.331</span>
+      <span class="version">v0.52.333</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4997,7 +5016,7 @@
         <div class="tool-panel-header">
           <h2>⑨ セール用サムネイル作成</h2>
         </div>
-        <p class="tool-panel-description">今回割引率が決まっている商品について、今回の割引率のセール用サムネイルを作成・管理します。内容は「セール用サムネイル」タブと連動します。<br>サムネイルの作成には、自社制作ツール「<b>画像日付変更くん</b>」をご利用ください。</p>
+        <p class="tool-panel-description">今回割引率が決まっている商品について、今回の割引率のセール用サムネイルを作成・管理します。内容は「セール用サムネイル」タブと連動します。<br>サムネイルの作成には、自社制作ツール「<b>画像日付変更くん</b>」を使用してください。</p>
         <!-- v0.52.319: 「通常のサムネイルをダウンロード」機能は廃止 -->
         <div class="st-search-bar">
           <input type="text" id="make-thumb-search" class="st-search-input" placeholder="🔍 商品管理番号・商品コードで検索" />
@@ -9954,7 +9973,7 @@
         return `<tr>
           <td class="st-col-mgr">${escapeHtml(p.mgr)}</td>
           <td class="st-col-code">${escapeHtml(p.itemCode || '')}</td>
-          <td class="st-col-normal">${imageCellHtml(p.imageUrl)}</td>
+          <td class="st-col-normal">${imageCellHtml(p.imageUrl)}${p.imageUrl ? `<div class="mt-normal-url"><span class="mt-normal-url-label">画像URL</span><span class="mt-normal-url-box" title="${escapeHtml(String(p.imageUrl).trim())}">${escapeHtml(String(p.imageUrl).trim())}</span></div>` : `<div class="mt-normal-url"><span class="mt-normal-url-none">画像URLなし</span></div>`}</td>
           ${cells}
         </tr>`;
       }).join('');
@@ -9974,6 +9993,18 @@
     function bindSaleThumbCellEvents(container, rerender) {
       if (!container) return;
       const doRerender = (typeof rerender === 'function') ? rerender : () => {};
+      // v0.52.333: 通常サムネURLの枠をダブルクリックで全選択 (省略表示でも全文コピー可)
+      container.querySelectorAll('.mt-normal-url-box').forEach(el => {
+        el.addEventListener('dblclick', () => {
+          try {
+            const range = document.createRange();
+            range.selectNodeContents(el);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+          } catch (e) {}
+        });
+      });
       // 画像URL入力 (保存)
       container.querySelectorAll('.st-url-input').forEach(inp => {
         const save = () => {
