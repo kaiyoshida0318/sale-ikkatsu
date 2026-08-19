@@ -4261,20 +4261,23 @@
     .ad-table tr.is-ad-deleted td {
       background: #fdecec;
     }
-    /* v0.52.334: 送り込み用画像設置 表 */
+    /* v0.52.334/335: 送り込み用画像設置 表 */
     .oki-table-wrap { overflow-x: auto; }
     .oki-table { border-collapse: collapse; width: 100%; font-size: 13px; }
     .oki-table th, .oki-table td { border: 1px solid #e2e6ea; padding: 8px 10px; text-align: left; vertical-align: middle; }
     .oki-table thead th { background: #f4f6f8; position: sticky; top: 0; font-weight: 700; color: #33414d; }
     .oki-table td.oki-mgr { white-space: nowrap; }
-    .oki-table .oki-sq { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 4px; background: #e0a020; vertical-align: middle; margin-right: 6px; }
-    .oki-table .oki-parent-note { color: #8a5e08; font-size: 11px; margin-left: 4px; }
+    .oki-table td.oki-mgr-child { padding-left: 22px; } /* 子は少しインデント */
+    .oki-table .oki-sq { display: inline-flex; width: 14px; height: 14px; border-radius: 4px; vertical-align: middle; margin-right: 6px; }
+    .oki-table .oki-sq-p { background: #2e9043; } /* 親=緑 */
+    .oki-table .oki-sq-c { background: #e0a020; } /* 子=黄 */
+    .oki-table .oki-role-note { font-size: 11px; margin-left: 6px; }
+    .oki-table .oki-role-p { color: #1f6b39; }
+    .oki-table .oki-role-c { color: #8a5e08; }
     .oki-table td.oki-img { text-align: center; }
     .oki-table td.oki-img .product-image-thumb { max-width: 72px; max-height: 72px; border-radius: 5px; }
     .oki-table td.oki-img .img-placeholder { display: inline-block; padding: 8px 10px; color: #9aa0a6; font-size: 11px; }
-    .oki-table td.oki-check { text-align: center; width: 70px; }
-    .oki-table td.oki-check input { width: 18px; height: 18px; accent-color: var(--brand); cursor: pointer; }
-    .oki-table tr.is-oki-done td { background: #eef8f0; }
+    .oki-table tr.is-oki-parent td { background: #eef8f0; font-weight: 600; } /* 親行=薄緑 */
   </style>
 </head>
 <body>
@@ -4372,7 +4375,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.334</span>
+      <span class="version">v0.52.336</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -5199,7 +5202,7 @@
         <div class="tool-panel-header">
           <h2><span class="vstep-num" data-vstep="okurikomi-image"></span>送り込み用画像設置</h2>
         </div>
-        <p class="tool-panel-description">送り込み設定をした商品がある場合、<b>送り込み元（黄色の四角＝子商品）</b>の商品ページに、送り込み先（親商品）へのリンクとなる画像を設置していきます。送り込み設定がある場合のみ対応が必要です。設置し終えた商品はチェックを入れて管理してください。</p>
+        <p class="tool-panel-description">送り込み設定をした商品がある場合、<b>送り込み元（黄色の四角＝子商品）</b>の商品ページに、送り込み先（親商品＝緑の四角）へのリンクとなる画像を設置していきます。各グループの先頭に親商品を参考表示し、その下に画像設置が必要な子商品を並べます。送り込み設定がある場合のみ対応が必要です。</p>
 
         <div class="card">
           <div id="okurikomi-image-summary" class="status sku-restore-summary"></div>
@@ -5349,6 +5352,21 @@
           <div id="top-image-back-summary" class="status sku-restore-summary"></div>
           <div id="top-image-back-table-container">
             <div class="empty-state">対象データがありません。「① 参加商品追加」でRMSデータを取り込んでください。</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- サブビュー: 送り込み用画像撤去 (v0.52.336) -->
+      <div id="tool-okurikomi-image-remove" class="tool-panel">
+        <div class="tool-panel-header">
+          <h2><span class="vstep-num" data-vstep="okurikomi-image-remove"></span>送り込み用画像撤去</h2>
+        </div>
+        <p class="tool-panel-description">セール中に設置した送り込み用の画像を撤去していきます。<b>送り込み元（黄色の四角＝子商品）</b>の商品ページに設置した、送り込み先（親商品＝緑の四角）へのリンク画像を外します。各グループの先頭に親商品を参考表示し、その下に画像撤去が必要な子商品を並べます。送り込み設定がある場合のみ対応が必要です。</p>
+
+        <div class="card">
+          <div id="okurikomi-image-remove-summary" class="status sku-restore-summary"></div>
+          <div id="okurikomi-image-remove-table-container">
+            <div class="empty-state">送り込み設定がありません。対応不要です。</div>
           </div>
         </div>
       </div>
@@ -5703,7 +5721,7 @@
     // ※旧 cost-non-set は v0.52.88 で廃止(②のセクション1=単一商品 に統合)
     // ※サブビュー間は forward/back で履歴を残す。同一サブビュー間は履歴に積まない。
     // 履歴に積まれた viewId は、ブラウザ戻る/進むで復元される。
-    const VALID_VIEWS = ['products','workflow','sale-thumb','pre-select','join-decide','add-products','ad-info','decide-price','decide-title','dl-rms-csv','make-rms-csv','make-thumb','cost-set-item','cost-set-component','upload-rms','rms-event','sku-record','ad-delete','ad-restore','upload-original','sku-restore','thumb-change','okurikomi-image','sp-banner','top-image-back','okurikomi','history','cleanup'];
+    const VALID_VIEWS = ['products','workflow','sale-thumb','pre-select','join-decide','add-products','ad-info','decide-price','decide-title','dl-rms-csv','make-rms-csv','make-thumb','cost-set-item','cost-set-component','upload-rms','rms-event','sku-record','ad-delete','ad-restore','upload-original','sku-restore','thumb-change','okurikomi-image','sp-banner','top-image-back','okurikomi-image-remove','okurikomi','history','cleanup'];
     // ブラウザ/マウスの「戻る」でサブビューから戻れるよう、サブビュー遷移時は history.pushState する
     let _suppressPushState = false; // popstate由来の呼び出しでは積まない
     const MAIN_TABS = ['products', 'workflow', 'sale-thumb', 'history'];
@@ -5895,6 +5913,10 @@
       // v0.52.334: 送り込み用画像設置 を開くときは表を再描画
       if (viewId === 'okurikomi-image') {
         if (typeof window._renderOkurikomiImageTable === 'function') window._renderOkurikomiImageTable();
+      }
+      // v0.52.336: 送り込み用画像撤去 を開くときは表を再描画
+      if (viewId === 'okurikomi-image-remove') {
+        if (typeof window._renderOkurikomiImageRemoveTable === 'function') window._renderOkurikomiImageRemoveTable();
       }
       // v0.52.203: 各アップロードページを開くとき、保持中ファイルのチップを再描画
       if (typeof renderUploadedFileSlot === 'function') {
@@ -8778,13 +8800,18 @@
       } catch (e) {}
     }
 
-    // v0.52.334: 送り込み用画像設置 表を描画
-    //   送り込み設定(親子グループ)の「子＝送り込み元(黄色)」商品ごとに、リンク画像設置のチェックを管理。
+    // v0.52.334/336: 送り込み用画像 設置/撤去 表を描画 (共通)
+    //   送り込み設定(親子グループ)を「親(先頭)→子」で表示。親=参考表示、子(送り込み元)=対応対象。
     //   送り込み設定が無ければ「対応不要」を表示。
-    function renderOkurikomiImageTable() {
-      const container = document.getElementById('okurikomi-image-table-container');
+    //   opts: { containerId, summaryId, actionWord ('設置'|'撤去') }
+    function renderOkurikomiImgTable(opts) {
+      opts = opts || {};
+      const containerId = opts.containerId || 'okurikomi-image-table-container';
+      const summaryId = opts.summaryId || 'okurikomi-image-summary';
+      const actionWord = opts.actionWord || '設置';
+      const container = document.getElementById(containerId);
       if (!container) return;
-      const summaryEl = document.getElementById('okurikomi-image-summary');
+      const summaryEl = document.getElementById(summaryId);
       const setSummary = (html, cls) => {
         if (!summaryEl) return;
         summaryEl.innerHTML = html;
@@ -8797,12 +8824,19 @@
         return;
       }
       const groups = (typeof loadOkurikomiGroups === 'function') ? loadOkurikomiGroups() : [];
-      // 子(送り込み元)を親情報付きで平坦化。表示順はグループ順→子の登録順。
-      const childList = [];
-      const seen = new Set();
+      // v0.52.335: グループ単位で「親(先頭)→子」を並べる。親は表示のみ(チェックなし)、子(送り込み元)にチェック。
+      //   displayList: { mgr, role:'parent'|'child', parent }
+      const displayList = [];
+      const childList = []; // 未対応件数の集計は子のみ
+      const seenChild = new Set();
       groups.forEach(g => {
-        (g.children || []).forEach(cm => {
-          if (cm && !seen.has(cm)) { childList.push({ mgr: cm, parent: g.parent }); seen.add(cm); }
+        const kids = (g.children || []).filter(cm => cm && !seenChild.has(cm));
+        if (kids.length === 0 && !g.parent) return;
+        if (g.parent) displayList.push({ mgr: g.parent, role: 'parent', parent: '' });
+        kids.forEach(cm => {
+          seenChild.add(cm);
+          displayList.push({ mgr: cm, role: 'child', parent: g.parent });
+          childList.push({ mgr: cm, parent: g.parent });
         });
       });
 
@@ -8818,30 +8852,28 @@
       const rowsArr = Array.isArray(data.rows) ? data.rows : [];
       const mgrToRow = {};
       for (const r of rowsArr) { if (r && r.mgr) mgrToRow[r.mgr] = r; }
-      const doneMap = getOkurikomiImageDoneMap();
 
-      // サマリー (未対応=未チェック件数)
-      const total = childList.length;
-      let remain = 0;
-      for (const c of childList) { if (!doneMap[c.mgr]) remain++; }
-      if (remain === 0) {
-        setSummary(`✓ 設置完了: <b>0</b> 件未対応（全 ${total} 件 設置済み）`, 'is-done');
-      } else {
-        setSummary(`未対応: <b>${remain}</b> 件（全 ${total} 件中）`, 'is-pending');
-      }
+      // サマリー (送り込み元=子商品の件数。この件数だけ画像設置対応が必要)
+      const childTotal = childList.length;
+      const parentTotal = displayList.filter(d => d.role === 'parent').length;
+      setSummary(`画像${actionWord}が必要な送り込み元（子）商品: <b>${childTotal}</b> 件（送り込み先（親） ${parentTotal} グループ）`, 'is-pending');
 
-      const rowsHtml = childList.map(c => {
-        const row = mgrToRow[c.mgr] || {};
+      const rowsHtml = displayList.map(d => {
+        const row = mgrToRow[d.mgr] || {};
         const itemCode = row.itemCode || '';
         const imgUrl = row.imageUrl || '';
         const imgCell = (typeof imageCellHtml === 'function') ? imageCellHtml(imgUrl) : (imgUrl ? `<img src="${escapeHtml(imgUrl)}" class="product-image-thumb">` : '<span class="img-placeholder">未取得</span>');
-        const checked = !!doneMap[c.mgr];
-        const trCls = checked ? ' class="is-oki-done"' : '';
-        return `<tr${trCls} data-mgr="${escapeHtml(c.mgr)}">
-          <td class="oki-mgr"><span class="oki-sq" title="送り込み元（子）"></span>${escapeHtml(c.mgr)}<span class="oki-parent-note" title="送り込み先（親）">→親: ${escapeHtml(c.parent)}</span></td>
+        if (d.role === 'parent') {
+          return `<tr class="is-oki-parent" data-mgr="${escapeHtml(d.mgr)}">
+            <td class="oki-mgr"><span class="oki-sq oki-sq-p" title="送り込み先（親）"></span>${escapeHtml(d.mgr)}<span class="oki-role-note oki-role-p">送り込み先（親）</span></td>
+            <td class="oki-code">${escapeHtml(itemCode)}</td>
+            <td class="oki-img">${imgCell}</td>
+          </tr>`;
+        }
+        return `<tr class="is-oki-child" data-mgr="${escapeHtml(d.mgr)}">
+          <td class="oki-mgr oki-mgr-child"><span class="oki-sq oki-sq-c" title="送り込み元（子）"></span>${escapeHtml(d.mgr)}<span class="oki-role-note oki-role-c">送り込み元（子）</span></td>
           <td class="oki-code">${escapeHtml(itemCode)}</td>
           <td class="oki-img">${imgCell}</td>
-          <td class="oki-check"><input type="checkbox" class="oki-done-check" data-mgr="${escapeHtml(c.mgr)}"${checked ? ' checked' : ''} aria-label="設置済み"></td>
         </tr>`;
       }).join('');
 
@@ -8852,33 +8884,21 @@
               <th class="oki-mgr">商品管理番号</th>
               <th class="oki-code">商品コード</th>
               <th class="oki-img">商品画像</th>
-              <th class="oki-check">設置済み</th>
             </tr>
           </thead>
           <tbody>${rowsHtml}</tbody>
         </table>
       </div>`;
-
-      container.querySelectorAll('input.oki-done-check').forEach(cb => {
-        cb.addEventListener('change', () => {
-          const mgr = cb.getAttribute('data-mgr');
-          if (!mgr) return;
-          setOkurikomiImageDone(mgr, cb.checked);
-          const tr = cb.closest('tr');
-          if (tr) tr.classList.toggle('is-oki-done', cb.checked);
-          // サマリー再計算
-          const allCb = container.querySelectorAll('input.oki-done-check');
-          let tot = 0, rem = 0;
-          allCb.forEach(c => { tot++; if (!c.checked) rem++; });
-          if (rem === 0) {
-            setSummary(`✓ 設置完了: <b>0</b> 件未対応（全 ${tot} 件 設置済み）`, 'is-done');
-          } else {
-            setSummary(`未対応: <b>${rem}</b> 件（全 ${tot} 件中）`, 'is-pending');
-          }
-        });
-      });
+    }
+    // 設置(セール前) と 撤去(セール後) の2ビューで同じ表を使う
+    function renderOkurikomiImageTable() {
+      renderOkurikomiImgTable({ containerId: 'okurikomi-image-table-container', summaryId: 'okurikomi-image-summary', actionWord: '設置' });
+    }
+    function renderOkurikomiImageRemoveTable() {
+      renderOkurikomiImgTable({ containerId: 'okurikomi-image-remove-table-container', summaryId: 'okurikomi-image-remove-summary', actionWord: '撤去' });
     }
     window._renderOkurikomiImageTable = renderOkurikomiImageTable;
+    window._renderOkurikomiImageRemoveTable = renderOkurikomiImageRemoveTable;
 
     // v0.52.186: ③ サムネイル戻し — 戻し済みチェックの保存 (年月別)
     //   保存先: archive[ym].topImageBack[mgr] = true  (⑭差し替えとは別管理)
@@ -10285,6 +10305,7 @@
           { id: 'after-upload-original', label: 'RMS-元CSVアップロード', action: 'open-upload-original' },
           { id: 'after-sku-restore', label: '審査落ちSKU倉庫出し', action: 'open-sku-restore' },
           { id: 'after-top-image-back', label: 'サムネイル戻し', action: 'open-top-image-back' },
+          { id: 'after-okurikomi-image-remove', label: '送り込み用画像撤去', action: 'open-okurikomi-image-remove' },
           { id: 'after-cleanup', label: 'ツール内不要データ削除', action: 'open-cleanup' },
         ],
       },
