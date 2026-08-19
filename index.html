@@ -4261,6 +4261,20 @@
     .ad-table tr.is-ad-deleted td {
       background: #fdecec;
     }
+    /* v0.52.334: 送り込み用画像設置 表 */
+    .oki-table-wrap { overflow-x: auto; }
+    .oki-table { border-collapse: collapse; width: 100%; font-size: 13px; }
+    .oki-table th, .oki-table td { border: 1px solid #e2e6ea; padding: 8px 10px; text-align: left; vertical-align: middle; }
+    .oki-table thead th { background: #f4f6f8; position: sticky; top: 0; font-weight: 700; color: #33414d; }
+    .oki-table td.oki-mgr { white-space: nowrap; }
+    .oki-table .oki-sq { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 4px; background: #e0a020; vertical-align: middle; margin-right: 6px; }
+    .oki-table .oki-parent-note { color: #8a5e08; font-size: 11px; margin-left: 4px; }
+    .oki-table td.oki-img { text-align: center; }
+    .oki-table td.oki-img .product-image-thumb { max-width: 72px; max-height: 72px; border-radius: 5px; }
+    .oki-table td.oki-img .img-placeholder { display: inline-block; padding: 8px 10px; color: #9aa0a6; font-size: 11px; }
+    .oki-table td.oki-check { text-align: center; width: 70px; }
+    .oki-table td.oki-check input { width: 18px; height: 18px; accent-color: var(--brand); cursor: pointer; }
+    .oki-table tr.is-oki-done td { background: #eef8f0; }
   </style>
 </head>
 <body>
@@ -4358,7 +4372,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.333</span>
+      <span class="version">v0.52.334</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -5180,6 +5194,21 @@
         </div>
       </div>
 
+      <!-- サブビュー: 送り込み用画像設置 (v0.52.334) -->
+      <div id="tool-okurikomi-image" class="tool-panel">
+        <div class="tool-panel-header">
+          <h2><span class="vstep-num" data-vstep="okurikomi-image"></span>送り込み用画像設置</h2>
+        </div>
+        <p class="tool-panel-description">送り込み設定をした商品がある場合、<b>送り込み元（黄色の四角＝子商品）</b>の商品ページに、送り込み先（親商品）へのリンクとなる画像を設置していきます。送り込み設定がある場合のみ対応が必要です。設置し終えた商品はチェックを入れて管理してください。</p>
+
+        <div class="card">
+          <div id="okurikomi-image-summary" class="status sku-restore-summary"></div>
+          <div id="okurikomi-image-table-container">
+            <div class="empty-state">送り込み設定がありません。対応不要です。</div>
+          </div>
+        </div>
+      </div>
+
       <!-- サブビュー: ⑭ スマホ上部バナー設置予約 -->
       <div id="tool-sp-banner" class="tool-panel">
         <div class="tool-panel-header">
@@ -5286,7 +5315,7 @@
         <div class="tool-panel-header">
           <h2>⑱ 審査落ちSKU倉庫出し</h2>
         </div>
-        <p class="tool-panel-description">セール開始準備⑯で倉庫に入れたSKUを販売中に戻していく。</p>
+        <p class="tool-panel-description">セール開始準備<span class="n-ss">⑰</span><span class="n-ma">⑱</span>で倉庫に入れたSKUを販売中に戻していく。</p>
 
         <div class="card">
           <h2>1. 倉庫から出す手順</h2>
@@ -5674,7 +5703,7 @@
     // ※旧 cost-non-set は v0.52.88 で廃止(②のセクション1=単一商品 に統合)
     // ※サブビュー間は forward/back で履歴を残す。同一サブビュー間は履歴に積まない。
     // 履歴に積まれた viewId は、ブラウザ戻る/進むで復元される。
-    const VALID_VIEWS = ['products','workflow','sale-thumb','pre-select','join-decide','add-products','ad-info','decide-price','decide-title','dl-rms-csv','make-rms-csv','make-thumb','cost-set-item','cost-set-component','upload-rms','rms-event','sku-record','ad-delete','ad-restore','upload-original','sku-restore','thumb-change','sp-banner','top-image-back','okurikomi','history','cleanup'];
+    const VALID_VIEWS = ['products','workflow','sale-thumb','pre-select','join-decide','add-products','ad-info','decide-price','decide-title','dl-rms-csv','make-rms-csv','make-thumb','cost-set-item','cost-set-component','upload-rms','rms-event','sku-record','ad-delete','ad-restore','upload-original','sku-restore','thumb-change','okurikomi-image','sp-banner','top-image-back','okurikomi','history','cleanup'];
     // ブラウザ/マウスの「戻る」でサブビューから戻れるよう、サブビュー遷移時は history.pushState する
     let _suppressPushState = false; // popstate由来の呼び出しでは積まない
     const MAIN_TABS = ['products', 'workflow', 'sale-thumb', 'history'];
@@ -5684,7 +5713,7 @@
 
     // v0.52.246: サブビューのタイトル番号を、現在のセールのワークフロー順から動的に決定する。
     //   マラソン/スーパーSALEで番号が変わるため、h2先頭の番号を実行時に上書きする。
-    const _CIRCLED_NUMS_RE = /^[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳]\s*/;
+    const _CIRCLED_NUMS_RE = /^[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳㉑㉒㉓㉔㉕㉖㉗㉘㉙㉚]\s*/;
     function getStepNumberMap() {
       const map = {};
       if (typeof getWorkflowBlocks !== 'function') return map;
@@ -5862,6 +5891,10 @@
       // v0.52.176: thumb-change サブビュー (⑭ サムネイル差し替え) を開くときは表を再描画
       if (viewId === 'thumb-change') {
         if (typeof window._renderThumbChangeTable === 'function') window._renderThumbChangeTable();
+      }
+      // v0.52.334: 送り込み用画像設置 を開くときは表を再描画
+      if (viewId === 'okurikomi-image') {
+        if (typeof window._renderOkurikomiImageTable === 'function') window._renderOkurikomiImageTable();
       }
       // v0.52.203: 各アップロードページを開くとき、保持中ファイルのチップを再描画
       if (typeof renderUploadedFileSlot === 'function') {
@@ -8721,6 +8754,132 @@
     }
     window._renderThumbChangeTable = renderThumbChangeTable;
 
+    // v0.52.334: 送り込み用画像設置 — 設置済みチェックの保存 (年月別)
+    //   保存先: archive[ym].okurikomiImageDone[childMgr] = true
+    function getOkurikomiImageDoneMap() {
+      try {
+        const ym = currentYM || getCurrentYM();
+        if (!ym) return {};
+        const archive = loadArchive();
+        const data = archive[ym];
+        return (data && data.okurikomiImageDone && typeof data.okurikomiImageDone === 'object') ? data.okurikomiImageDone : {};
+      } catch (e) { return {}; }
+    }
+    function setOkurikomiImageDone(mgr, done) {
+      try {
+        const ym = currentYM || getCurrentYM();
+        if (!ym) return;
+        const archive = loadArchive();
+        if (!archive[ym]) archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
+        if (!archive[ym].okurikomiImageDone || typeof archive[ym].okurikomiImageDone !== 'object') archive[ym].okurikomiImageDone = {};
+        if (done) archive[ym].okurikomiImageDone[mgr] = true;
+        else delete archive[ym].okurikomiImageDone[mgr];
+        saveArchive(archive);
+      } catch (e) {}
+    }
+
+    // v0.52.334: 送り込み用画像設置 表を描画
+    //   送り込み設定(親子グループ)の「子＝送り込み元(黄色)」商品ごとに、リンク画像設置のチェックを管理。
+    //   送り込み設定が無ければ「対応不要」を表示。
+    function renderOkurikomiImageTable() {
+      const container = document.getElementById('okurikomi-image-table-container');
+      if (!container) return;
+      const summaryEl = document.getElementById('okurikomi-image-summary');
+      const setSummary = (html, cls) => {
+        if (!summaryEl) return;
+        summaryEl.innerHTML = html;
+        summaryEl.className = 'status sku-restore-summary' + (cls ? ' ' + cls : '');
+      };
+      const ym = currentYM || (typeof getCurrentYM === 'function' ? getCurrentYM() : null);
+      if (!ym) {
+        setSummary('', '');
+        container.innerHTML = `<div class="empty-state">セール期間が選択されていません。</div>`;
+        return;
+      }
+      const groups = (typeof loadOkurikomiGroups === 'function') ? loadOkurikomiGroups() : [];
+      // 子(送り込み元)を親情報付きで平坦化。表示順はグループ順→子の登録順。
+      const childList = [];
+      const seen = new Set();
+      groups.forEach(g => {
+        (g.children || []).forEach(cm => {
+          if (cm && !seen.has(cm)) { childList.push({ mgr: cm, parent: g.parent }); seen.add(cm); }
+        });
+      });
+
+      if (childList.length === 0) {
+        setSummary('', '');
+        container.innerHTML = `<div class="empty-state">送り込み設定がありません。対応不要です。</div>`;
+        return;
+      }
+
+      // 商品コード・画像を rows から引く
+      const archive = loadArchive();
+      const data = archive[ym] || {};
+      const rowsArr = Array.isArray(data.rows) ? data.rows : [];
+      const mgrToRow = {};
+      for (const r of rowsArr) { if (r && r.mgr) mgrToRow[r.mgr] = r; }
+      const doneMap = getOkurikomiImageDoneMap();
+
+      // サマリー (未対応=未チェック件数)
+      const total = childList.length;
+      let remain = 0;
+      for (const c of childList) { if (!doneMap[c.mgr]) remain++; }
+      if (remain === 0) {
+        setSummary(`✓ 設置完了: <b>0</b> 件未対応（全 ${total} 件 設置済み）`, 'is-done');
+      } else {
+        setSummary(`未対応: <b>${remain}</b> 件（全 ${total} 件中）`, 'is-pending');
+      }
+
+      const rowsHtml = childList.map(c => {
+        const row = mgrToRow[c.mgr] || {};
+        const itemCode = row.itemCode || '';
+        const imgUrl = row.imageUrl || '';
+        const imgCell = (typeof imageCellHtml === 'function') ? imageCellHtml(imgUrl) : (imgUrl ? `<img src="${escapeHtml(imgUrl)}" class="product-image-thumb">` : '<span class="img-placeholder">未取得</span>');
+        const checked = !!doneMap[c.mgr];
+        const trCls = checked ? ' class="is-oki-done"' : '';
+        return `<tr${trCls} data-mgr="${escapeHtml(c.mgr)}">
+          <td class="oki-mgr"><span class="oki-sq" title="送り込み元（子）"></span>${escapeHtml(c.mgr)}<span class="oki-parent-note" title="送り込み先（親）">→親: ${escapeHtml(c.parent)}</span></td>
+          <td class="oki-code">${escapeHtml(itemCode)}</td>
+          <td class="oki-img">${imgCell}</td>
+          <td class="oki-check"><input type="checkbox" class="oki-done-check" data-mgr="${escapeHtml(c.mgr)}"${checked ? ' checked' : ''} aria-label="設置済み"></td>
+        </tr>`;
+      }).join('');
+
+      container.innerHTML = `<div class="oki-table-wrap">
+        <table class="oki-table">
+          <thead>
+            <tr>
+              <th class="oki-mgr">商品管理番号</th>
+              <th class="oki-code">商品コード</th>
+              <th class="oki-img">商品画像</th>
+              <th class="oki-check">設置済み</th>
+            </tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>`;
+
+      container.querySelectorAll('input.oki-done-check').forEach(cb => {
+        cb.addEventListener('change', () => {
+          const mgr = cb.getAttribute('data-mgr');
+          if (!mgr) return;
+          setOkurikomiImageDone(mgr, cb.checked);
+          const tr = cb.closest('tr');
+          if (tr) tr.classList.toggle('is-oki-done', cb.checked);
+          // サマリー再計算
+          const allCb = container.querySelectorAll('input.oki-done-check');
+          let tot = 0, rem = 0;
+          allCb.forEach(c => { tot++; if (!c.checked) rem++; });
+          if (rem === 0) {
+            setSummary(`✓ 設置完了: <b>0</b> 件未対応（全 ${tot} 件 設置済み）`, 'is-done');
+          } else {
+            setSummary(`未対応: <b>${rem}</b> 件（全 ${tot} 件中）`, 'is-pending');
+          }
+        });
+      });
+    }
+    window._renderOkurikomiImageTable = renderOkurikomiImageTable;
+
     // v0.52.186: ③ サムネイル戻し — 戻し済みチェックの保存 (年月別)
     //   保存先: archive[ym].topImageBack[mgr] = true  (⑭差し替えとは別管理)
     function getTopImageBackMap() {
@@ -10105,6 +10264,7 @@
           { id: 'prep-rms-event', label: 'RMSイベント申請■申請日当日■', action: 'open-rms-event' },
           { id: 'prep-ad-delete', label: '広告削除■申請日当日■', action: 'open-ad-delete' },
           { id: 'prep-thumb-change', label: 'サムネイル差し替え', action: 'open-thumb-change' },
+          { id: 'prep-okurikomi-image', label: '送り込み用画像設置', action: 'open-okurikomi-image' },
           { id: 'prep-sp-banner', label: 'スマホ上部バナー設置予約', action: 'open-sp-banner' },
           { id: 'prep-sku-record', label: '審査落ちSKU倉庫入れ■■申請日翌日■■', action: 'open-sku-record' },
         ],
