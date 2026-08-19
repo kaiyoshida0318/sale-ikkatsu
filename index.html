@@ -4277,7 +4277,25 @@
     .oki-table td.oki-img { text-align: center; }
     .oki-table td.oki-img .product-image-thumb { max-width: 72px; max-height: 72px; border-radius: 5px; }
     .oki-table td.oki-img .img-placeholder { display: inline-block; padding: 8px 10px; color: #9aa0a6; font-size: 11px; }
+    .oki-table th.oki-check, .oki-table td.oki-check { text-align: center; width: 92px; }
+    .oki-table td.oki-check input { width: 18px; height: 18px; accent-color: var(--brand); cursor: pointer; }
     .oki-table tr.is-oki-parent td { background: #eef8f0; font-weight: 600; } /* 親行=薄緑 */
+    .oki-table tr.is-oki-child.is-oki-done td { background: #f2f8f3; } /* 対応済みの子行 */
+    /* 親の完了ランプ: 子すべて完了で光る */
+    .oki-table .oki-parent-status {
+      display: inline-block; padding: 3px 9px; border-radius: 12px; font-size: 11px; font-weight: 700;
+      background: #e6eaee; color: #8a97a3; border: 1px solid #d5dbe1; white-space: nowrap;
+    }
+    .oki-table .oki-parent-status.is-complete {
+      background: #2e9043; color: #fff; border-color: #2e9043;
+      box-shadow: 0 0 0 0 rgba(46,144,67,.55); animation: okiGlow 1.4s ease-in-out infinite;
+    }
+    @keyframes okiGlow {
+      0%   { box-shadow: 0 0 3px 1px rgba(46,144,67,.55); }
+      50%  { box-shadow: 0 0 10px 3px rgba(46,144,67,.85); }
+      100% { box-shadow: 0 0 3px 1px rgba(46,144,67,.55); }
+    }
+    .oki-table tr.is-oki-parent-done td { background: #e3f5e8; } /* 完了グループの親行は濃いめ薄緑 */
   </style>
 </head>
 <body>
@@ -4375,7 +4393,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.336</span>
+      <span class="version">v0.52.338</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -8776,26 +8794,29 @@
     }
     window._renderThumbChangeTable = renderThumbChangeTable;
 
-    // v0.52.334: 送り込み用画像設置 — 設置済みチェックの保存 (年月別)
-    //   保存先: archive[ym].okurikomiImageDone[childMgr] = true
-    function getOkurikomiImageDoneMap() {
+    // v0.52.334/337: 送り込み用画像 設置/撤去 — 対応済みチェックの保存 (年月別)
+    //   保存先: archive[ym][storeKey][childMgr] = true
+    //   設置=okurikomiImageDone / 撤去=okurikomiImageRemoveDone (別管理)
+    function getOkurikomiImageDoneMap(storeKey) {
+      storeKey = storeKey || 'okurikomiImageDone';
       try {
         const ym = currentYM || getCurrentYM();
         if (!ym) return {};
         const archive = loadArchive();
         const data = archive[ym];
-        return (data && data.okurikomiImageDone && typeof data.okurikomiImageDone === 'object') ? data.okurikomiImageDone : {};
+        return (data && data[storeKey] && typeof data[storeKey] === 'object') ? data[storeKey] : {};
       } catch (e) { return {}; }
     }
-    function setOkurikomiImageDone(mgr, done) {
+    function setOkurikomiImageDone(mgr, done, storeKey) {
+      storeKey = storeKey || 'okurikomiImageDone';
       try {
         const ym = currentYM || getCurrentYM();
         if (!ym) return;
         const archive = loadArchive();
         if (!archive[ym]) archive[ym] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
-        if (!archive[ym].okurikomiImageDone || typeof archive[ym].okurikomiImageDone !== 'object') archive[ym].okurikomiImageDone = {};
-        if (done) archive[ym].okurikomiImageDone[mgr] = true;
-        else delete archive[ym].okurikomiImageDone[mgr];
+        if (!archive[ym][storeKey] || typeof archive[ym][storeKey] !== 'object') archive[ym][storeKey] = {};
+        if (done) archive[ym][storeKey][mgr] = true;
+        else delete archive[ym][storeKey][mgr];
         saveArchive(archive);
       } catch (e) {}
     }
@@ -8809,6 +8830,7 @@
       const containerId = opts.containerId || 'okurikomi-image-table-container';
       const summaryId = opts.summaryId || 'okurikomi-image-summary';
       const actionWord = opts.actionWord || '設置';
+      const storeKey = opts.storeKey || 'okurikomiImageDone';
       const container = document.getElementById(containerId);
       if (!container) return;
       const summaryEl = document.getElementById(summaryId);
@@ -8853,10 +8875,25 @@
       const mgrToRow = {};
       for (const r of rowsArr) { if (r && r.mgr) mgrToRow[r.mgr] = r; }
 
-      // サマリー (送り込み元=子商品の件数。この件数だけ画像設置対応が必要)
+      const doneMap = getOkurikomiImageDoneMap(storeKey);
       const childTotal = childList.length;
       const parentTotal = displayList.filter(d => d.role === 'parent').length;
-      setSummary(`画像${actionWord}が必要な送り込み元（子）商品: <b>${childTotal}</b> 件（送り込み先（親） ${parentTotal} グループ）`, 'is-pending');
+      // 親→子(mgr配列) のマップ (親の完了判定に使用)
+      const parentChildren = {};
+      displayList.forEach(d => {
+        if (d.role === 'child' && d.parent) {
+          if (!parentChildren[d.parent]) parentChildren[d.parent] = [];
+          parentChildren[d.parent].push(d.mgr);
+        }
+      });
+      // サマリー (未対応=未チェックの子商品件数)
+      let remainInit = 0;
+      for (const c of childList) { if (!doneMap[c.mgr]) remainInit++; }
+      if (remainInit === 0) {
+        setSummary(`✓ ${actionWord}完了: <b>0</b> 件未対応（全 ${childTotal} 件 ${actionWord}済み・送り込み先（親） ${parentTotal} グループ）`, 'is-done');
+      } else {
+        setSummary(`画像${actionWord}が必要な送り込み元（子）商品: 未対応 <b>${remainInit}</b> 件（全 ${childTotal} 件・送り込み先（親） ${parentTotal} グループ）`, 'is-pending');
+      }
 
       const rowsHtml = displayList.map(d => {
         const row = mgrToRow[d.mgr] || {};
@@ -8864,13 +8901,21 @@
         const imgUrl = row.imageUrl || '';
         const imgCell = (typeof imageCellHtml === 'function') ? imageCellHtml(imgUrl) : (imgUrl ? `<img src="${escapeHtml(imgUrl)}" class="product-image-thumb">` : '<span class="img-placeholder">未取得</span>');
         if (d.role === 'parent') {
-          return `<tr class="is-oki-parent" data-mgr="${escapeHtml(d.mgr)}">
+          // 親: チェック列(左端)は「子すべて完了で光る」完了インジケーター
+          const kids = parentChildren[d.mgr] || [];
+          const allDone = kids.length > 0 && kids.every(cm => !!doneMap[cm]);
+          const statusCell = `<span class="oki-parent-status${allDone ? ' is-complete' : ''}" title="${allDone ? 'この送り込み先の子商品すべて' + actionWord + '完了' : '子商品に未対応があります'}">${allDone ? '✓ 完了' : '未完了'}</span>`;
+          return `<tr class="is-oki-parent${allDone ? ' is-oki-parent-done' : ''}" data-mgr="${escapeHtml(d.mgr)}">
+            <td class="oki-check oki-parent-check">${statusCell}</td>
             <td class="oki-mgr"><span class="oki-sq oki-sq-p" title="送り込み先（親）"></span>${escapeHtml(d.mgr)}<span class="oki-role-note oki-role-p">送り込み先（親）</span></td>
             <td class="oki-code">${escapeHtml(itemCode)}</td>
             <td class="oki-img">${imgCell}</td>
           </tr>`;
         }
-        return `<tr class="is-oki-child" data-mgr="${escapeHtml(d.mgr)}">
+        const checked = !!doneMap[d.mgr];
+        const trCls = 'is-oki-child' + (checked ? ' is-oki-done' : '');
+        return `<tr class="${trCls}" data-mgr="${escapeHtml(d.mgr)}">
+          <td class="oki-check"><input type="checkbox" class="oki-done-check" data-mgr="${escapeHtml(d.mgr)}"${checked ? ' checked' : ''} aria-label="${actionWord}済み"></td>
           <td class="oki-mgr oki-mgr-child"><span class="oki-sq oki-sq-c" title="送り込み元（子）"></span>${escapeHtml(d.mgr)}<span class="oki-role-note oki-role-c">送り込み元（子）</span></td>
           <td class="oki-code">${escapeHtml(itemCode)}</td>
           <td class="oki-img">${imgCell}</td>
@@ -8881,6 +8926,7 @@
         <table class="oki-table">
           <thead>
             <tr>
+              <th class="oki-check">${actionWord}済み</th>
               <th class="oki-mgr">商品管理番号</th>
               <th class="oki-code">商品コード</th>
               <th class="oki-img">商品画像</th>
@@ -8889,13 +8935,23 @@
           <tbody>${rowsHtml}</tbody>
         </table>
       </div>`;
+
+      container.querySelectorAll('input.oki-done-check').forEach(cb => {
+        cb.addEventListener('change', () => {
+          const mgr = cb.getAttribute('data-mgr');
+          if (!mgr) return;
+          setOkurikomiImageDone(mgr, cb.checked, storeKey);
+          // 親の完了ランプ・サマリーを最新化するため表を再描画
+          renderOkurikomiImgTable(opts);
+        });
+      });
     }
     // 設置(セール前) と 撤去(セール後) の2ビューで同じ表を使う
     function renderOkurikomiImageTable() {
-      renderOkurikomiImgTable({ containerId: 'okurikomi-image-table-container', summaryId: 'okurikomi-image-summary', actionWord: '設置' });
+      renderOkurikomiImgTable({ containerId: 'okurikomi-image-table-container', summaryId: 'okurikomi-image-summary', actionWord: '設置', storeKey: 'okurikomiImageDone' });
     }
     function renderOkurikomiImageRemoveTable() {
-      renderOkurikomiImgTable({ containerId: 'okurikomi-image-remove-table-container', summaryId: 'okurikomi-image-remove-summary', actionWord: '撤去' });
+      renderOkurikomiImgTable({ containerId: 'okurikomi-image-remove-table-container', summaryId: 'okurikomi-image-remove-summary', actionWord: '撤去', storeKey: 'okurikomiImageRemoveDone' });
     }
     window._renderOkurikomiImageTable = renderOkurikomiImageTable;
     window._renderOkurikomiImageRemoveTable = renderOkurikomiImageRemoveTable;
