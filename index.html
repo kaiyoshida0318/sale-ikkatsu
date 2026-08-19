@@ -4393,7 +4393,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.338</span>
+      <span class="version">v0.52.339</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -8907,18 +8907,18 @@
           const statusCell = `<span class="oki-parent-status${allDone ? ' is-complete' : ''}" title="${allDone ? 'この送り込み先の子商品すべて' + actionWord + '完了' : '子商品に未対応があります'}">${allDone ? '✓ 完了' : '未完了'}</span>`;
           return `<tr class="is-oki-parent${allDone ? ' is-oki-parent-done' : ''}" data-mgr="${escapeHtml(d.mgr)}">
             <td class="oki-check oki-parent-check">${statusCell}</td>
+            <td class="oki-img">${imgCell}</td>
             <td class="oki-mgr"><span class="oki-sq oki-sq-p" title="送り込み先（親）"></span>${escapeHtml(d.mgr)}<span class="oki-role-note oki-role-p">送り込み先（親）</span></td>
             <td class="oki-code">${escapeHtml(itemCode)}</td>
-            <td class="oki-img">${imgCell}</td>
           </tr>`;
         }
         const checked = !!doneMap[d.mgr];
         const trCls = 'is-oki-child' + (checked ? ' is-oki-done' : '');
         return `<tr class="${trCls}" data-mgr="${escapeHtml(d.mgr)}">
           <td class="oki-check"><input type="checkbox" class="oki-done-check" data-mgr="${escapeHtml(d.mgr)}"${checked ? ' checked' : ''} aria-label="${actionWord}済み"></td>
+          <td class="oki-img">${imgCell}</td>
           <td class="oki-mgr oki-mgr-child"><span class="oki-sq oki-sq-c" title="送り込み元（子）"></span>${escapeHtml(d.mgr)}<span class="oki-role-note oki-role-c">送り込み元（子）</span></td>
           <td class="oki-code">${escapeHtml(itemCode)}</td>
-          <td class="oki-img">${imgCell}</td>
         </tr>`;
       }).join('');
 
@@ -8927,9 +8927,9 @@
           <thead>
             <tr>
               <th class="oki-check">${actionWord}済み</th>
+              <th class="oki-img">商品画像</th>
               <th class="oki-mgr">商品管理番号</th>
               <th class="oki-code">商品コード</th>
-              <th class="oki-img">商品画像</th>
             </tr>
           </thead>
           <tbody>${rowsHtml}</tbody>
