@@ -1694,6 +1694,10 @@
     /* v0.52.301: RMSダウンロード リンクは「ゆかい屋 × 楽天スーパーSALE」の①のときだけ表示 */
     .ap-rms-dl-link { display: none; }
     body[data-shop="ゆかい屋"][data-sale-name="super-sale"] .ap-rms-dl-link { display: block; }
+    /* v0.52.345: 店舗ID入りリンク先URLは店舗別に出し分け。
+       ゆかい屋用(354660)は yukaiya-only-link、KAIRY用(399668)は kairy-only-link。 */
+    body:not([data-shop="ゆかい屋"]) .yukaiya-only-link { display: none; }
+    body:not([data-shop="KAIRY"]) .kairy-only-link { display: none; }
     /* チェックボックス風リスト (取り込み手順内の "✔項目") */
     .howto-checklist {
       list-style: none;
@@ -4402,7 +4406,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.344</span>
+      <span class="version">v0.52.347</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4823,7 +4827,7 @@
           <h2>2. RMSデータのダウンロード</h2>
           <ol class="howto-list">
             <li>RMS - 店舗設定 - <b>1 商品管理</b> - <b>2 CSV一括編集</b> - <b>CSVダウンロード</b>
-              <div class="card-lead" style="margin-top:6px;">リンク先ページ: <a href="https://item.rms.rakuten.co.jp/rms-item-download/shops/354660" target="_blank" rel="noopener noreferrer">https://item.rms.rakuten.co.jp/rms-item-download/shops/354660</a></div>
+              <div class="card-lead yukaiya-only-link" style="margin-top:6px;">リンク先ページ: <a href="https://item.rms.rakuten.co.jp/rms-item-download/shops/354660" target="_blank" rel="noopener noreferrer">https://item.rms.rakuten.co.jp/rms-item-download/shops/354660</a></div>
             </li>
             <li>「<b>商品管理番号で絞り込む</b>」で、先程ダウンロードしたCSVの<b>商品管理番号列全体</b>をコピーして一括貼り付け</li>
             <li>以下の項目にチェックを入れてダウンロード
@@ -5133,7 +5137,8 @@
           <div class="howto-list" style="padding-left: 0;">
             楽天RMS - 店舗設定 - <b>1 商品管理</b> - <b>3 イベント申請</b> - <b>イベント商品申請</b>
           </div>
-          <div class="card-lead" style="margin-top:6px;">リンク先URL: <a href="https://item.rms.rakuten.co.jp/rms-sale/shops/354660/application-result?page=1" target="_blank" rel="noopener noreferrer">https://item.rms.rakuten.co.jp/rms-sale/shops/354660/application-result?page=1</a></div>
+          <div class="card-lead yukaiya-only-link" style="margin-top:6px;">リンク先URL: <a href="https://item.rms.rakuten.co.jp/rms-sale/shops/354660/application-result?page=1" target="_blank" rel="noopener noreferrer">https://item.rms.rakuten.co.jp/rms-sale/shops/354660/application-result?page=1</a></div>
+          <div class="card-lead kairy-only-link" style="margin-top:6px;">リンク先URL: <a href="https://item.rms.rakuten.co.jp/rms-sale/shops/399668/application-result?page=1" target="_blank" rel="noopener noreferrer">https://item.rms.rakuten.co.jp/rms-sale/shops/399668/application-result?page=1</a></div>
 
           <!-- v0.52.263: 手順順序を変更し、CSVダウンロードボタンをステップ2と3の間へ移動 -->
           <ol class="rms-event-steps">
@@ -5252,7 +5257,8 @@
           <h2>設定手順</h2>
           <ol class="howto-list">
             <li>RMSで <b>店舗設定 → 5 デザイン設定 → 共通バナー設定</b> を開く。
-              <div class="card-lead" style="margin-top:6px;">リンク先URL: <a href="https://rlayout.rms.rakuten.co.jp/rms/mall/rsf/layout/vc?__event=RL55_001_000&amp;shop_bid=354660" target="_blank" rel="noopener noreferrer">https://rlayout.rms.rakuten.co.jp/rms/mall/rsf/layout/vc?__event=RL55_001_000&amp;shop_bid=354660</a></div>
+              <div class="card-lead yukaiya-only-link" style="margin-top:6px;">リンク先URL: <a href="https://rlayout.rms.rakuten.co.jp/rms/mall/rsf/layout/vc?__event=RL55_001_000&amp;shop_bid=354660" target="_blank" rel="noopener noreferrer">https://rlayout.rms.rakuten.co.jp/rms/mall/rsf/layout/vc?__event=RL55_001_000&amp;shop_bid=354660</a></div>
+              <div class="card-lead kairy-only-link" style="margin-top:6px;">リンク先URL: <a href="https://rlayout.rms.rakuten.co.jp/rms/mall/rsf/layout/vc?__event=RL55_001_000&amp;shop_bid=399668" target="_blank" rel="noopener noreferrer">https://rlayout.rms.rakuten.co.jp/rms/mall/rsf/layout/vc?__event=RL55_001_000&amp;shop_bid=399668</a></div>
             </li>
             <li><b>大バナー画像</b> の「<b>+ 追加</b>」をクリック。</li>
             <li>「<b>スマホ上部バナー</b>」フォルダ内から画像を選択。</li>
@@ -10481,58 +10487,108 @@
     // 進行中マーク(外枠) はメモリ変数 _inProgressBtnId で一時管理 (永続化しない)
     let _inProgressBtnId = null;
 
+    // v0.52.346: 完了/スキップの状態は、巨大なアーカイブ(CSV等)とは別の
+    //   小さな専用キーに保存する。localStorage(約5MB・他ツールと共有)が満杯だと
+    //   アーカイブ全体の保存に失敗し、完了ボタン等が効かなくなる問題を防ぐ。
+    //   構造: { [shop]: { [saleName]: { [ym]: { done:{...}, skip:{...} } } } }
+    const SALE_WF_KEY = 'sale-ikkatsu-workflow-v1';
+    function _wfLoadAll() {
+      try { return JSON.parse(localStorage.getItem(SALE_WF_KEY) || '{}') || {}; } catch (e) { return {}; }
+    }
+    function _wfSaveAll(obj) {
+      try { localStorage.setItem(SALE_WF_KEY, JSON.stringify(obj)); return true; }
+      catch (e) { console.warn('workflow状態の保存に失敗:', e); return false; }
+    }
+    function _wfCtx() {
+      const shop = (typeof getCurrentShop === 'function') ? getCurrentShop() : '';
+      const sn = (typeof getCurrentSaleName === 'function') ? getCurrentSaleName() : '';
+      const ym = currentYM;
+      return { shop, sn, ym };
+    }
+    // 現在のショップ/セール/年月のノード({done,skip})を取得。create=true で無ければ作成。
+    //   初回作成時は、旧方式(アーカイブ内 workflow/workflowSkip)から状態を引き継ぐ(移行)。
+    function _wfNode(create) {
+      const { shop, sn, ym } = _wfCtx();
+      if (!ym) return null;
+      const all = _wfLoadAll();
+      let node = all[shop] && all[shop][sn] && all[shop][sn][ym];
+      if (!node) {
+        // 旧アーカイブから移行用に読み出し
+        let legacyDone = {}, legacySkip = {};
+        try {
+          const archive = loadArchive();
+          if (archive[ym]) {
+            legacyDone = Object.assign({}, archive[ym].workflow || {});
+            legacySkip = Object.assign({}, archive[ym].workflowSkip || {});
+          }
+        } catch (e) {}
+        node = { done: legacyDone, skip: legacySkip };
+        if (create) {
+          if (!all[shop]) all[shop] = {};
+          if (!all[shop][sn]) all[shop][sn] = {};
+          all[shop][sn][ym] = node;
+          node.__all = all; // 保存用に一時参照
+        }
+      } else {
+        if (!node.done) node.done = {};
+        if (!node.skip) node.skip = {};
+        node.__all = all;
+      }
+      return node;
+    }
+    function _wfPersist(node) {
+      if (!node) return;
+      const all = node.__all || _wfLoadAll();
+      delete node.__all;
+      const { shop, sn, ym } = _wfCtx();
+      if (!ym) return;
+      if (!all[shop]) all[shop] = {};
+      if (!all[shop][sn]) all[shop][sn] = {};
+      all[shop][sn][ym] = { done: node.done || {}, skip: node.skip || {} };
+      _wfSaveAll(all);
+    }
+
     function getWorkflowState() {
       if (!currentYM) return {};
-      const archive = loadArchive();
-      return (archive[currentYM] && archive[currentYM].workflow) || {};
+      const node = _wfNode(false);
+      return (node && node.done) || {};
     }
     function setWorkflowDone(btnId, done) {
       if (!currentYM) return;
-      const archive = loadArchive();
-      if (!archive[currentYM]) archive[currentYM] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {} };
-      const wf = archive[currentYM].workflow || {};
-      const sk = archive[currentYM].workflowSkip || {};
+      const node = _wfNode(true);
+      if (!node) return;
       if (done) {
-        wf[btnId] = true;
-        delete sk[btnId];               // 完了と排他: 完了したらスキップは外す
-        // チェック入れた瞬間に「進行中(外枠)」も外す
+        node.done[btnId] = true;
+        delete node.skip[btnId];        // 完了と排他: 完了したらスキップは外す
         if (_inProgressBtnId === btnId) _inProgressBtnId = null;
       } else {
-        delete wf[btnId];
+        delete node.done[btnId];
       }
-      archive[currentYM].workflow = wf;
-      archive[currentYM].workflowSkip = sk;
-      saveArchive(archive);
+      _wfPersist(node);
     }
     // v0.52.229: スキップ(今回は使わない) 状態。done と排他。
-    //   構造: archive[YYYY/MM].workflowSkip = { 'prep-add-products': true, ... }
     function getWorkflowSkipState() {
       if (!currentYM) return {};
-      const archive = loadArchive();
-      return (archive[currentYM] && archive[currentYM].workflowSkip) || {};
+      const node = _wfNode(false);
+      return (node && node.skip) || {};
     }
     function setWorkflowSkip(btnId, skip) {
       if (!currentYM) return;
-      const archive = loadArchive();
-      if (!archive[currentYM]) archive[currentYM] = { rows: [], titles: {}, startDt: '', endDt: '', workflow: {}, workflowSkip: {} };
-      const sk = archive[currentYM].workflowSkip || {};
-      const wf = archive[currentYM].workflow || {};
+      const node = _wfNode(true);
+      if (!node) return;
       if (skip) {
-        sk[btnId] = true;
-        delete wf[btnId];                 // 完了と排他: スキップしたら完了は外す
+        node.skip[btnId] = true;
+        delete node.done[btnId];         // 完了と排他: スキップしたら完了は外す
         if (_inProgressBtnId === btnId) _inProgressBtnId = null;
       } else {
-        delete sk[btnId];
+        delete node.skip[btnId];
       }
-      archive[currentYM].workflowSkip = sk;
-      archive[currentYM].workflow = wf;
-      saveArchive(archive);
+      _wfPersist(node);
     }
     // ボタンを開いた = 進行中マーク (チェック済みの場合は付けない)
     function markWorkflowOpened(btnId) {
       if (!currentYM) { _inProgressBtnId = btnId; return; }
-      const archive = loadArchive();
-      const wf = (archive[currentYM] && archive[currentYM].workflow) || {};
+      const wf = getWorkflowState();
       if (wf[btnId]) { _inProgressBtnId = null; return; } // 既にチェック済みなら付けない
       _inProgressBtnId = btnId;
     }
