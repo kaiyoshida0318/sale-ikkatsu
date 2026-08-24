@@ -4274,6 +4274,11 @@
     .ad-table tr.is-ad-deleted td {
       background: #fdecec;
     }
+    /* v0.52.351: 送り込み用画像 説明文の色分け */
+    .oki-c-parent { color: #1f8a44; font-weight: 700; } /* 親=緑 */
+    .oki-c-child  { color: #c67c1e; font-weight: 700; } /* 子=黄(琥珀) */
+    .oki-c-okuri  { color: #1f6fb2; font-weight: 700; } /* -okuri=青(リンクあり) */
+    .oki-c-yoko   { color: #7e57c2; font-weight: 700; } /* -yoko=紫(リンクなし) */
     /* v0.52.350: 送り込み用画像 リンクHTMLコード例 (1行・折り返さず横スクロール) */
     .oki-link-snippet {
       display: inline-block;
@@ -4425,7 +4430,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.350</span>
+      <span class="version">v0.52.352</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -5255,12 +5260,12 @@
         <div class="tool-panel-header">
           <h2><span class="vstep-num" data-vstep="okurikomi-image"></span>送り込み用画像設置</h2>
         </div>
-        <p class="tool-panel-description">送り込み設定をした商品がある場合、<b>送り込み元（黄色の四角＝子商品）</b>の商品ページに、送り込み先（親商品＝緑の四角）へのリンクとなる画像を設置していきます。各グループの先頭に親商品を参考表示し、その下に画像設置が必要な子商品を並べます。送り込み設定がある場合のみ対応が必要です。<br>
+        <p class="tool-panel-description">送り込み設定をした商品がある場合、<span class="oki-c-child">送り込み元（黄色の四角＝子商品）</span>の商品ページに、<span class="oki-c-parent">送り込み先（親商品＝緑の四角）</span>へのリンクとなる画像を設置していきます。各グループの先頭に<span class="oki-c-parent">親商品</span>を参考表示し、その下に画像設置が必要な<span class="oki-c-child">子商品</span>を並べます。送り込み設定がある場合のみ対応が必要です。<br>
         <br>
         <b>送り込み用画像は2種類あります。</b>登録する場所によって使い分けます。<br>
-        ・リンクを貼り付けられる箇所（<b>スマートフォン用商品説明文欄</b>・<b>PC用販売説明文欄</b>の2箇所）には、末尾が「<b>-okuri</b>」の画像を登録します。<br>
-        ・リンクを貼り付けられない箇所（<b>商品ページ画像・動画欄</b>）には、末尾が「<b>-yoko</b>」の画像を登録します。<br>
-        リンクを貼り付ける「-okuri」画像には、次の形のリンク用HTMLを使います（<b>改行せず1行のまま</b>コピーして使用）。<br>
+        ・<span class="oki-c-okuri">リンクを貼り付けられる箇所</span>（<span class="oki-c-okuri">スマートフォン用商品説明文欄</span>・<span class="oki-c-okuri">PC用販売説明文欄</span>の2箇所）には、末尾が「<span class="oki-c-okuri">-okuri</span>」の画像を登録します。<br>
+        ・<span class="oki-c-yoko">リンクを貼り付けられない箇所</span>（<span class="oki-c-yoko">商品ページ画像・動画欄</span>）には、末尾が「<span class="oki-c-yoko">-yoko</span>」の画像を登録します。<br>
+        リンクを貼り付ける「<span class="oki-c-okuri">-okuri</span>」画像には、次の形のリンク用HTMLを使います（<b>改行せず1行のまま</b>コピーして使用）。<br>
         <code class="oki-link-snippet">&lt;a href="リンク先ページのURL"&gt;&lt;img src="クリック用画像「-okuri」のURL" width="100%"&gt;&lt;/a&gt;</code></p>
 
         <div class="card">
@@ -5423,7 +5428,11 @@
         <div class="tool-panel-header">
           <h2><span class="vstep-num" data-vstep="okurikomi-image-remove"></span>送り込み用画像撤去</h2>
         </div>
-        <p class="tool-panel-description">セール中に設置した送り込み用の画像を撤去していきます。<b>送り込み元（黄色の四角＝子商品）</b>の商品ページに設置した、送り込み先（親商品＝緑の四角）へのリンク画像を外します。各グループの先頭に親商品を参考表示し、その下に画像撤去が必要な子商品を並べます。送り込み設定がある場合のみ対応が必要です。</p>
+        <p class="tool-panel-description">セール中に設置した送り込み用の画像を撤去していきます。<span class="oki-c-child">送り込み元（黄色の四角＝子商品）</span>の商品ページに設置した、<span class="oki-c-parent">送り込み先（親商品＝緑の四角）</span>への画像を外します。各グループの先頭に<span class="oki-c-parent">親商品</span>を参考表示し、その下に画像撤去が必要な<span class="oki-c-child">子商品</span>を並べます。送り込み設定がある場合のみ対応が必要です。<br>
+        <br>
+        <b>撤去する画像は2種類あります。</b>設置したときと同じ2箇所から外します。<br>
+        ・<span class="oki-c-okuri">リンクを貼り付けた箇所</span>（<span class="oki-c-okuri">スマートフォン用商品説明文欄</span>・<span class="oki-c-okuri">PC用販売説明文欄</span>の2箇所）に入れた、末尾が「<span class="oki-c-okuri">-okuri</span>」の画像を、<b>リンク用HTMLごと</b>削除します。<br>
+        ・<span class="oki-c-yoko">リンクを貼り付けていない箇所</span>（<span class="oki-c-yoko">商品ページ画像・動画欄</span>）に入れた、末尾が「<span class="oki-c-yoko">-yoko</span>」の画像を削除します。</p>
 
         <div class="card">
           <div id="okurikomi-image-remove-summary" class="status sku-restore-summary"></div>
