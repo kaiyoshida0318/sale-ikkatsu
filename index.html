@@ -781,13 +781,21 @@
     body[data-view="top-image-back"] #tool-top-image-back.tool-panel.active {
       display: flex;
       flex-direction: column;
-      height: calc(100vh - var(--main-tabs-h, 50px));
+      /* v0.52.342: 上部バー(ヘッダー+メインタブ)全体の高さを引き、パネルをその直下にsticky固定。
+         これにより、ワークフローボタンを過ぎてスクロールするとパネルが画面下端まで埋まり、
+         表が途中で止まって下に余白が出る問題を解消する。 */
+      height: calc(100vh - var(--top-bar-h, 130px));
+      position: sticky;
+      top: var(--top-bar-h, 130px);
       overflow-y: auto;
       overflow-x: hidden;
       overscroll-behavior: contain;
       padding: 8px 8px 0; /* v0.52.197: 上に余白を入れ、固定したサマリーバーが隠れないように */
       box-sizing: border-box;
     }
+    /* v0.52.342: これらのビューでは main 下マージンを消し、パネルを画面下端まで詰める */
+    body[data-view="thumb-change"] main,
+    body[data-view="top-image-back"] main { margin-bottom: 0; }
     body[data-view="thumb-change"] .tool-panel-header,
     body[data-view="top-image-back"] .tool-panel-header {
       position: static; flex-shrink: 0; padding: 8px 0 4px; margin-bottom: 0; background: var(--bg);
@@ -800,6 +808,7 @@
     body[data-view="top-image-back"] #tool-top-image-back .card {
       flex: 1; min-height: 0; display: flex; flex-direction: column;
       padding: 0; border: 0; background: transparent; overflow: visible;
+      margin-bottom: 0; /* v0.52.342: 下の余白を詰めて表を画面下端まで */
     }
     /* サマリーバー: パネルスクロール基準でバナー直下(top:0)にsticky固定 */
     body[data-view="thumb-change"] #thumb-change-summary,
@@ -4393,7 +4402,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.341</span>
+      <span class="version">v0.52.343</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -8917,7 +8926,7 @@
         const checked = !!doneMap[d.mgr];
         const trCls = 'is-oki-child' + (checked ? ' is-oki-done' : '');
         return `<tr class="${trCls}" data-mgr="${escapeHtml(d.mgr)}">
-          <td class="oki-check"><input type="checkbox" class="oki-done-check" data-mgr="${escapeHtml(d.mgr)}"${checked ? ' checked' : ''} aria-label="${actionWord}済み"></td>
+          <td class="oki-check"><input type="checkbox" class="oki-done-check" data-mgr="${escapeHtml(d.mgr)}" data-parent="${escapeHtml(d.parent || '')}"${checked ? ' checked' : ''} aria-label="${actionWord}済み"></td>
           <td class="oki-img">${imgCell}</td>
           <td class="oki-mgr oki-mgr-child"><span class="oki-sq oki-sq-c" title="送り込み元（子）"></span>${escapeHtml(d.mgr)}<span class="oki-role-note oki-role-c">送り込み元（子）</span></td>
           <td class="oki-code">${escapeHtml(itemCode)}</td>
@@ -8938,13 +8947,41 @@
         </table>
       </div>`;
 
+      // v0.52.343: チェックはDOMを作り直さず「差分更新」する。
+      //   （change中に表全体を再描画するとクリック対象のinputが差し替わり、
+      //     実操作でチェックが入らない不具合になるため。）
+      const refreshSummary = () => {
+        let rem = 0;
+        container.querySelectorAll('input.oki-done-check').forEach(c => { if (!c.checked) rem++; });
+        if (rem === 0) {
+          setSummary(`✓ ${actionWord}完了: <b>0</b> 件未対応（全 ${childTotal} 件 ${actionWord}済み・送り込み先（親） ${parentTotal} グループ）`, 'is-done');
+        } else {
+          setSummary(`画像${actionWord}が必要な送り込み元（子）商品: 未対応 <b>${rem}</b> 件（全 ${childTotal} 件・送り込み先（親） ${parentTotal} グループ）`, 'is-pending');
+        }
+      };
+      const refreshParentLamp = (parentMgr) => {
+        if (!parentMgr) return;
+        const kidCbs = [...container.querySelectorAll(`input.oki-done-check[data-parent="${(window.CSS && CSS.escape) ? CSS.escape(parentMgr) : parentMgr}"]`)];
+        const allDone = kidCbs.length > 0 && kidCbs.every(c => c.checked);
+        const ptr = container.querySelector(`tr.is-oki-parent[data-mgr="${(window.CSS && CSS.escape) ? CSS.escape(parentMgr) : parentMgr}"]`);
+        if (!ptr) return;
+        ptr.classList.toggle('is-oki-parent-done', allDone);
+        const st = ptr.querySelector('.oki-parent-status');
+        if (st) {
+          st.classList.toggle('is-complete', allDone);
+          st.textContent = allDone ? '✓ 完了' : '未完了';
+          st.setAttribute('title', allDone ? ('この送り込み先の子商品すべて' + actionWord + '完了') : '子商品に未対応があります');
+        }
+      };
       container.querySelectorAll('input.oki-done-check').forEach(cb => {
         cb.addEventListener('change', () => {
           const mgr = cb.getAttribute('data-mgr');
           if (!mgr) return;
           setOkurikomiImageDone(mgr, cb.checked, storeKey);
-          // 親の完了ランプ・サマリーを最新化するため表を再描画
-          renderOkurikomiImgTable(opts);
+          const tr = cb.closest('tr');
+          if (tr) tr.classList.toggle('is-oki-done', cb.checked);
+          refreshParentLamp(cb.getAttribute('data-parent'));
+          refreshSummary();
         });
       });
     }
