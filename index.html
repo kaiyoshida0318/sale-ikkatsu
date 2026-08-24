@@ -4274,26 +4274,28 @@
     .ad-table tr.is-ad-deleted td {
       background: #fdecec;
     }
+    /* v0.52.354: HTMLコード例の注意書き (黒太字で目立たせる) */
+    .oki-code-caution { display: inline-block; margin-top: 4px; color: #000; font-weight: 700; font-size: 13.5px; }
     /* v0.52.351: 送り込み用画像 説明文の色分け */
     .oki-c-parent { color: #1f8a44; font-weight: 700; } /* 親=緑 */
     .oki-c-child  { color: #c67c1e; font-weight: 700; } /* 子=黄(琥珀) */
     .oki-c-okuri  { color: #1f6fb2; font-weight: 700; } /* -okuri=青(リンクあり) */
     .oki-c-yoko   { color: #7e57c2; font-weight: 700; } /* -yoko=紫(リンクなし) */
-    /* v0.52.350: 送り込み用画像 リンクHTMLコード例 (1行・折り返さず横スクロール) */
+    /* v0.52.350/353: 送り込み用画像 リンクHTMLコード例 (改行そのまま・折り返さず横スクロール) */
     .oki-link-snippet {
-      display: inline-block;
+      display: block;
       margin-top: 6px;
       max-width: 100%;
       box-sizing: border-box;
       font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
       font-size: 12.5px;
-      line-height: 1.5;
+      line-height: 1.6;
       color: #1f2d3d;
       background: #f4f6f8;
       border: 1px solid #d5dbe1;
       border-radius: 6px;
-      padding: 6px 10px;
-      white-space: nowrap;
+      padding: 8px 10px;
+      white-space: pre;
       overflow-x: auto;
       -webkit-user-select: all;
       user-select: all;
@@ -4430,7 +4432,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.352</span>
+      <span class="version">v0.52.354</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -5265,8 +5267,11 @@
         <b>送り込み用画像は2種類あります。</b>登録する場所によって使い分けます。<br>
         ・<span class="oki-c-okuri">リンクを貼り付けられる箇所</span>（<span class="oki-c-okuri">スマートフォン用商品説明文欄</span>・<span class="oki-c-okuri">PC用販売説明文欄</span>の2箇所）には、末尾が「<span class="oki-c-okuri">-okuri</span>」の画像を登録します。<br>
         ・<span class="oki-c-yoko">リンクを貼り付けられない箇所</span>（<span class="oki-c-yoko">商品ページ画像・動画欄</span>）には、末尾が「<span class="oki-c-yoko">-yoko</span>」の画像を登録します。<br>
-        リンクを貼り付ける「<span class="oki-c-okuri">-okuri</span>」画像には、次の形のリンク用HTMLを使います（<b>改行せず1行のまま</b>コピーして使用）。<br>
-        <code class="oki-link-snippet">&lt;a href="リンク先ページのURL"&gt;&lt;img src="クリック用画像「-okuri」のURL" width="100%"&gt;&lt;/a&gt;</code></p>
+        リンクを貼り付ける「<span class="oki-c-okuri">-okuri</span>」画像には、次の形のリンク用HTMLを使います。<br>
+        <span class="oki-code-caution">※ このHTMLの形（改行や空白の位置）は変えずに、そのままコピーして使用してください。</span><br>
+        <code class="oki-link-snippet">&lt;a href="https://search.rakuten.co.jp/search/mall/%E3%82%B9%E3%83%9E%E3%83%BC%E3%83%88%E3%82%A6%E3%82%A9%E3%83%83%E3%83%81+%E3%83%99%E3%83%AB%E3%83%88/?sid=354660"&gt;
+&lt;img src="https://image.rakuten.co.jp/yukaiya/cabinet/ss/wb-26-01-okuri.jpg" width="100%"&gt;
+&lt;/a&gt;</code></p>
 
         <div class="card">
           <div id="okurikomi-image-summary" class="status sku-restore-summary"></div>
