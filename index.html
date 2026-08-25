@@ -4432,7 +4432,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.355</span>
+      <span class="version">v0.52.356</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -10534,52 +10534,13 @@
     function _wfLoadAll() {
       try { return JSON.parse(localStorage.getItem(SALE_WF_KEY) || '{}') || {}; } catch (e) { return {}; }
     }
-    // v0.52.348: 容量オーバーで完了/スキップ等の小さな状態すら保存できない場合に、
-    //   再取得可能な過去セールの取り込みCSV(実体)を自動で空けて保存を通す(現在のセールは触らない)。
-    function _wfAutoFreeSpace() {
-      try {
-        if (typeof _loadArchiveV2 !== 'function' || typeof _saveArchiveV2 !== 'function') return false;
-        const v2 = _loadArchiveV2() || {};
-        const curShop = (typeof getCurrentShop === 'function') ? getCurrentShop() : '';
-        const curSale = (typeof getCurrentSaleName === 'function') ? getCurrentSaleName() : '';
-        const curYm = currentYM || (typeof getCurrentYM === 'function' ? getCurrentYM() : null);
-        let freedAny = false;
-        for (const shop of Object.keys(v2)) {
-          const byName = v2[shop] || {};
-          for (const sn of Object.keys(byName)) {
-            const byYm = byName[sn] || {};
-            for (const ym of Object.keys(byYm)) {
-              if (shop === curShop && sn === curSale && ym === curYm) continue; // 現在のセールは残す
-              const data = byYm[ym];
-              if (!data || typeof data !== 'object') continue;
-              try { if (typeof _preserveDiscHistBeforeDelete === 'function') _preserveDiscHistBeforeDelete(shop, sn, ym, data); } catch (e) {}
-              for (const bk of SP_REOBTAINABLE_BLOB_KEYS) { if (bk in data) { delete data[bk]; freedAny = true; } }
-              if (data.uploadedFiles && typeof data.uploadedFiles === 'object') {
-                for (const sk of Object.keys(data.uploadedFiles)) {
-                  const e = data.uploadedFiles[sk];
-                  if (e && typeof e.dataB64 === 'string') { delete e.dataB64; delete e.mime; freedAny = true; }
-                }
-              }
-            }
-          }
-        }
-        if (freedAny) { try { _saveArchiveV2(v2); } catch (e) {} }
-        return freedAny;
-      } catch (e) { return false; }
-    }
     function _wfSaveAll(obj) {
+      // v0.52.356: 完了/スキップは巨大なアーカイブと別キーに保存するため、容量が逼迫していても
+      //   ほぼ確実に書ける。ごく稀に完全に満杯で書けない場合は、データを自動削除せず案内のみ行う
+      //   （v0.52.348の自動削除は、選択中以外のセールの取り込みCSVまで消してしまう副作用があったため撤去）。
       try { localStorage.setItem(SALE_WF_KEY, JSON.stringify(obj)); return true; }
       catch (e) {
-        // 容量オーバー: 再取得可能な過去CSVを自動で空けてから再試行
-        try {
-          if (_wfAutoFreeSpace()) {
-            localStorage.setItem(SALE_WF_KEY, JSON.stringify(obj));
-            if (typeof renderStoragePanel === 'function') { try { renderStoragePanel(); } catch (e3) {} }
-            return true;
-          }
-        } catch (e2) {}
         console.warn('workflow状態の保存に失敗:', e);
-        // 空けられる再取得可能データが無く保存できない → 容量オーバーを一度だけ案内
         if (!window.__wfQuotaWarned) {
           window.__wfQuotaWarned = true;
           try { alert('ブラウザの保存容量（localStorage）がいっぱいで、完了/スキップの状態を保存できませんでした。\n「ツール内不要データ削除」または①の容量パネルから、終わった過去セールの取り込みCSVを削除して空き容量を作ってください。'); } catch (e3) {}
@@ -12962,6 +12923,11 @@
       const archive = loadArchive();
       const data = archive[ym];
       if (!data || !data.rmsCsvB64) {
+        // v0.52.356: 商品行(rows)はあるのにRMS CSV実体が無い場合は、容量削減等で削除された可能性が高い。
+        //   その旨と再取り込みを案内する（参加商品には表示されるのにSKUが出ない状況の説明）。
+        if (data && Array.isArray(data.rows) && data.rows.length > 0) {
+          return { rows: [], reason: 'このセールの取り込みCSV（SKU情報）が見つかりません。容量削減などで削除された可能性があります。お手数ですが「① 参加商品追加」で、このショップ（' + ((typeof getCurrentShop === 'function') ? getCurrentShop() : '') + '）のRMSデータをもう一度取り込んでください。' };
+        }
         return { rows: [], reason: '「① 参加商品追加」でRMSデータを取り込んでください' };
       }
       const text = decodeShiftJIS(b642u8(data.rmsCsvB64));
@@ -13035,6 +13001,9 @@
       if (!container) return;
       const { rows, reason } = buildSkuRecordRows();
       if (!rows || rows.length === 0) {
+        // v0.52.356: 旧ショップの件数が残らないよう件数表示をクリア
+        const cntEl0 = document.getElementById('sku-record-search-count');
+        if (cntEl0) cntEl0.textContent = '';
         container.innerHTML = `<div class="empty-state">${escapeHtml(reason || '対象データがありません')}</div>`;
         return;
       }
@@ -13140,6 +13109,8 @@
       if (!allRows || allRows.length === 0) {
         setSummary('', '');
         if (statusEl) { statusEl.className = 'status'; statusEl.innerHTML = ''; }
+        const cntEl0 = document.getElementById('sku-restore-search-count');
+        if (cntEl0) cntEl0.textContent = ''; // v0.52.356: 旧ショップの件数を残さない
         container.innerHTML = `<div class="empty-state">${escapeHtml(reason || '対象データがありません')}</div>`;
         return;
       }
