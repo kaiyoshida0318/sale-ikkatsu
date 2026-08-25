@@ -4432,7 +4432,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.357</span>
+      <span class="version">v0.52.358</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4696,7 +4696,7 @@
           <div id="storage-panel-body" class="storage-panel-body" style="display:none;">
             <p class="sp-desc">このツールはブラウザの保存領域(localStorage)にデータを保存します。上限に達すると取り込みが保存できません。</p>
             <div id="storage-usage" class="sp-usage"></div>
-            <p class="sp-desc sp-guide">容量を空けるには、<b>「セール作業手順」→ セール後 →「ツール内不要データ削除」</b>（スーパーSALE=㉑ / マラソン=㉒）を開いて、終わったセール期間の取り込みCSVを削除してください。</p>
+            <p class="sp-desc sp-guide">容量を空けるには、<b>「セール作業手順」→ セール後 →「ツール内不要データ削除」</b>（スーパーSALE=㉓ / マラソン=㉔）を開いて、終わったセール期間の取り込みCSVを削除してください。</p>
           </div>
         </div>
 
@@ -11672,7 +11672,7 @@
         } else {
           // 商品行は保存できたが、CSV実体(⑤/④で使用)は容量不足で保存できなかった
           setAddProductsStatus(
-            `⚠️ ${productRows.length}件の商品は取り込めました（「セール参加商品」に反映されます）。ただし保存容量が上限のため、後工程(⑤割引率決定・④原価特定)で使うCSV実体を保存できませんでした。「セール作業手順」→ セール後 →「ツール内不要データ削除」(スーパーSALE=㉑ / マラソン=㉒)で終わったセールの取り込みCSVを削除して容量を空けてから、もう一度①のCSVを取り込み直してください。`,
+            `⚠️ ${productRows.length}件の商品は取り込めました（「セール参加商品」に反映されます）。ただし保存容量が上限のため、後工程(⑤割引率決定・④原価特定)で使うCSV実体を保存できませんでした。「セール作業手順」→ セール後 →「ツール内不要データ削除」(スーパーSALE=㉓ / マラソン=㉔)で終わったセールの取り込みCSVを削除して容量を空けてから、もう一度①のCSVを取り込み直してください。`,
             'error'
           );
           if (typeof showStoragePanel === 'function') showStoragePanel();
@@ -11681,7 +11681,7 @@
         if (err && err.isQuota) {
           // v0.52.305: 容量超過で商品行すら保存できなかった → 正直に伝え、容量管理パネルを開く
           setAddProductsStatus(
-            '❌ 保存できませんでした。ブラウザの保存容量（localStorage）が上限に達しています。「セール作業手順」→ セール後 →「ツール内不要データ削除」(スーパーSALE=㉑ / マラソン=㉒)を開き、終わったセール期間の取り込みCSVを削除して容量を空けてから、もう一度取り込んでください。',
+            '❌ 保存できませんでした。ブラウザの保存容量（localStorage）が上限に達しています。「セール作業手順」→ セール後 →「ツール内不要データ削除」(スーパーSALE=㉓ / マラソン=㉔)を開き、終わったセール期間の取り込みCSVを削除して容量を空けてから、もう一度取り込んでください。',
             'error'
           );
           if (typeof showStoragePanel === 'function') showStoragePanel();
