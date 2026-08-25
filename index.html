@@ -4432,7 +4432,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.356</span>
+      <span class="version">v0.52.357</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -6184,6 +6184,11 @@
     //   null のままなら IDB未初期化 or 非対応 → 旧localStorage方式にフォールバック。
     let _thumbsCacheV2 = null;
     let _thumbsReady = false;
+    // v0.52.357: 大きな取り込みCSV実体(rmsCsvB64 等)も localStorage を圧迫するため IndexedDB へ移行。
+    //   _archiveBlobCache: null=未初期化(localStorage方式) / object=IndexedDB方式。
+    //   キーは `${shop}|${saleName}|${ym}|${blobKey}` = base64文字列。
+    let _archiveBlobCache = null;
+    const _ARCHIVE_BLOB_KEYS = ['rmsCsvB64', 'setItemCsvB64', 'setComponentCsvB64', 'nonSetCsvB64'];
     const SALE_CURRENT_SHOP_KEY = 'sale-ikkatsu-current-shop';
     const SHOPS = ['ゆかい屋', 'KAIRY'];
     const SALE_NAMES = ['super-sale', 'marathon'];
@@ -6256,17 +6261,135 @@
       try { localStorage.removeItem(SALE_ARCHIVE_PRE_MIGRATION_BACKUP); } catch(e){}
       try { localStorage.removeItem(SALE_THUMBS_PRE_MIGRATION_BACKUP); } catch(e){}
     }
+    // v0.52.357: IndexedDB方式のとき、localStorageから読んだv2に blob実体をキャッシュから補完する
+    function _hydrateArchiveBlobs(v2) {
+      if (!_archiveBlobCache || !v2 || typeof v2 !== 'object') return;
+      for (const shop in v2) {
+        const byName = v2[shop]; if (!byName || typeof byName !== 'object') continue;
+        for (const sn in byName) {
+          const byYm = byName[sn]; if (!byYm || typeof byYm !== 'object') continue;
+          for (const ym in byYm) {
+            const data = byYm[ym]; if (!data || typeof data !== 'object') continue;
+            for (const bk of _ARCHIVE_BLOB_KEYS) {
+              const ck = shop + '|' + sn + '|' + ym + '|' + bk;
+              if (ck in _archiveBlobCache) data[bk] = _archiveBlobCache[ck];
+            }
+          }
+        }
+      }
+    }
+    // blob実体をキャッシュへ退避し、localStorage保存用に blob を除いた複製を返す(絶対に「不在=削除」はしない)
+    function _stripArchiveBlobs(v2) {
+      const out = {};
+      for (const shop in v2) {
+        const byName = v2[shop];
+        if (!byName || typeof byName !== 'object') { out[shop] = byName; continue; }
+        out[shop] = {};
+        for (const sn in byName) {
+          const byYm = byName[sn];
+          if (!byYm || typeof byYm !== 'object') { out[shop][sn] = byYm; continue; }
+          out[shop][sn] = {};
+          for (const ym in byYm) {
+            const data = byYm[ym];
+            if (!data || typeof data !== 'object') { out[shop][sn][ym] = data; continue; }
+            const copy = {};
+            for (const k in data) {
+              if (_ARCHIVE_BLOB_KEYS.indexOf(k) >= 0) {
+                const val = data[k];
+                if (val !== undefined && val !== null && val !== '') {
+                  _archiveBlobCache[shop + '|' + sn + '|' + ym + '|' + k] = val; // 退避(追加/更新のみ)
+                }
+                // localStorage用複製には含めない
+              } else {
+                copy[k] = data[k];
+              }
+            }
+            out[shop][sn][ym] = copy;
+          }
+        }
+      }
+      return out;
+    }
+    // 明示的に blob をキャッシュ(IDB)からも削除する(容量削除ツール等から呼ぶ)
+    function _deleteArchiveBlob(shop, sn, ym, bk) {
+      if (!_archiveBlobCache) return;
+      const ck = shop + '|' + sn + '|' + ym + '|' + bk;
+      if (ck in _archiveBlobCache) { delete _archiveBlobCache[ck]; _persistArchiveBlobs(); }
+    }
+    let _persistBlobTimer = null;
+    function _persistArchiveBlobs() {
+      if (!_archiveBlobCache) return;
+      // 連続保存をまとめて IDB へ (失敗しても localStorage 側は成功しているので致命的ではない)
+      try {
+        if (typeof idbPutBlob === 'function') idbPutBlob('archive-blobs', _archiveBlobCache).catch(() => {});
+      } catch (e) {}
+    }
     function _loadArchiveV2() {
       try {
         const raw = localStorage.getItem(SALE_ARCHIVE_KEY_V2);
         if (!raw) return null;
-        return JSON.parse(raw);
+        const v2 = JSON.parse(raw);
+        if (_archiveBlobCache) _hydrateArchiveBlobs(v2); // IDB方式なら blob を補完
+        return v2;
       } catch (e) { return null; }
     }
     function _saveArchiveV2(v2) {
       // v0.52.287: 保存の成否を返す (容量超過などの失敗を呼び出し側で検知できるように)
-      try { localStorage.setItem(SALE_ARCHIVE_KEY_V2, JSON.stringify(v2)); return true; }
+      try {
+        if (_archiveBlobCache) {
+          // v0.52.357: 大きな blob は IndexedDB へ退避し、localStorage には入れない
+          const stripped = _stripArchiveBlobs(v2);
+          localStorage.setItem(SALE_ARCHIVE_KEY_V2, JSON.stringify(stripped));
+          _persistArchiveBlobs();
+        } else {
+          localStorage.setItem(SALE_ARCHIVE_KEY_V2, JSON.stringify(v2));
+        }
+        return true;
+      }
       catch (e) { console.warn('archive-v2保存失敗:', e); return false; }
+    }
+    // v0.52.357: 起動時に一度だけ — IDBから blob を読み込み、localStorageに残る blob を IDB へ移行して LS を解放
+    async function initArchiveBlobStore() {
+      try {
+        if (typeof indexedDB === 'undefined' || typeof idbGetBlob !== 'function') return; // 非対応 → LS方式のまま
+        let stored = null;
+        try { stored = await idbGetBlob('archive-blobs'); } catch (e) { stored = null; }
+        const cache = (stored && typeof stored === 'object') ? stored : {};
+        // localStorage に残っている blob をキャッシュへ吸い上げる
+        let hadLsBlobs = false;
+        let v2 = null;
+        try {
+          const raw = localStorage.getItem(SALE_ARCHIVE_KEY_V2);
+          if (raw) {
+            v2 = JSON.parse(raw);
+            for (const shop in v2) { const bn = v2[shop] || {}; if (typeof bn !== 'object') continue;
+              for (const sn in bn) { const by = bn[sn] || {}; if (typeof by !== 'object') continue;
+                for (const ym in by) { const d = by[ym]; if (!d || typeof d !== 'object') continue;
+                  for (const bk of _ARCHIVE_BLOB_KEYS) { if (bk in d && d[bk]) { cache[shop + '|' + sn + '|' + ym + '|' + bk] = d[bk]; hadLsBlobs = true; } }
+                }
+              }
+            }
+          }
+        } catch (e) {}
+        // ここで IDB方式へ切替
+        _archiveBlobCache = cache;
+        // localStorage から blob を除いて保存し直し、容量を解放
+        if (v2) {
+          try {
+            const stripped = _stripArchiveBlobs(v2);
+            localStorage.setItem(SALE_ARCHIVE_KEY_V2, JSON.stringify(stripped));
+          } catch (e) { console.warn('archive-v2 strip保存失敗:', e); }
+        }
+        if (hadLsBlobs) { try { await idbPutBlob('archive-blobs', _archiveBlobCache); } catch (e) {} }
+        // blob が使えるようになったので現在の画面を再描画
+        try {
+          if (typeof renderProductTable === 'function') renderProductTable();
+          const view = document.body.getAttribute('data-view');
+          if (view === 'sku-record' && typeof renderSkuRecordTable === 'function') renderSkuRecordTable();
+          if (view === 'sku-restore' && typeof renderSkuRestoreTable === 'function') renderSkuRestoreTable();
+          if (typeof renderStoragePanel === 'function') renderStoragePanel();
+        } catch (e) {}
+      } catch (e) { console.warn('initArchiveBlobStore失敗:', e); }
     }
     function loadArchive() {
       try {
@@ -7272,7 +7395,7 @@
               // v0.52.308: 削除前に過去割引率を恒久記録へ退避
               _preserveDiscHistBeforeDelete(shop, sn, ym, data);
               freed += spReobtainableCharsOf(data);
-              for (const bk of SP_REOBTAINABLE_BLOB_KEYS) { if (bk in data) delete data[bk]; }
+              for (const bk of SP_REOBTAINABLE_BLOB_KEYS) { if (bk in data) delete data[bk]; if (typeof _deleteArchiveBlob === 'function') _deleteArchiveBlob(shop, sn, ym, bk); }
               if (data.uploadedFiles && typeof data.uploadedFiles === 'object') {
                 for (const sk of Object.keys(data.uploadedFiles)) {
                   const e = data.uploadedFiles[sk];
@@ -7365,7 +7488,7 @@
         if (!data || typeof data !== 'object') return false;
         // v0.52.308: 削除前に過去割引率を恒久記録へ退避
         _preserveDiscHistBeforeDelete(shop, sn, ym, data);
-        for (const bk of SP_REOBTAINABLE_BLOB_KEYS) { if (bk in data) delete data[bk]; }
+        for (const bk of SP_REOBTAINABLE_BLOB_KEYS) { if (bk in data) delete data[bk]; if (typeof _deleteArchiveBlob === 'function') _deleteArchiveBlob(shop, sn, ym, bk); }
         if (data.uploadedFiles && typeof data.uploadedFiles === 'object') {
           for (const sk of Object.keys(data.uploadedFiles)) {
             const e = data.uploadedFiles[sk];
@@ -16128,6 +16251,8 @@
     renderProductTable();
     // v0.52.329: サムネイルを IndexedDB へ移行 (localStorage容量オーバー対策)。非同期で読み込み→ビュー再描画
     if (typeof initThumbsStore === "function") { try { initThumbsStore(); } catch (e) { console.warn('initThumbsStore起動失敗:', e); } }
+    // v0.52.357: 取り込みCSV実体(rmsCsvB64等)も IndexedDB へ移行して localStorage を解放
+    if (typeof initArchiveBlobStore === "function") { try { initArchiveBlobStore(); } catch (e) { console.warn('initArchiveBlobStore起動失敗:', e); } }
     if (typeof renderWorkflow === "function") renderWorkflow();
     if (typeof bindTopImageDlButtons === "function") bindTopImageDlButtons();
     if (typeof restoreAllStatusMessages === "function") restoreAllStatusMessages();
