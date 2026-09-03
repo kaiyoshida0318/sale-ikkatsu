@@ -4432,7 +4432,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.358</span>
+      <span class="version">v0.52.359</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -6622,6 +6622,11 @@
       if (typeof restoreAllStatusMessages === 'function') {
         try { restoreAllStatusMessages(); } catch (e) {}
       }
+      // v0.52.359: ダウンロード系の一時ステータス(「N件ダウンロードしました」等)は文脈が変わったら必ずクリア。
+      //   （別ショップの件数表示が残って混同する不具合の修正。⑫広告削除/⑪RMSイベント/⑯広告復活 のDLボタン）
+      try {
+        document.querySelectorAll('.rms-event-dl-status').forEach(el => { el.textContent = ''; el.className = 'rms-event-dl-status'; });
+      } catch (e) {}
       // v0.52.232: 下のサブビュー(説明画面)を文脈に合わせて切替。
       //   現在開いているビューが今のセールで無効なら「セール作業手順」に戻す。
       let v = document.body.getAttribute('data-view') || 'workflow';
