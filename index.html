@@ -4335,6 +4335,36 @@
       100% { box-shadow: 0 0 3px 1px rgba(46,144,67,.55); }
     }
     .oki-table tr.is-oki-parent-done td { background: #e3f5e8; } /* 完了グループの親行は濃いめ薄緑 */
+    /* v0.52.360: GitHub連携 モーダル */
+    .gh-sync-btn { border-color: #cfd8e3; }
+    .gh-modal-overlay { position: fixed; inset: 0; background: rgba(23,35,60,.45); display: none; align-items: flex-start; justify-content: center; z-index: 3000; overflow-y: auto; padding: 40px 12px; }
+    .gh-modal-overlay.is-open { display: flex; }
+    .gh-modal { background: #fff; border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,.25); width: 560px; max-width: 100%; box-sizing: border-box; padding: 20px 22px; }
+    .gh-modal h2 { margin: 0 0 4px; font-size: 17px; color: #17233c; display: flex; align-items: center; gap: 8px; }
+    .gh-modal .gh-sub { margin: 0 0 14px; font-size: 12.5px; color: #667; line-height: 1.6; }
+    .gh-field { margin-bottom: 10px; }
+    .gh-field label { display: block; font-size: 12px; font-weight: 700; color: #445; margin-bottom: 3px; }
+    .gh-field input[type=text], .gh-field input[type=password] { width: 100%; box-sizing: border-box; padding: 7px 10px; border: 1px solid #cfd6de; border-radius: 7px; font-size: 13px; font-family: inherit; }
+    .gh-row { display: flex; gap: 10px; }
+    .gh-row .gh-field { flex: 1; }
+    .gh-token-row { display: flex; gap: 8px; align-items: flex-end; }
+    .gh-token-row .gh-field { flex: 1; margin-bottom: 0; }
+    .gh-remember { font-size: 12px; color: #556; display: flex; align-items: center; gap: 6px; margin: 8px 0 4px; }
+    .gh-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+    .gh-btn { border: 0; border-radius: 8px; padding: 10px 16px; font-size: 13.5px; font-weight: 700; cursor: pointer; font-family: inherit; }
+    .gh-btn-save { background: #1f8a44; color: #fff; }
+    .gh-btn-save:hover { background: #1b7a3c; }
+    .gh-btn-load { background: #185fa5; color: #fff; }
+    .gh-btn-load:hover { background: #14508c; }
+    .gh-btn-ghost { background: #eef1f4; color: #445; }
+    .gh-btn-ghost:hover { background: #e2e7ec; }
+    .gh-btn-close { margin-left: auto; background: #eef1f4; color: #445; }
+    .gh-status { margin-top: 14px; font-size: 12.5px; line-height: 1.6; padding: 10px 12px; border-radius: 8px; white-space: pre-wrap; word-break: break-word; display: none; }
+    .gh-status.is-info { display: block; background: #eef4fb; color: #23507f; border: 1px solid #cfe0f2; }
+    .gh-status.is-ok { display: block; background: #e9f7ee; color: #1f7a3d; border: 1px solid #bfe6cd; }
+    .gh-status.is-error { display: block; background: #fdecec; color: #b3271e; border: 1px solid #f2c4c1; }
+    .gh-warn { margin-top: 14px; font-size: 11.5px; color: #8a5e08; background: #fff8e8; border: 1px solid #f0e0b0; border-radius: 8px; padding: 9px 11px; line-height: 1.65; }
+    .gh-warn b { color: #7a3e00; }
   </style>
 </head>
 <body>
@@ -4432,7 +4462,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.359</span>
+      <span class="version">v0.52.360</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4441,6 +4471,10 @@
       <!-- v0.52.211: 不具合報告用のログ取得ボタン (一番右端) -->
       <button type="button" id="btn-log-capture" class="log-capture-btn" title="エラー情報やツールの状態をログとして取得 (クリップボードコピー＆ファイル保存)">
         <span class="lc-icon">🐛</span><span class="lc-label">ログを取る</span>
+      </button>
+      <!-- v0.52.360: GitHub連携 (データ共有/バックアップ) -->
+      <button type="button" id="btn-github-sync" class="log-capture-btn gh-sync-btn" title="GitHubにデータを保存/読み込み (共有・バックアップ)">
+        <span class="lc-icon">☁</span><span class="lc-label">GitHub連携</span>
       </button>
     </div>
       </div><!-- /header-row-ops -->
@@ -6622,7 +6656,7 @@
       if (typeof restoreAllStatusMessages === 'function') {
         try { restoreAllStatusMessages(); } catch (e) {}
       }
-      // v0.52.359: ダウンロード系の一時ステータス(「N件ダウンロードしました」等)は文脈が変わったら必ずクリア。
+      // v0.52.360: ダウンロード系の一時ステータス(「N件ダウンロードしました」等)は文脈が変わったら必ずクリア。
       //   （別ショップの件数表示が残って混同する不具合の修正。⑫広告削除/⑪RMSイベント/⑯広告復活 のDLボタン）
       try {
         document.querySelectorAll('.rms-event-dl-status').forEach(el => { el.textContent = ''; el.className = 'rms-event-dl-status'; });
@@ -16856,6 +16890,192 @@
       }
       window._restorePreSelect = _restorePreSelect;
     })();
+
+    // ============================================================
+    // v0.52.360: GitHub連携 (データ共有 / バックアップ)
+    //   このブラウザの全データ(localStorage の sale-ikkatsu-* と IndexedDB の
+    //   thumbs-v2 / archive-blobs)を1つのJSONにまとめ、GitHubのファイルへ保存/読込する。
+    //   トークンはツール内に埋め込まない。各自が実行時に入力する。
+    // ============================================================
+    (function githubSyncModule() {
+      const GH_CONFIG_KEY = 'sale-ikkatsu-gh-config';
+      const GH_API = 'https://api.github.com';
+      const DEFAULTS = { owner: 'kaiyoshida0318', repo: 'sale-ikkatsu', branch: 'main', path: 'data/sale-ikkatsu-data.json' };
+
+      const $ = (id) => document.getElementById(id);
+
+      function setStatus(msg, kind) {
+        const el = $('gh-status');
+        if (!el) return;
+        el.textContent = msg || '';
+        el.className = 'gh-status' + (msg ? ' is-' + (kind || 'info') : '');
+      }
+      // UTF-8 対応 Base64
+      function utf8ToB64(str) { return btoa(unescape(encodeURIComponent(str))); }
+      function b64ToUtf8(b64) { return decodeURIComponent(escape(atob((b64 || '').replace(/\s/g, '')))); }
+
+      function loadCfg() { try { return JSON.parse(localStorage.getItem(GH_CONFIG_KEY) || '{}') || {}; } catch (e) { return {}; } }
+      function saveCfg(cfg) { try { localStorage.setItem(GH_CONFIG_KEY, JSON.stringify(cfg)); } catch (e) {} }
+
+      function readForm() {
+        return {
+          token: ($('gh-token').value || '').trim(),
+          owner: ($('gh-owner').value || '').trim() || DEFAULTS.owner,
+          repo: ($('gh-repo').value || '').trim() || DEFAULTS.repo,
+          branch: ($('gh-branch').value || '').trim() || DEFAULTS.branch,
+          path: ($('gh-path').value || '').trim().replace(/^\/+/, '') || DEFAULTS.path,
+          remember: !!$('gh-remember').checked,
+        };
+      }
+      function persistCfg(cfg) {
+        const store = { owner: cfg.owner, repo: cfg.repo, branch: cfg.branch, path: cfg.path, remember: cfg.remember };
+        if (cfg.remember && cfg.token) store.token = cfg.token; // 記憶する場合のみトークン保存
+        saveCfg(store);
+      }
+
+      function openModal() {
+        const cfg = loadCfg();
+        $('gh-owner').value = cfg.owner || DEFAULTS.owner;
+        $('gh-repo').value = cfg.repo || DEFAULTS.repo;
+        $('gh-branch').value = cfg.branch || DEFAULTS.branch;
+        $('gh-path').value = cfg.path || DEFAULTS.path;
+        $('gh-remember').checked = !!cfg.remember;
+        $('gh-token').value = cfg.remember && cfg.token ? cfg.token : '';
+        setStatus('', '');
+        overlay().classList.add('is-open');
+        overlay().setAttribute('aria-hidden', 'false');
+      }
+      function closeModal() { overlay().classList.remove('is-open'); overlay().setAttribute('aria-hidden', 'true'); }
+      function overlay() { return $('gh-modal-overlay'); }
+
+      function ghHeaders(token) {
+        return { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
+      }
+      async function ghErr(res) {
+        let m = res.status + ' ' + res.statusText;
+        try { const j = await res.json(); if (j && j.message) m += ' - ' + j.message; } catch (e) {}
+        if (res.status === 401) m += '（トークンが無効か期限切れです）';
+        else if (res.status === 403) m += '（権限不足。Contents=Read and write を確認）';
+        else if (res.status === 404) m += '（オーナー/リポジトリ/ブランチ名を確認）';
+        else if (res.status === 409 || res.status === 422) m += '（他の人が先に更新した可能性。もう一度お試しください）';
+        return m;
+      }
+      const contentsUrl = (cfg) => GH_API + '/repos/' + cfg.owner + '/' + cfg.repo + '/contents/' + cfg.path.split('/').map(encodeURIComponent).join('/');
+
+      async function ghGetFile(cfg) {
+        const res = await fetch(contentsUrl(cfg) + '?ref=' + encodeURIComponent(cfg.branch), { headers: ghHeaders(cfg.token) });
+        if (res.status === 404) return { exists: false };
+        if (!res.ok) throw new Error(await ghErr(res));
+        const j = await res.json();
+        let text;
+        if (j.content && j.encoding === 'base64') text = b64ToUtf8(j.content);
+        else if (j.download_url) { const r2 = await fetch(j.download_url); if (!r2.ok) throw new Error('ファイル本体の取得に失敗しました'); text = await r2.text(); }
+        else throw new Error('ファイル内容を取得できませんでした');
+        return { exists: true, sha: j.sha, text };
+      }
+      async function ghPutFile(cfg, text, sha) {
+        const body = { message: 'sale-ikkatsu データ更新 ' + new Date().toISOString(), content: utf8ToB64(text), branch: cfg.branch };
+        if (sha) body.sha = sha;
+        const res = await fetch(contentsUrl(cfg), { method: 'PUT', headers: ghHeaders(cfg.token), body: JSON.stringify(body) });
+        if (!res.ok) throw new Error(await ghErr(res));
+        return await res.json();
+      }
+
+      // ---- このブラウザの全データを収集 ----
+      async function gatherData() {
+        const ls = {};
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.indexOf('sale-ikkatsu') === 0 && k !== GH_CONFIG_KEY) ls[k] = localStorage.getItem(k);
+        }
+        let thumbs = null, archiveBlobs = null;
+        try { if (typeof idbGetBlob === 'function') thumbs = await idbGetBlob('thumbs-v2'); } catch (e) {}
+        try { if (typeof idbGetBlob === 'function') archiveBlobs = await idbGetBlob('archive-blobs'); } catch (e) {}
+        return {
+          _type: 'sale-ikkatsu-github-backup', _version: 1,
+          savedAt: new Date().toISOString(),
+          tool: (document.querySelector('.version') ? document.querySelector('.version').textContent.trim() : ''),
+          localStorage: ls,
+          idb: { 'thumbs-v2': thumbs || null, 'archive-blobs': archiveBlobs || null },
+        };
+      }
+      // ---- 取得したデータをこのブラウザへ復元 ----
+      async function restoreData(obj) {
+        if (!obj || obj._type !== 'sale-ikkatsu-github-backup') throw new Error('このファイルはバックアップ形式ではありません');
+        const remove = [];
+        for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.indexOf('sale-ikkatsu') === 0 && k !== GH_CONFIG_KEY) remove.push(k); }
+        remove.forEach(k => { try { localStorage.removeItem(k); } catch (e) {} });
+        const ls = obj.localStorage || {};
+        for (const k in ls) { try { localStorage.setItem(k, ls[k]); } catch (e) { throw new Error('復元中に保存容量が不足しました（キー: ' + k + '）'); } }
+        const idb = obj.idb || {};
+        try { if (typeof idbPutBlob === 'function' && ('thumbs-v2' in idb)) await idbPutBlob('thumbs-v2', idb['thumbs-v2'] || {}); } catch (e) {}
+        try { if (typeof idbPutBlob === 'function' && ('archive-blobs' in idb)) await idbPutBlob('archive-blobs', idb['archive-blobs'] || {}); } catch (e) {}
+      }
+
+      function fmtBytes(n) { if (n < 1024) return n + ' B'; if (n < 1048576) return (n / 1024).toFixed(1) + ' KB'; return (n / 1048576).toFixed(2) + ' MB'; }
+
+      async function doSave() {
+        const cfg = readForm();
+        if (!cfg.token) { setStatus('トークンを入力してください。', 'error'); return; }
+        persistCfg(cfg);
+        setStatus('データを収集中...', 'info');
+        try {
+          const data = await gatherData();
+          const json = JSON.stringify(data);
+          const sizeStr = fmtBytes(new Blob([json]).size);
+          if (!window.confirm('GitHub上の共有ファイルを、今のこのブラウザのデータ（約' + sizeStr + '）で上書きします。よろしいですか？\n\n（共有ファイルの現在の内容は置き換わります）')) { setStatus('キャンセルしました。', 'info'); return; }
+          setStatus('GitHubへ保存中...（約' + sizeStr + '）', 'info');
+          let sha = null;
+          try { const cur = await ghGetFile(cfg); if (cur.exists) sha = cur.sha; } catch (e) { /* 取得失敗でも新規作成を試す */ }
+          await ghPutFile(cfg, json, sha);
+          setStatus('✅ 保存しました（約' + sizeStr + '）。他の端末では「GitHubから読み込み」で反映できます。', 'ok');
+        } catch (e) {
+          setStatus('❌ 保存に失敗しました: ' + (e && e.message ? e.message : e), 'error');
+        }
+      }
+      async function doLoad() {
+        const cfg = readForm();
+        if (!cfg.token) { setStatus('トークンを入力してください。', 'error'); return; }
+        persistCfg(cfg);
+        setStatus('GitHubから取得中...', 'info');
+        try {
+          const cur = await ghGetFile(cfg);
+          if (!cur.exists) { setStatus('❌ 指定パスにファイルがありません（まだ誰も保存していない可能性）。', 'error'); return; }
+          let obj;
+          try { obj = JSON.parse(cur.text); } catch (e) { throw new Error('ファイルの中身がJSONとして読めませんでした'); }
+          if (!obj || obj._type !== 'sale-ikkatsu-github-backup') throw new Error('このファイルはこのツールのバックアップ形式ではありません');
+          const when = obj.savedAt ? new Date(obj.savedAt).toLocaleString() : '不明';
+          if (!window.confirm('GitHubのデータ（保存日時: ' + when + '）を、このブラウザに読み込みます。\n\n⚠ 今このブラウザにあるデータは上書きされます。よろしいですか？')) { setStatus('キャンセルしました。', 'info'); return; }
+          setStatus('復元中...', 'info');
+          await restoreData(obj);
+          setStatus('✅ 読み込みました。画面を再読み込みします...', 'ok');
+          setTimeout(() => { try { location.reload(); } catch (e) {} }, 800);
+        } catch (e) {
+          setStatus('❌ 読み込みに失敗しました: ' + (e && e.message ? e.message : e), 'error');
+        }
+      }
+
+      // イベント (DOM構築後にバインド。モーダルはスクリプトより後ろに配置されているため)
+      function initGhUI() {
+        if (!$('gh-modal-overlay') || !$('btn-github-sync')) return;
+        $('btn-github-sync').addEventListener('click', openModal);
+        $('gh-btn-close').addEventListener('click', closeModal);
+        overlay().addEventListener('click', (e) => { if (e.target === overlay()) closeModal(); });
+        $('gh-btn-save').addEventListener('click', doSave);
+        $('gh-btn-load').addEventListener('click', doLoad);
+        $('gh-token-clear').addEventListener('click', () => {
+          $('gh-token').value = '';
+          $('gh-remember').checked = false;
+          const cfg = loadCfg(); delete cfg.token; cfg.remember = false; saveCfg(cfg);
+          setStatus('記憶していたトークンを削除しました。', 'info');
+        });
+        $('gh-remember').addEventListener('change', () => {
+          if (!$('gh-remember').checked) { const cfg = loadCfg(); delete cfg.token; cfg.remember = false; saveCfg(cfg); }
+        });
+      }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initGhUI);
+      else initGhUI();
+    })();
   </script>
 
   <!-- v0.52.216: セール期間 (開始-終了日時) 編集モーダル -->
@@ -16946,6 +17166,42 @@
       <div class="pem-actions">
         <button type="button" id="ymc-cancel" class="pem-btn pem-btn-cancel">キャンセル</button>
         <button type="button" id="ymc-create" class="pem-btn pem-btn-save">作成</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- v0.52.360: GitHub連携 (データ共有/バックアップ) モーダル -->
+  <div id="gh-modal-overlay" class="gh-modal-overlay" aria-hidden="true">
+    <div class="gh-modal" role="dialog" aria-modal="true" aria-label="GitHub連携">
+      <h2>☁ GitHub連携（データ共有・バックアップ）</h2>
+      <p class="gh-sub">このブラウザの全データ（参加履歴・チェック・割引率・タイトル・サムネイル・取り込みCSV など）を、GitHub上のファイルにまとめて<b>保存</b>／<b>読み込み</b>します。複数人・複数端末での共有やバックアップに使えます。</p>
+
+      <div class="gh-token-row">
+        <div class="gh-field">
+          <label for="gh-token">GitHub トークン（fine-grained・Contents書込権限）</label>
+          <input type="password" id="gh-token" placeholder="github_pat_..." autocomplete="off" spellcheck="false" />
+        </div>
+        <button type="button" id="gh-token-clear" class="gh-btn gh-btn-ghost" title="記憶したトークンを削除">✕ 削除</button>
+      </div>
+      <label class="gh-remember"><input type="checkbox" id="gh-remember" /> このブラウザにトークンを記憶する（共用PCでは推奨しません）</label>
+
+      <div class="gh-row">
+        <div class="gh-field"><label for="gh-owner">オーナー</label><input type="text" id="gh-owner" placeholder="kaiyoshida0318" /></div>
+        <div class="gh-field"><label for="gh-repo">リポジトリ</label><input type="text" id="gh-repo" placeholder="sale-ikkatsu" /></div>
+        <div class="gh-field" style="max-width:120px;"><label for="gh-branch">ブランチ</label><input type="text" id="gh-branch" placeholder="main" /></div>
+      </div>
+      <div class="gh-field"><label for="gh-path">保存先パス（リポジトリ内）</label><input type="text" id="gh-path" placeholder="data/sale-ikkatsu-data.json" /></div>
+
+      <div class="gh-actions">
+        <button type="button" id="gh-btn-save" class="gh-btn gh-btn-save">⬆ GitHubへ保存</button>
+        <button type="button" id="gh-btn-load" class="gh-btn gh-btn-load">⬇ GitHubから読み込み</button>
+        <button type="button" id="gh-btn-close" class="gh-btn gh-btn-close">閉じる</button>
+      </div>
+
+      <div id="gh-status" class="gh-status"></div>
+
+      <div class="gh-warn">
+        <b>ご注意：</b>「保存」は共有ファイルを<b>丸ごと上書き</b>します（自動マージなし）。保存する人を決める／読み込んでから作業する運用が安全です。トークンは<b>index.html等に書かない</b>でください。データが大きい（数MB〜）と保存に失敗することがあります。
       </div>
     </div>
   </div>
