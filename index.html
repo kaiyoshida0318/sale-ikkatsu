@@ -1936,12 +1936,14 @@
       align-self: center;
       display: inline-flex;
       align-items: center;
-      gap: 6px;
       background: #f5f6fa;
       border: 1px solid var(--border);
       border-radius: 6px;
-      padding: 6px 12px;
-      font-size: 12px;
+      /* v0.52.363: 「上部を隠す」(.wf-top-toggle) と同じサイズに統一 */
+      padding: 2px 10px;
+      font-size: 11px;
+      line-height: normal;
+      gap: 4px;
       font-weight: 600;
       color: var(--muted);
       cursor: pointer;
@@ -1949,8 +1951,8 @@
       transition: background .12s, color .12s, border-color .12s;
     }
     .main-tabs-bar .header-toggle-btn .icon-chev {
-      width: 14px;
-      height: 14px;
+      width: 11px;
+      height: 11px;
       transition: transform .15s;
     }
     /* ヘッダー折りたたみ中: ヘッダー本体を隠す + ボタンのシェブロンを反転 */
@@ -2819,19 +2821,26 @@
       line-height: 1.5;
       flex-shrink: 0;
     }
-    /* v0.52.362: 「上部を隠す」で ⑥割引率決定 のワークフローのボタン群＋見出し＋説明文(その上まで)を隠し、表を画面いっぱいに */
-    body.decide-h2-hidden[data-view="decide-price"] #workflow-shared,
-    body.decide-h2-hidden[data-view="decide-price"] .tool-panel-header,
-    body.decide-h2-hidden[data-view="decide-price"] .tool-panel-description { display: none; }
-    /* 「上部を隠す/表示」トグル (amacheck風のグレー小ボタン)。ツールバー右端に配置 */
+    /* v0.52.363: 「上部を隠す」を全画面共通化。作業工程のボタン群(#workflow-shared)を全サブビューで隠す。
+       「セール作業手順」タブ自体はボタン群しか無いので隠さない。
+       ⑤割引率決定は表があるとき(ツールバー有)だけ、見出し＋説明文もまとめて隠す(v0.52.362の挙動を維持) */
+    body.wf-top-hidden:not([data-view="workflow"]) #workflow-shared { display: none; }
+    body.wf-top-hidden[data-view="decide-price"]:has(#decide-price-table-container .decide-toolbar) #tool-decide-price .tool-panel-header,
+    body.wf-top-hidden[data-view="decide-price"]:has(#decide-price-table-container .decide-toolbar) #tool-decide-price .tool-panel-description { display: none; }
+    /* ⑤は表のツールバー側にトグルがあるので、見出し側のトグルは表が無いときだけ出す(重複防止) */
+    body[data-view="decide-price"]:has(#decide-price-table-container .decide-toolbar) #tool-decide-price .tool-panel-header .wf-top-toggle { display: none; }
+    /* 「上部を隠す/表示」トグル (amacheck風のグレー小ボタン)。⑤はツールバー右端、他は見出し右端に配置 */
     .decide-toolbar { display: flex; align-items: center; gap: 10px; }
     .decide-toolbar .decide-stats { flex: 1 1 auto; }
-    .decide-h2-toggle {
+    .wf-top-toggle {
       flex: none; padding: 2px 10px; font-size: 11px; font-weight: 600;
       background: #eef0f3; color: #4b5563; border: 1px solid #c9ced6; border-radius: 6px;
-      cursor: pointer; white-space: nowrap;
+      cursor: pointer; white-space: nowrap; font-family: inherit;
     }
-    .decide-h2-toggle:hover { background: #e2e5ea; }
+    .wf-top-toggle:hover { background: #e2e5ea; color: #4b5563; }
+    .tool-panel-header > .wf-top-toggle { margin-left: auto; }
+    /* ⑥タイトル決定の進捗バッジ(margin-left:auto)と右寄せを取り合わないように */
+    .tool-panel-header:has(.title-progress) > .wf-top-toggle { margin-left: 0; }
     body[data-view="decide-price"] #decide-price-status:empty {
       display: none;
       margin: 0;
@@ -4475,7 +4484,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.362</span>
+      <span class="version">v0.52.363</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -5891,6 +5900,8 @@
       if (panel) panel.classList.add('active');
       // v0.52.246: タイトル番号を現在のセールのワークフロー順に合わせて上書き
       applyPanelNumber(viewId);
+      // v0.52.363: 見出し右端に「上部を隠す」トグルを用意 (全画面共通)
+      if (typeof window._ensureWfTopToggle === 'function') window._ensureWfTopToggle(viewId);
       // body[data-view] を最新化 (CSSで workflow-shared の表示制御に使用)
       document.body.setAttribute('data-view', viewId);
       // ワークフローブロック内の「現在開いているサブビュー」ボタンを is-current でハイライト
@@ -15336,7 +15347,7 @@
         <div class="mgr-tabs-area">
           <div class="decide-toolbar">
             <span class="decide-stats">${result.stats.output_rows}件 (除外: ${result.stats.excluded_no_price} / 原価未取得: ${result.stats.cost_not_found})</span>
-            <button type="button" class="decide-h2-toggle" title="ワークフローのボタン群・見出し・説明文を隠して表を広く表示">${document.body.classList.contains('decide-h2-hidden') ? '▸ 上部を表示' : '▾ 上部を隠す'}</button>
+            <button type="button" class="wf-top-toggle" title="作業工程のボタン群・見出し・説明文を隠して表を広く表示">${document.body.classList.contains('wf-top-hidden') ? '▸ 上部を表示' : '▾ 上部を隠す'}</button>
           </div>
           <div class="mgr-tabs" role="tablist">${tabsHtml}</div>
         </div>
@@ -16905,20 +16916,49 @@
       window._restorePreSelect = _restorePreSelect;
     })();
 
-    // v0.52.362: ⑥割引率決定「上部を隠す/表示」トグル。
-    //   ワークフローのボタン群＋見出し＋説明文(その上まで)を隠して表を広く。ボタンは再描画で作り直されるため、
-    //   クリックは document への委譲で一度だけ登録する(再登録による二重動作を防止)。
-    (function decideHeader2Toggle() {
+    // v0.52.363: 「上部を隠す/表示」トグルを全画面共通化 (v0.52.362 は ⑤割引率決定のみ)。
+    //   作業工程のボタン群(#workflow-shared)を全サブビューで隠す。状態は body.wf-top-hidden で一元管理し、
+    //   軽量フラグとして localStorage に保存(リロード後も維持)。
+    //   トグルは各サブビューの見出し(.tool-panel-header)右端に showView 時に注入(無ければ足すだけ・冪等)。
+    //   ⑤は表ツールバー側にも同じボタンがある(再描画で作り直されるため、クリックは document 委譲で一度だけ登録)。
+    (function workflowTopToggle() {
+      const KEY = 'sale-ikkatsu-wf-top-hidden';
+      // ボタン群自体を表示しないビュー (トグル不要)
+      const NO_TOGGLE_VIEWS = { products: 1, workflow: 1, 'sale-thumb': 1, history: 1 };
+      function isHidden() { return document.body.classList.contains('wf-top-hidden'); }
+      function labelOf(hidden) { return hidden ? '▸ 上部を表示' : '▾ 上部を隠す'; }
       function syncToggleLabels() {
-        const hidden = document.body.classList.contains('decide-h2-hidden');
-        document.querySelectorAll('.decide-h2-toggle').forEach(b => { b.textContent = hidden ? '▸ 上部を表示' : '▾ 上部を隠す'; });
+        const hidden = isHidden();
+        document.querySelectorAll('.wf-top-toggle').forEach(b => { b.textContent = labelOf(hidden); });
       }
+      function ensureToggle(viewId) {
+        if (!viewId || NO_TOGGLE_VIEWS[viewId]) return;
+        const panel = document.getElementById('tool-' + viewId);
+        const header = panel && panel.querySelector('.tool-panel-header');
+        if (!header) return;
+        let btn = header.querySelector(':scope > .wf-top-toggle');
+        if (!btn) {
+          btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'wf-top-toggle';
+          btn.title = '作業工程のボタン群を隠す / 表示 (全画面共通)';
+          header.appendChild(btn);
+        }
+        btn.textContent = labelOf(isHidden());
+      }
+      window._ensureWfTopToggle = ensureToggle;
+      try { if (localStorage.getItem(KEY) === '1') document.body.classList.add('wf-top-hidden'); } catch (e) {}
       document.addEventListener('click', (e) => {
-        const btn = e.target.closest && e.target.closest('.decide-h2-toggle');
+        const btn = e.target.closest && e.target.closest('.wf-top-toggle');
         if (!btn) return;
-        document.body.classList.toggle('decide-h2-hidden');
+        const next = !isHidden();
+        document.body.classList.toggle('wf-top-hidden', next);
+        try { localStorage.setItem(KEY, next ? '1' : '0'); } catch (err) {}
         syncToggleLabels();
+        if (typeof window._syncStickyTabs === 'function') requestAnimationFrame(() => window._syncStickyTabs());
       });
+      // 起動時点で開いているビューにも付ける
+      ensureToggle(document.body.getAttribute('data-view'));
     })();
 
     // ============================================================
