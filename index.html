@@ -528,6 +528,8 @@
     /* ⑥ セール用タイトル決定: 表が広いので画面幅いっぱい */
     body[data-view="decide-title"] main {
       max-width: 100%;
+      /* v0.52.364: 下マージン分だけ余計にスクロールでき、見出し行(「上部を隠す」行)がタブバーの下に潜っていたため0に */
+      margin-bottom: 0;
     }
     /* ワークフロー画面: 5列ボタンに余裕を持たせるため広げる */
     body[data-view="workflow"] main {
@@ -4484,7 +4486,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.363</span>
+      <span class="version">v0.52.364</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
