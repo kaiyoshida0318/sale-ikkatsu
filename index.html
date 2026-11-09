@@ -2819,6 +2819,19 @@
       line-height: 1.5;
       flex-shrink: 0;
     }
+    /* v0.52.362: 「上部を隠す」で ⑥割引率決定 のワークフローのボタン群＋見出し＋説明文(その上まで)を隠し、表を画面いっぱいに */
+    body.decide-h2-hidden[data-view="decide-price"] #workflow-shared,
+    body.decide-h2-hidden[data-view="decide-price"] .tool-panel-header,
+    body.decide-h2-hidden[data-view="decide-price"] .tool-panel-description { display: none; }
+    /* 「上部を隠す/表示」トグル (amacheck風のグレー小ボタン)。ツールバー右端に配置 */
+    .decide-toolbar { display: flex; align-items: center; gap: 10px; }
+    .decide-toolbar .decide-stats { flex: 1 1 auto; }
+    .decide-h2-toggle {
+      flex: none; padding: 2px 10px; font-size: 11px; font-weight: 600;
+      background: #eef0f3; color: #4b5563; border: 1px solid #c9ced6; border-radius: 6px;
+      cursor: pointer; white-space: nowrap;
+    }
+    .decide-h2-toggle:hover { background: #e2e5ea; }
     body[data-view="decide-price"] #decide-price-status:empty {
       display: none;
       margin: 0;
@@ -4335,7 +4348,7 @@
       100% { box-shadow: 0 0 3px 1px rgba(46,144,67,.55); }
     }
     .oki-table tr.is-oki-parent-done td { background: #e3f5e8; } /* 完了グループの親行は濃いめ薄緑 */
-    /* v0.52.360: GitHub連携 モーダル */
+    /* v0.52.361: GitHub連携 モーダル */
     .gh-sync-btn { border-color: #cfd8e3; }
     .gh-modal-overlay { position: fixed; inset: 0; background: rgba(23,35,60,.45); display: none; align-items: flex-start; justify-content: center; z-index: 3000; overflow-y: auto; padding: 40px 12px; }
     .gh-modal-overlay.is-open { display: flex; }
@@ -4462,7 +4475,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.360</span>
+      <span class="version">v0.52.362</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4472,7 +4485,7 @@
       <button type="button" id="btn-log-capture" class="log-capture-btn" title="エラー情報やツールの状態をログとして取得 (クリップボードコピー＆ファイル保存)">
         <span class="lc-icon">🐛</span><span class="lc-label">ログを取る</span>
       </button>
-      <!-- v0.52.360: GitHub連携 (データ共有/バックアップ) -->
+      <!-- v0.52.361: GitHub連携 (データ共有/バックアップ) -->
       <button type="button" id="btn-github-sync" class="log-capture-btn gh-sync-btn" title="GitHubにデータを保存/読み込み (共有・バックアップ)">
         <span class="lc-icon">☁</span><span class="lc-label">GitHub連携</span>
       </button>
@@ -6656,7 +6669,7 @@
       if (typeof restoreAllStatusMessages === 'function') {
         try { restoreAllStatusMessages(); } catch (e) {}
       }
-      // v0.52.360: ダウンロード系の一時ステータス(「N件ダウンロードしました」等)は文脈が変わったら必ずクリア。
+      // v0.52.361: ダウンロード系の一時ステータス(「N件ダウンロードしました」等)は文脈が変わったら必ずクリア。
       //   （別ショップの件数表示が残って混同する不具合の修正。⑫広告削除/⑪RMSイベント/⑯広告復活 のDLボタン）
       try {
         document.querySelectorAll('.rms-event-dl-status').forEach(el => { el.textContent = ''; el.className = 'rms-event-dl-status'; });
@@ -15323,6 +15336,7 @@
         <div class="mgr-tabs-area">
           <div class="decide-toolbar">
             <span class="decide-stats">${result.stats.output_rows}件 (除外: ${result.stats.excluded_no_price} / 原価未取得: ${result.stats.cost_not_found})</span>
+            <button type="button" class="decide-h2-toggle" title="ワークフローのボタン群・見出し・説明文を隠して表を広く表示">${document.body.classList.contains('decide-h2-hidden') ? '▸ 上部を表示' : '▾ 上部を隠す'}</button>
           </div>
           <div class="mgr-tabs" role="tablist">${tabsHtml}</div>
         </div>
@@ -16891,8 +16905,24 @@
       window._restorePreSelect = _restorePreSelect;
     })();
 
+    // v0.52.362: ⑥割引率決定「上部を隠す/表示」トグル。
+    //   ワークフローのボタン群＋見出し＋説明文(その上まで)を隠して表を広く。ボタンは再描画で作り直されるため、
+    //   クリックは document への委譲で一度だけ登録する(再登録による二重動作を防止)。
+    (function decideHeader2Toggle() {
+      function syncToggleLabels() {
+        const hidden = document.body.classList.contains('decide-h2-hidden');
+        document.querySelectorAll('.decide-h2-toggle').forEach(b => { b.textContent = hidden ? '▸ 上部を表示' : '▾ 上部を隠す'; });
+      }
+      document.addEventListener('click', (e) => {
+        const btn = e.target.closest && e.target.closest('.decide-h2-toggle');
+        if (!btn) return;
+        document.body.classList.toggle('decide-h2-hidden');
+        syncToggleLabels();
+      });
+    })();
+
     // ============================================================
-    // v0.52.360: GitHub連携 (データ共有 / バックアップ)
+    // v0.52.361: GitHub連携 (データ共有 / バックアップ)
     //   このブラウザの全データ(localStorage の sale-ikkatsu-* と IndexedDB の
     //   thumbs-v2 / archive-blobs)を1つのJSONにまとめ、GitHubのファイルへ保存/読込する。
     //   トークンはツール内に埋め込まない。各自が実行時に入力する。
@@ -17170,7 +17200,7 @@
     </div>
   </div>
 
-  <!-- v0.52.360: GitHub連携 (データ共有/バックアップ) モーダル -->
+  <!-- v0.52.361: GitHub連携 (データ共有/バックアップ) モーダル -->
   <div id="gh-modal-overlay" class="gh-modal-overlay" aria-hidden="true">
     <div class="gh-modal" role="dialog" aria-modal="true" aria-label="GitHub連携">
       <h2>☁ GitHub連携（データ共有・バックアップ）</h2>
