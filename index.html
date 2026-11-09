@@ -2823,15 +2823,14 @@
       line-height: 1.5;
       flex-shrink: 0;
     }
-    /* v0.52.363: 「上部を隠す」を全画面共通化。作業工程のボタン群(#workflow-shared)を全サブビューで隠す。
-       「セール作業手順」タブ自体はボタン群しか無いので隠さない。
-       ⑤割引率決定は表があるとき(ツールバー有)だけ、見出し＋説明文もまとめて隠す(v0.52.362の挙動を維持) */
-    body.wf-top-hidden:not([data-view="workflow"]) #workflow-shared { display: none; }
+    /* v0.52.365: 「上部を隠す」は ⑥割引率決定 のみ (v0.52.363 の全画面共通化は撤回)。
+       作業工程のボタン群(#workflow-shared)を隠す。表があるとき(ツールバー有)は見出し＋説明文もまとめて隠す */
+    body.wf-top-hidden[data-view="decide-price"] #workflow-shared { display: none; }
     body.wf-top-hidden[data-view="decide-price"]:has(#decide-price-table-container .decide-toolbar) #tool-decide-price .tool-panel-header,
     body.wf-top-hidden[data-view="decide-price"]:has(#decide-price-table-container .decide-toolbar) #tool-decide-price .tool-panel-description { display: none; }
     /* ⑤は表のツールバー側にトグルがあるので、見出し側のトグルは表が無いときだけ出す(重複防止) */
     body[data-view="decide-price"]:has(#decide-price-table-container .decide-toolbar) #tool-decide-price .tool-panel-header .wf-top-toggle { display: none; }
-    /* 「上部を隠す/表示」トグル (amacheck風のグレー小ボタン)。⑤はツールバー右端、他は見出し右端に配置 */
+    /* 「上部を隠す/表示」トグル (amacheck風のグレー小ボタン)。表があるときはツールバー右端、無いときは見出し右端 */
     .decide-toolbar { display: flex; align-items: center; gap: 10px; }
     .decide-toolbar .decide-stats { flex: 1 1 auto; }
     .wf-top-toggle {
@@ -2841,8 +2840,6 @@
     }
     .wf-top-toggle:hover { background: #e2e5ea; color: #4b5563; }
     .tool-panel-header > .wf-top-toggle { margin-left: auto; }
-    /* ⑥タイトル決定の進捗バッジ(margin-left:auto)と右寄せを取り合わないように */
-    .tool-panel-header:has(.title-progress) > .wf-top-toggle { margin-left: 0; }
     body[data-view="decide-price"] #decide-price-status:empty {
       display: none;
       margin: 0;
@@ -4486,7 +4483,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.364</span>
+      <span class="version">v0.52.365</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -16918,15 +16915,14 @@
       window._restorePreSelect = _restorePreSelect;
     })();
 
-    // v0.52.363: 「上部を隠す/表示」トグルを全画面共通化 (v0.52.362 は ⑤割引率決定のみ)。
-    //   作業工程のボタン群(#workflow-shared)を全サブビューで隠す。状態は body.wf-top-hidden で一元管理し、
-    //   軽量フラグとして localStorage に保存(リロード後も維持)。
-    //   トグルは各サブビューの見出し(.tool-panel-header)右端に showView 時に注入(無ければ足すだけ・冪等)。
-    //   ⑤は表ツールバー側にも同じボタンがある(再描画で作り直されるため、クリックは document 委譲で一度だけ登録)。
+    // v0.52.365: 「上部を隠す/表示」トグルは ⑥割引率決定 のみ (v0.52.363 の全画面共通化は撤回)。
+    //   状態は body.wf-top-hidden で管理し、軽量フラグとして localStorage に保存(リロード後も維持)。
+    //   表があるときは表ツールバー側のボタン(再描画で作り直されるため、クリックは document 委譲で一度だけ登録)。
+    //   表が無いとき用に見出し右端にも注入しておく(隠したまま表が消えても戻せるように。表があるときはCSSで非表示)。
     (function workflowTopToggle() {
       const KEY = 'sale-ikkatsu-wf-top-hidden';
-      // ボタン群自体を表示しないビュー (トグル不要)
-      const NO_TOGGLE_VIEWS = { products: 1, workflow: 1, 'sale-thumb': 1, history: 1 };
+      // トグルを置くビュー
+      const TOGGLE_VIEWS = { 'decide-price': 1 };
       function isHidden() { return document.body.classList.contains('wf-top-hidden'); }
       function labelOf(hidden) { return hidden ? '▸ 上部を表示' : '▾ 上部を隠す'; }
       function syncToggleLabels() {
@@ -16934,7 +16930,7 @@
         document.querySelectorAll('.wf-top-toggle').forEach(b => { b.textContent = labelOf(hidden); });
       }
       function ensureToggle(viewId) {
-        if (!viewId || NO_TOGGLE_VIEWS[viewId]) return;
+        if (!viewId || !TOGGLE_VIEWS[viewId]) return;
         const panel = document.getElementById('tool-' + viewId);
         const header = panel && panel.querySelector('.tool-panel-header');
         if (!header) return;
@@ -16943,7 +16939,7 @@
           btn = document.createElement('button');
           btn.type = 'button';
           btn.className = 'wf-top-toggle';
-          btn.title = '作業工程のボタン群を隠す / 表示 (全画面共通)';
+          btn.title = '作業工程のボタン群を隠す / 表示';
           header.appendChild(btn);
         }
         btn.textContent = labelOf(isHidden());
