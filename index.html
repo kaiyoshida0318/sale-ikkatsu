@@ -1998,7 +1998,10 @@
     #workflow-shared {
       display: block;
       max-width: 1280px;
-      margin: 0 auto;
+      /* v0.52.367: 右端に「工程隠す」(ヘッダー隠すボタンの真下)を置くので、右側だけその分の余白を確保。
+         広い画面では従来どおり中央寄せ。--wf-collapse-reserve は JS がヘッダー隠すボタンの位置から算出 */
+      margin: 0 max(var(--wf-collapse-reserve, 140px), calc((100% - 1280px) / 2)) 0 auto;
+      position: relative;
       padding: 0 16px 24px;
       border-bottom: 1px solid var(--border);
       margin-bottom: 24px;
@@ -2035,6 +2038,30 @@
       gap: 12px;
       align-items: start;
     }
+    /* v0.52.366: 「工程隠す」ボタン。押すと作業工程のボタン群を全サブビューで隠し、
+       タブバーの「ヘッダー隠す」の右に「工程表示」ボタンが出る。
+       v0.52.367: ヘッダー隠すボタンの真下に、タブバー下線を挟んで上下対称の位置・同じサイズで置く(left/top/width/height は JS) */
+    #workflow-shared > .wf-collapse-btn {
+      position: absolute; top: 17px; right: 0; z-index: 2;
+      box-sizing: border-box; justify-content: center;
+    }
+    .wf-collapse-btn,
+    .main-tabs-bar .wf-show-btn {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: #f5f6fa; border: 1px solid var(--border); border-radius: 6px;
+      padding: 2px 10px; font-size: 11px; line-height: normal; font-weight: 600;
+      color: var(--muted); cursor: pointer; font-family: inherit; white-space: nowrap;
+      transition: background .12s, color .12s, border-color .12s;
+    }
+    .wf-collapse-btn:hover,
+    .main-tabs-bar .wf-show-btn:hover { background: #e2e5ea; color: #4b5563; }
+    .wf-collapse-btn .icon-chev,
+    .main-tabs-bar .wf-show-btn .icon-chev { width: 11px; height: 11px; flex-shrink: 0; }
+    .main-tabs-bar .wf-show-btn { display: none; margin-left: 6px; align-self: center; }
+    body[data-wf-collapsed="true"]:not([data-view="workflow"]) #workflow-shared { display: none; }
+    body[data-wf-collapsed="true"]:not([data-view="workflow"]):not([data-view="products"]):not([data-view="sale-thumb"]):not([data-view="history"]) .main-tabs-bar .wf-show-btn { display: inline-flex; }
+    /* 「セール作業手順」タブ自体はボタン群が本体なので常に表示し、隠すボタンも出さない */
+    body[data-view="workflow"] .wf-collapse-btn { display: none; }
     /* ブロック間の区切り線 (セール開始準備 / セール当日 / セール後) */
     .workflow-block + .workflow-block {
       border-top: 1px solid var(--border);
@@ -4483,7 +4510,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.365</span>
+      <span class="version">v0.52.367</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -4539,6 +4566,13 @@
       </svg>
       <span class="header-toggle-label">ヘッダー</span>
     </button>
+    <!-- v0.52.366: 作業工程のボタン群を「工程隠す」で隠したときだけ表示 -->
+    <button type="button" id="btn-show-workflow" class="wf-show-btn" title="作業工程のボタン群を表示" aria-label="作業工程のボタン群を表示">
+      <svg class="icon-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="6 9 12 15 18 9"></polyline>
+      </svg>
+      <span>工程表示</span>
+    </button>
   </nav>
 
   <!-- 画像拡大モーダル (② サブビューの手順説明画像をクリック拡大表示するのに使用) -->
@@ -4553,6 +4587,13 @@
        セール参加商品タブでは display:none で非表示。 -->
   <div id="workflow-shared">
     <div class="workflow" id="workflow"></div>
+    <!-- v0.52.367: 作業工程のボタン群を隠す (ヘッダー隠すボタンの真下に JS で位置合わせ) -->
+    <button type="button" id="btn-hide-workflow" class="wf-collapse-btn" title="作業工程のボタン群を隠す" aria-label="作業工程のボタン群を隠す">
+      <svg class="icon-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="6 15 12 9 18 15"></polyline>
+      </svg>
+      <span>工程隠す</span>
+    </button>
   </div>
 
   <main>
@@ -5845,6 +5886,81 @@
         try { localStorage.setItem(KEY, next ? '1' : '0'); } catch (e) {}
         applyState(next);
       });
+    })();
+
+    // v0.52.366: 作業工程のボタン群の折りたたみ (「工程隠す」/「工程表示」)
+    //   状態は body[data-wf-collapsed] で管理し localStorage に保存。全サブビュー共通
+    //   (「セール作業手順」タブ自体では隠さない)。「工程隠す」は renderWorkflow で作り直されるので document 委譲。
+    (function workflowCollapseSetup() {
+      const KEY = 'sale-ikkatsu-wf-collapsed';
+      function applyState(collapsed) {
+        document.body.setAttribute('data-wf-collapsed', collapsed ? 'true' : 'false');
+        if (typeof window._syncStickyTabs === 'function') requestAnimationFrame(() => window._syncStickyTabs());
+      }
+      let initial = false;
+      try { initial = localStorage.getItem(KEY) === '1'; } catch (e) {}
+      applyState(initial);
+      function setCollapsed(next) {
+        try { localStorage.setItem(KEY, next ? '1' : '0'); } catch (e) {}
+        applyState(next);
+      }
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest) return;
+        if (e.target.closest('.wf-collapse-btn')) { setCollapsed(true); return; }
+        if (e.target.closest('#btn-show-workflow')) { setCollapsed(false); return; }
+      });
+
+      // v0.52.367: 「工程隠す」をヘッダー隠すボタンの真下に置く。
+      //   ・サイズ: ヘッダー隠すボタンと同じ幅・高さ
+      //   ・横位置: ヘッダー隠すボタンと同じ left (縦一直線)
+      //   ・縦位置: タブバー下線を中心に上下対称 (下線→工程隠す上端 = ヘッダー隠す下端→下線)
+      //   ・右側余白: ボタン群がボタンに重ならないよう --wf-collapse-reserve を設定
+      let navGap = 16; // タブバー下端 → #workflow-shared 上端 (.workflow の margin-top が相殺されて出る隙間)
+      function place() {
+        const hb = document.getElementById('btn-toggle-header');
+        const nav = document.querySelector('.main-tabs-bar');
+        const ws = document.getElementById('workflow-shared');
+        const btn = document.getElementById('btn-hide-workflow');
+        if (!hb || !nav || !ws || !btn) return;
+        const h = hb.getBoundingClientRect();
+        if (!h.width) return;
+        const vw = document.documentElement.clientWidth;
+        document.documentElement.style.setProperty('--wf-collapse-reserve', Math.max(0, Math.ceil(vw - h.left - 4)) + 'px');
+        if (!ws.offsetParent) return; // 非表示中は位置計算しない (表示時に再計算)
+        const n = nav.getBoundingClientRect();
+        const w = ws.getBoundingClientRect();
+        // タブバーが本来の位置にある時(スクロール0・sticky の top 再計算済み)だけ隙間を測り直す。
+        //   ヘッダー開閉直後は sticky の top 更新が1フレーム遅れ、タブバーが一時的にずれた位置にあるため
+        const hdrEl = document.querySelector('body > header');
+        const natTop = (hdrEl && hdrEl.offsetParent !== null) ? hdrEl.getBoundingClientRect().bottom : 0;
+        if (window.scrollY === 0 && Math.abs(n.top - natTop) < 0.5) navGap = w.top - n.bottom;
+        btn.style.width = h.width + 'px';
+        btn.style.height = h.height + 'px';
+        btn.style.left = (h.left - w.left) + 'px';
+        btn.style.right = 'auto';
+        btn.style.top = ((n.bottom - h.bottom) - navGap) + 'px';
+      }
+      let raf = 0;
+      let tmr = 0;
+      function schedule() {
+        cancelAnimationFrame(raf); raf = requestAnimationFrame(place);
+        // sticky 位置の再計算(別の rAF)が終わった後にもう一度合わせる
+        clearTimeout(tmr); tmr = setTimeout(place, 120);
+      }
+      window._placeWfCollapseBtn = schedule;
+      window.addEventListener('resize', schedule);
+      try {
+        const ro = new ResizeObserver(schedule);
+        const hb = document.getElementById('btn-toggle-header');
+        const nav = document.querySelector('.main-tabs-bar');
+        if (hb) ro.observe(hb);
+        if (nav) ro.observe(nav);
+      } catch (e) {}
+      try {
+        new MutationObserver(schedule).observe(document.body, { attributes: true, attributeFilter: ['data-view', 'data-header-collapsed', 'data-wf-collapsed'] });
+      } catch (e) {}
+      if (document.readyState === 'complete') schedule(); else window.addEventListener('load', schedule);
+      schedule();
     })();
 
     // ---- UI制御 ----
@@ -10908,6 +11024,9 @@
             }
           } catch (e) {}
         }
+        // ※この innerHTML に <svg> などを入れないこと。wf-btn は <button> の中に <button>(完了/スキップ) がある
+        //   入れ子構造で、Chrome は単純なタグだけの innerHTML なら高速パーサで入れ子のまま組むが、svg 等が混ざると
+        //   標準パーサに切り替わり内側の button を外へ追い出す(=完了/スキップがボタン群の外に散らばって崩れる)。
         return `<div class="workflow-block ${block.className}">
           <div class="workflow-block-label">${escapeHtml(block.label)}${dateSuffix}</div>
           <div class="workflow-block-buttons">${btnsHtml}</div>
