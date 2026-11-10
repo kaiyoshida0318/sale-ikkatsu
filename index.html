@@ -2860,6 +2860,11 @@
     /* 「上部を隠す/表示」トグル (amacheck風のグレー小ボタン)。表があるときはツールバー右端、無いときは見出し右端 */
     .decide-toolbar { display: flex; align-items: center; gap: 10px; }
     .decide-toolbar .decide-stats { flex: 1 1 auto; }
+    /* v0.52.368: 原価なしモード表示 */
+    .nocost-badge {
+      flex: none; padding: 2px 8px; font-size: 11px; font-weight: 700; border-radius: 999px;
+      background: #fff4e0; color: #9a5b00; border: 1px solid #f0c27a; white-space: nowrap; cursor: help;
+    }
     .wf-top-toggle {
       flex: none; padding: 2px 10px; font-size: 11px; font-weight: 600;
       background: #eef0f3; color: #4b5563; border: 1px solid #c9ced6; border-radius: 6px;
@@ -4510,7 +4515,7 @@
         <span class="py-status-dot"></span>
         <span class="py-status-text">準備中...</span>
       </span>
-      <span class="version">v0.52.367</span>
+      <span class="version">v0.52.368</span>
       <div class="font-size-control" role="group" aria-label="文字サイズ変更">
         <button type="button" id="fs-down" title="小さく">A−</button>
         <span class="pct" id="fs-pct">100%</span>
@@ -11046,7 +11051,10 @@
             const doneCoupling = {
               'prep-make-thumb': ['prep-thumb-change', 'after-top-image-back'],
               'prep-ad-delete': ['day-ad-restore'],
-              'prep-sku-record': ['after-sku-restore']
+              'prep-sku-record': ['after-sku-restore'],
+              // v0.52.368: 原価特定(NE)を完了にしたら、もう片方のスキップも外す (原価なしモード解除)
+              'prep-cost-set-item': ['prep-cost-set-component'],
+              'prep-cost-set-component': ['prep-cost-set-item']
             };
             const children = doneCoupling[id];
             if (children) {
@@ -11094,6 +11102,12 @@
           // v0.52.269: 広告削除 をスキップ/解除したら、セール当日の広告復活も連動
           if (id === 'prep-ad-delete') {
             setWorkflowSkip('day-ad-restore', next);
+            renderWorkflow();
+            return;
+          }
+          // v0.52.368: 原価特定(NE)の2ステップは連動。スキップ中は「原価なしモード」(割引率決定で原価を手入力)
+          if (NO_COST_STEP_IDS.includes(id)) {
+            NO_COST_STEP_IDS.forEach(x => setWorkflowSkip(x, next));
             renderWorkflow();
             return;
           }
@@ -12740,6 +12754,18 @@
     // 戻り値: { rows: [...], stats: {...}, warnings: [...] }
     // rows の各要素は object { name, setCode, mgr, ssTitle, price, cost, ship, v1, v2, v3, v4,
     //                          feeL, feeM, feeN, feeO, ... , isBlankRow: bool }
+    // v0.52.368: 原価なしモード (NE未使用ショップ向け。現状 KAIRY)。
+    //   作業手順で「原価特定-NE-単一orセット商品仕分け」「原価特定-NE-セット構成物原価特定」を
+    //   スキップにすると ON (ショップ×セール×年月ごと)。NEのCSVが無くても割引率決定・素材DLへ進め、
+    //   原価は割引率決定の「原価」列に手入力 (archive[ym].editedCells[sku].cost)。
+    const NO_COST_STEP_IDS = ['prep-cost-set-item', 'prep-cost-set-component'];
+    function isNoCostMode() {
+      try {
+        const sk = (typeof getWorkflowSkipState === 'function') ? getWorkflowSkipState() : {};
+        return NO_COST_STEP_IDS.some(id => !!sk[id]);
+      } catch (e) { return false; }
+    }
+
     function mergeAllFromArchive() {
       const ym = currentYM || getCurrentYM();
       if (!ym) throw new Error('セール期間(開始日時)を先に入力してください');
@@ -12747,18 +12773,19 @@
       const data = archive[ym];
       if (!data) throw new Error('セール期間のデータがありません');
       if (!data.rmsCsvB64) throw new Error('① のRMSデータCSVが未取り込みです');
-      if (!data.setItemCsvB64) throw new Error('② のNE-セット商品コードCSVが未取り込みです');
-      if (!data.setComponentCsvB64) throw new Error('③ のNE-セット構成物コードCSVが未取り込みです');
-      // v0.52.249: セット無し(単一)商品が0件のときは nonSetNone フラグで「該当なし」を許容
-      if (!data.nonSetCsvB64 && !data.nonSetNone) throw new Error('④ のNE-セット無しコードCSVが未取り込みです');
+      const noCost = isNoCostMode();
+      if (!noCost) {
+        if (!data.setItemCsvB64) throw new Error('② のNE-セット商品コードCSVが未取り込みです');
+        if (!data.setComponentCsvB64) throw new Error('③ のNE-セット構成物コードCSVが未取り込みです');
+        // v0.52.249: セット無し(単一)商品が0件のときは nonSetNone フラグで「該当なし」を許容
+        if (!data.nonSetCsvB64 && !data.nonSetNone) throw new Error('④ のNE-セット無しコードCSVが未取り込みです');
+      }
 
       const rmsText = decodeShiftJIS(b642u8(data.rmsCsvB64));
-      const setItemText = decodeShiftJIS(b642u8(data.setItemCsvB64));
-      const compText = decodeShiftJIS(b642u8(data.setComponentCsvB64));
-      const nonSetText = data.nonSetCsvB64 ? decodeShiftJIS(b642u8(data.nonSetCsvB64)) : '';
-
-      const setItemMap = parseSetItemMap(setItemText);
-      const componentCost = parseCostMap(compText);
+      // 原価なしモードでは NE のCSVを一切使わない (取り込み済みでも無視 = 原価は手入力のみ)
+      const setItemMap = noCost ? {} : parseSetItemMap(decodeShiftJIS(b642u8(data.setItemCsvB64)));
+      const componentCost = noCost ? {} : parseCostMap(decodeShiftJIS(b642u8(data.setComponentCsvB64)));
+      const nonSetText = (!noCost && data.nonSetCsvB64) ? decodeShiftJIS(b642u8(data.nonSetCsvB64)) : '';
       const nonSetCost = nonSetText ? parseCostMap(nonSetText) : {};
 
       // RMSデータをパース
@@ -12853,16 +12880,25 @@
         const v3 = iV3 >= 0 ? (r[iV3]||'') : '';
         const v4 = iV4 >= 0 ? (r[iV4]||'') : '';
 
+        const ed = editedCells[sku] || {};
+
         // 原価計算
-        const cc = calcCostForSku(sku, setItemMap, componentCost, nonSetCost);
-        const cost = cc.cost;
-        if (cost === null) {
-          countCostNotFound++;
-          warnings.push(`SKU "${sku}" の原価が見つかりません`);
+        let cost;
+        if (noCost) {
+          // v0.52.368: 原価なしモード = 手入力の原価のみ (未入力は null → 利益・利益率は空欄)。警告は出さない
+          cost = toNum(ed.cost);
+          if (cost === null) countCostNotFound++; else countCostFound++;
         } else {
-          countCostFound++;
-          if (cc.missing.length > 0) {
-            warnings.push(`SKU "${sku}" の構成物のうち見つからなかったコード: ${cc.missing.join(', ')}`);
+          const cc = calcCostForSku(sku, setItemMap, componentCost, nonSetCost);
+          cost = cc.cost;
+          if (cost === null) {
+            countCostNotFound++;
+            warnings.push(`SKU "${sku}" の原価が見つかりません`);
+          } else {
+            countCostFound++;
+            if (cc.missing.length > 0) {
+              warnings.push(`SKU "${sku}" の構成物のうち見つからなかったコード: ${cc.missing.join(', ')}`);
+            }
           }
         }
 
@@ -12870,7 +12906,6 @@
         // 商品名は元データのフォールバックを優先 (空文字保存があっても元データを表示)
         // RMSデータでは同一管理番号の最初の行にだけ商品名が入っているケースが多いため、
         // mgrNameMap (① 取り込み時に算出した代表名) もフォールバックとして使う
-        const ed = editedCells[sku] || {};
         const rowName = name || (isFirstInMgr ? (mgrNameMap[mgr] || '') : '');
         const dispName = (ed.name !== undefined && ed.name !== null && ed.name !== '') ? ed.name : rowName;
         const dispSs = (ed.ssTitle !== undefined && ed.ssTitle !== null) ? ed.ssTitle : '';
@@ -12924,6 +12959,7 @@
           cost_found: countCostFound,
           cost_not_found: countCostNotFound,
         },
+        noCost,
         warnings,
       };
     }
@@ -15280,18 +15316,22 @@
       } catch (err) {
         container.innerHTML = `<div class="empty-state">
           ${escapeHtml(err.message)}<br>
-          <span style="font-size:12px;color:var(--muted);">「セール作業手順」の ①②④⑤ をすべて取り込んでください。</span>
+          <span style="font-size:12px;color:var(--muted);">「セール作業手順」の ①②④⑤ をすべて取り込んでください。</span><br>
+          <span style="font-size:12px;color:var(--muted);">ネクストエンジンを使わない場合は、作業手順の「原価特定-NE-…」2つを <b>スキップ</b> にすると、原価を手入力して割引率を決められます。</span>
         </div>`;
         return;
       }
 
       const rows = result.rows;
+      const noCost = !!result.noCost;
       if (!rows || rows.length === 0) {
         container.innerHTML = `<div class="empty-state">対象データがありません。</div>`;
         return;
       }
 
-      const cols = DECIDE_COLS.filter(c => _decideShowFee || c.group !== 'fee');
+      // v0.52.368: 原価なしモードでは「原価」列を手入力できるようにする
+      const cols = DECIDE_COLS.filter(c => _decideShowFee || c.group !== 'fee')
+        .map(c => (noCost && c.key === 'cost') ? Object.assign({}, c, { editable: true, label: '原価(手入力)' }) : c);
       const colCount = cols.length;
 
       // 保存された列幅を適用
@@ -15464,7 +15504,10 @@
       container.innerHTML = `
         <div class="mgr-tabs-area">
           <div class="decide-toolbar">
-            <span class="decide-stats">${result.stats.output_rows}件 (除外: ${result.stats.excluded_no_price} / 原価未取得: ${result.stats.cost_not_found})</span>
+            ${noCost
+              ? `<span class="nocost-badge" title="作業手順で「原価特定-NE-…」をスキップしているため、NEのデータを使わずに進めています。原価は表の「原価(手入力)」欄に入れると利益・利益率を計算します。">NEなし・原価手入力</span>
+                 <span class="decide-stats">${result.stats.output_rows}件 (除外: ${result.stats.excluded_no_price} / 原価入力済み: ${result.stats.cost_found} / 原価未入力: ${result.stats.cost_not_found})</span>`
+              : `<span class="decide-stats">${result.stats.output_rows}件 (除外: ${result.stats.excluded_no_price} / 原価未取得: ${result.stats.cost_not_found})</span>`}
             <button type="button" class="wf-top-toggle" title="作業工程のボタン群・見出し・説明文を隠して表を広く表示">${document.body.classList.contains('wf-top-hidden') ? '▸ 上部を表示' : '▾ 上部を隠す'}</button>
           </div>
           <div class="mgr-tabs" role="tablist">${tabsHtml}</div>
@@ -15854,8 +15897,8 @@
           saveEditedCell(sku, field, newVal);
           // undo記録 (original→newVal)
           recordEditedCellChange(sku, field, original, newVal);
-          // 送料変更 → 利益が変わるので再描画
-          if (field === 'ship') {
+          // 送料・原価(原価なしモードの手入力)変更 → 利益が変わるので再描画
+          if (field === 'ship' || field === 'cost') {
             renderDecidePriceTable();
           }
         });
